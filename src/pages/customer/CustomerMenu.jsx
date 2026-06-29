@@ -1,0 +1,710 @@
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import {
+  Plus,
+  Minus,
+  UtensilsCrossed,
+  X,
+  ArrowRight,
+  Store,
+  AlertTriangle,
+} from 'lucide-react'
+import { supabase, imageUrl } from '../../lib/supabase'
+import { formatCurrency } from '../../lib/format'
+import { useCustomerSession } from '../../hooks/useCustomerSession'
+import { useToast } from '../../components/Toast'
+import { Button, FullPageSpinner } from '../../components/ui'
+
+export default function CustomerMenu() {
+  const { restaurantId, tableId } = useParams()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const { ready, error: sessionError } = useCustomerSession()
+
+  const [loading, setLoading] = useState(true)
+  const [restaurant, setRestaurant] = useState(null)
+  const [table, setTable] = useState(null)
+  const [categories, setCategories] = useState([])
+  const [items, setItems] = useState([])
+  const [optionsByItem, setOptionsByItem] = useState({})
+  const [notFound, setNotFound] = useState(false)
+
+  const [cart, setCart] = useCart(restaurantId, tableId)
+  const [activeItem, setActiveItem] = useState(null)
+  const [cartOpen, setCartOpen] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data: rest } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('id', restaurantId)
+      .maybeSingle()
+
+    if (!rest) {
+      setNotFound(true)
+      setLoading(false)
+      return
+    }
+    setRestaurant(rest)
+
+    if (tableId) {
+      const { data: t } = await supabase
+        .from('tables')
+        .select('*')
+        .eq('id', tableId)
+        .eq('restaurant_id', restaurantId)
+        .maybeSingle()
+      setTable(t || null)
+    }
+
+    const [cats, its, opts, vals] = await Promise.all([
+      supabase.from('menu_categories').select('*').eq('restaurant_id', restaurantId).order('sort_order'),
+      supabase
+        .from('menu_items')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .eq('is_available', true)
+        .order('sort_order'),
+      supabase.from('item_options').select('*').eq('restaurant_id', restaurantId).order('sort_order'),
+      supabase.from('item_option_values').select('*').eq('restaurant_id', restaurantId).order('sort_order'),
+    ])
+
+    setCategories(cats.data || [])
+    setItems(its.data || [])
+
+    const valsByOption = {}
+    for (const v of vals.data || []) {
+      ;(valsByOption[v.option_id] ||= []).push(v)
+    }
+    const byItem = {}
+    for (const o of opts.data || []) {
+      ;(byItem[o.item_id] ||= []).push({ ...o, values: valsByOption[o.id] || [] })
+    }
+    setOptionsByItem(byItem)
+
+    setLoading(false)
+  }, [restaurantId, tableId])
+
+  useEffect(() => {
+    if (ready) load()
+  }, [ready, load])
+
+  const accent = restaurant?.accent_color || '#ef4444'
+  const currency = restaurant?.currency || 'USD'
+  const canOrder = Boolean(tableId) && restaurant?.status === 'active'
+
+  const cartCount = cart.reduce((n, l) => n + l.quantity, 0)
+  const cartTotal = cart.reduce((s, l) => s + l.lineTotal, 0)
+
+  const addToCart = (line) => {
+    setCart((c) => [...c, line])
+    toast.success('Added to cart')
+  }
+
+  // --- gates -----------------------------------------------------------------
+  if (sessionError) return <SessionErrorScreen error={sessionError} />
+  if (!ready || loading) return <FullPageSpinner label="Loading menu…" />
+  if (notFound) return <NotFoundScreen />
+
+  if (restaurant.status !== 'active') {
+    return (
+      <CenteredCard
+        icon={AlertTriangle}
+        title={`${restaurant.name} isn’t taking orders`}
+        text="This restaurant is currently unavailable. Please check back later."
+      />
+    )
+  }
+
+  const grouped = categories
+    .map((c) => ({ category: c, items: items.filter((i) => i.category_id === c.id) }))
+    .filter((g) => g.items.length > 0)
+  const uncategorized = items.filter((i) => !i.category_id)
+  if (uncategorized.length) grouped.push({ category: { id: 'uncat', name: 'More' }, items: uncategorized })
+
+  return (
+    <div className="min-h-[100dvh] bg-gray-50 pb-28" style={{ '--brand': accent }}>
+      <BrandHeader restaurant={restaurant} table={table} accent={accent} />
+
+      {!tableId && (
+        <div className="mx-auto max-w-2xl px-4 pt-3">
+          <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            Browsing only — scan a table’s QR code to place an order.
+          </div>
+        </div>
+      )}
+
+      {grouped.length === 0 ? (
+        <div className="mx-auto max-w-2xl px-4 py-16">
+          <CenteredCard icon={UtensilsCrossed} title="Menu coming soon" text="This restaurant hasn’t added items yet." inline />
+        </div>
+      ) : (
+        <>
+          <CategoryNav groups={grouped} />
+          <div className="mx-auto max-w-2xl space-y-8 px-4 py-5">
+            {grouped.map(({ category, items: catItems }) => (
+              <section key={category.id} id={`cat-${category.id}`} className="scroll-mt-28">
+                <h2 className="mb-3 text-xl font-extrabold text-gray-900">{category.name}</h2>
+                <div className="space-y-3">
+                  {catItems.map((item) => (
+                    <MenuItemRow
+                      key={item.id}
+                      item={item}
+                      hasOptions={(optionsByItem[item.id] || []).length > 0}
+                      currency={currency}
+                      onOpen={() => setActiveItem(item)}
+                      onQuickAdd={
+                        canOrder
+                          ? () => {
+                              const groups = optionsByItem[item.id] || []
+                              if (groups.length) setActiveItem(item)
+                              else
+                                addToCart(makeLine(item, [], 1))
+                            }
+                          : null
+                      }
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Cart bar */}
+      {canOrder && cartCount > 0 && !cartOpen && !activeItem && (
+        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-2xl px-4 pb-4 safe-bottom">
+          <button
+            onClick={() => setCartOpen(true)}
+            className="flex w-full items-center justify-between rounded-2xl px-5 py-4 text-white shadow-xl transition active:scale-[.99]"
+            style={{ backgroundColor: accent }}
+          >
+            <span className="flex items-center gap-2 font-semibold">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-white/25 text-sm">
+                {cartCount}
+              </span>
+              View cart
+            </span>
+            <span className="font-bold">{formatCurrency(cartTotal, currency)}</span>
+          </button>
+        </div>
+      )}
+
+      {activeItem && (
+        <ItemModal
+          item={activeItem}
+          groups={optionsByItem[activeItem.id] || []}
+          currency={currency}
+          accent={accent}
+          canOrder={canOrder}
+          onClose={() => setActiveItem(null)}
+          onAdd={(line) => {
+            addToCart(line)
+            setActiveItem(null)
+          }}
+        />
+      )}
+
+      {cartOpen && (
+        <CartSheet
+          cart={cart}
+          setCart={setCart}
+          currency={currency}
+          accent={accent}
+          restaurantId={restaurantId}
+          tableId={tableId}
+          onClose={() => setCartOpen(false)}
+          onPlaced={() => {
+            setCart([])
+            setCartOpen(false)
+            navigate(`/r/${restaurantId}/t/${tableId}/status`)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------- cart helpers -- */
+function makeLine(item, options, quantity) {
+  const delta = options.reduce((s, o) => s + Number(o.priceDelta || 0), 0)
+  const unitPrice = Number(item.price) + delta
+  return {
+    lineId: `${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    itemId: item.id,
+    name: item.name,
+    options, // [{ group, value, priceDelta }]
+    quantity,
+    unitPrice,
+    lineTotal: unitPrice * quantity,
+  }
+}
+
+function useCart(restaurantId, tableId) {
+  const key = `tableserve:cart:${restaurantId}:${tableId || 'none'}`
+  const [cart, setCartState] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(key) || '[]')
+    } catch {
+      return []
+    }
+  })
+  const setCart = useCallback(
+    (updater) => {
+      setCartState((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater
+        try {
+          localStorage.setItem(key, JSON.stringify(next))
+        } catch {
+          /* ignore quota errors */
+        }
+        return next
+      })
+    },
+    [key],
+  )
+  return [cart, setCart]
+}
+
+/* --------------------------------------------------------------- header --- */
+function BrandHeader({ restaurant, table, accent }) {
+  return (
+    <header className="text-white" style={{ backgroundColor: accent }}>
+      <div className="mx-auto max-w-2xl px-4 pb-5 pt-6">
+        <div className="flex items-center gap-3">
+          {restaurant.logo_url ? (
+            <img
+              src={imageUrl(restaurant.logo_url)}
+              alt=""
+              className="h-14 w-14 rounded-2xl border-2 border-white/30 object-cover"
+            />
+          ) : (
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/20">
+              <Store className="h-7 w-7" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-extrabold">{restaurant.name}</h1>
+            {restaurant.cuisine && <p className="text-sm text-white/80">{restaurant.cuisine}</p>}
+          </div>
+        </div>
+        {restaurant.description && (
+          <p className="mt-3 text-sm text-white/90">{restaurant.description}</p>
+        )}
+        {table && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">
+            <UtensilsCrossed className="h-4 w-4" /> {table.label}
+          </div>
+        )}
+      </div>
+    </header>
+  )
+}
+
+function CategoryNav({ groups }) {
+  const [active, setActive] = useState(groups[0]?.category.id)
+  const navRef = useRef(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (visible.length) {
+          const id = visible[0].target.id.replace('cat-', '')
+          setActive(id)
+        }
+      },
+      { rootMargin: '-30% 0px -60% 0px', threshold: 0 },
+    )
+    groups.forEach((g) => {
+      const el = document.getElementById(`cat-${g.category.id}`)
+      if (el) observer.observe(el)
+    })
+    return () => observer.disconnect()
+  }, [groups])
+
+  const jump = (id) => {
+    document.getElementById(`cat-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  return (
+    <div className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur">
+      <div ref={navRef} className="no-scrollbar mx-auto flex max-w-2xl gap-2 overflow-x-auto px-4 py-3">
+        {groups.map(({ category }) => (
+          <button
+            key={category.id}
+            onClick={() => jump(category.id)}
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+              active === category.id ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {category.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MenuItemRow({ item, hasOptions, currency, onOpen, onQuickAdd }) {
+  return (
+    <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm">
+      <button onClick={onOpen} className="min-w-0 flex-1 text-left">
+        <p className="font-bold text-gray-900">{item.name}</p>
+        {item.description && (
+          <p className="mt-0.5 line-clamp-2 text-sm text-gray-500">{item.description}</p>
+        )}
+        <p className="mt-1.5 font-semibold text-gray-900">{formatCurrency(item.price, currency)}</p>
+      </button>
+      <div className="relative flex-shrink-0">
+        <button onClick={onOpen} className="block h-24 w-24 overflow-hidden rounded-xl bg-gray-100">
+          {item.image_url ? (
+            <img src={imageUrl(item.image_url)} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="grid h-full w-full place-items-center text-gray-300">
+              <UtensilsCrossed className="h-7 w-7" />
+            </span>
+          )}
+        </button>
+        {onQuickAdd && (
+          <button
+            onClick={onQuickAdd}
+            className="absolute -bottom-2 right-1.5 grid h-9 w-9 place-items-center rounded-full bg-brand text-white shadow-md ring-2 ring-white active:scale-95"
+            aria-label={hasOptions ? 'Choose options' : 'Add to cart'}
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ----------------------------------------------------------- item modal --- */
+function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd }) {
+  const toast = useToast()
+  const [qty, setQty] = useState(1)
+  // selections: { [optionId]: valueId[] }  (single = array of length 0/1)
+  const [selections, setSelections] = useState(() => {
+    const init = {}
+    for (const g of groups) {
+      init[g.id] = g.is_required && g.selection_type === 'single' && g.values[0] ? [g.values[0].id] : []
+    }
+    return init
+  })
+
+  const toggle = (group, valueId) => {
+    setSelections((sel) => {
+      const cur = sel[group.id] || []
+      if (group.selection_type === 'single') return { ...sel, [group.id]: [valueId] }
+      return cur.includes(valueId)
+        ? { ...sel, [group.id]: cur.filter((v) => v !== valueId) }
+        : { ...sel, [group.id]: [...cur, valueId] }
+    })
+  }
+
+  const chosen = useMemo(() => {
+    const out = []
+    for (const g of groups) {
+      for (const vid of selections[g.id] || []) {
+        const v = g.values.find((x) => x.id === vid)
+        if (v) out.push({ group: g.name, value: v.name, priceDelta: Number(v.price_delta) })
+      }
+    }
+    return out
+  }, [groups, selections])
+
+  const unitPrice = Number(item.price) + chosen.reduce((s, o) => s + o.priceDelta, 0)
+
+  const add = () => {
+    // Validate required groups.
+    for (const g of groups) {
+      if (g.is_required && (selections[g.id] || []).length === 0) {
+        toast.error(`Please choose ${g.name}.`)
+        return
+      }
+    }
+    onAdd(makeLine(item, chosen, qty))
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ '--brand': accent }}>
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-white animate-slide-up sm:rounded-3xl">
+        <div className="relative">
+          <div className="h-44 w-full overflow-hidden rounded-t-3xl bg-gray-100">
+            {item.image_url ? (
+              <img src={imageUrl(item.image_url)} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="grid h-full w-full place-items-center text-gray-300">
+                <UtensilsCrossed className="h-10 w-10" />
+              </div>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-gray-700 shadow"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <h3 className="text-xl font-extrabold text-gray-900">{item.name}</h3>
+          {item.description && <p className="mt-1 text-sm text-gray-500">{item.description}</p>}
+          <p className="mt-2 text-lg font-bold text-gray-900">{formatCurrency(item.price, currency)}</p>
+
+          {groups.map((g) => (
+            <div key={g.id} className="mt-5">
+              <div className="mb-2 flex items-center gap-2">
+                <h4 className="font-bold text-gray-900">{g.name}</h4>
+                <span className="text-xs text-gray-400">
+                  {g.is_required ? 'Required' : 'Optional'} ·{' '}
+                  {g.selection_type === 'single' ? 'choose one' : 'choose any'}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {g.values.map((v) => {
+                  const isSel = (selections[g.id] || []).includes(v.id)
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => toggle(g, v.id)}
+                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
+                        isSel ? 'border-brand bg-gray-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span
+                          className={`grid h-5 w-5 place-items-center border ${
+                            g.selection_type === 'single' ? 'rounded-full' : 'rounded-md'
+                          } ${isSel ? 'border-brand bg-brand text-white' : 'border-gray-300'}`}
+                        >
+                          {isSel && <span className="h-2 w-2 rounded-sm bg-white" />}
+                        </span>
+                        <span className="font-medium text-gray-800">{v.name}</span>
+                      </span>
+                      {Number(v.price_delta) !== 0 && (
+                        <span className="text-sm text-gray-500">
+                          +{formatCurrency(v.price_delta, currency)}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* footer */}
+        <div className="border-t border-gray-100 px-5 py-4 safe-bottom">
+          {canOrder ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-xl bg-gray-100 px-2 py-1.5">
+                <button
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-white text-gray-700 shadow-sm"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="w-5 text-center font-bold">{qty}</span>
+                <button
+                  onClick={() => setQty((q) => q + 1)}
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-white text-gray-700 shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <button
+                onClick={add}
+                className="flex flex-1 items-center justify-between rounded-xl px-5 py-3 font-bold text-white"
+                style={{ backgroundColor: accent }}
+              >
+                <span>Add to cart</span>
+                <span>{formatCurrency(unitPrice * qty, currency)}</span>
+              </button>
+            </div>
+          ) : (
+            <p className="text-center text-sm text-gray-500">
+              Scan a table’s QR code to order.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ----------------------------------------------------------- cart sheet --- */
+function CartSheet({ cart, setCart, currency, accent, restaurantId, tableId, onClose, onPlaced }) {
+  const toast = useToast()
+  const [notes, setNotes] = useState('')
+  const [placing, setPlacing] = useState(false)
+
+  const total = cart.reduce((s, l) => s + l.lineTotal, 0)
+
+  const changeQty = (lineId, delta) => {
+    setCart((c) =>
+      c
+        .map((l) =>
+          l.lineId === lineId
+            ? { ...l, quantity: l.quantity + delta, lineTotal: l.unitPrice * (l.quantity + delta) }
+            : l,
+        )
+        .filter((l) => l.quantity > 0),
+    )
+  }
+
+  const placeOrder = async () => {
+    if (cart.length === 0) return
+    setPlacing(true)
+    const payload = cart.map((l) => ({
+      menu_item_id: l.itemId,
+      name_snapshot: l.name,
+      unit_price: l.unitPrice,
+      quantity: l.quantity,
+      selected_options: l.options.map((o) => ({
+        group: o.group,
+        value: o.value,
+        price_delta: o.priceDelta,
+      })),
+      line_total: l.lineTotal,
+    }))
+    const { error } = await supabase.rpc('place_order', {
+      p_restaurant_id: restaurantId,
+      p_table_id: tableId || null,
+      p_items: payload,
+      p_notes: notes.trim() || null,
+    })
+    setPlacing(false)
+    if (error) {
+      toast.error(error.message || 'Could not place order.')
+      return
+    }
+    toast.success('Order placed! 🎉')
+    onPlaced()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ '--brand': accent }}>
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-white animate-slide-up sm:rounded-3xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+          <h3 className="text-lg font-bold text-gray-900">Your order</h3>
+          <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {cart.length === 0 ? (
+            <p className="py-10 text-center text-sm text-gray-400">Your cart is empty.</p>
+          ) : (
+            <div className="space-y-3">
+              {cart.map((l) => (
+                <div key={l.lineId} className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900">{l.name}</p>
+                    {l.options.length > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {l.options.map((o) => o.value).join(', ')}
+                      </p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-500">
+                      {formatCurrency(l.unitPrice, currency)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-1.5 py-1">
+                    <button
+                      onClick={() => changeQty(l.lineId, -1)}
+                      className="grid h-7 w-7 place-items-center rounded-md bg-white text-gray-700 shadow-sm"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="w-4 text-center text-sm font-bold">{l.quantity}</span>
+                    <button
+                      onClick={() => changeQty(l.lineId, 1)}
+                      className="grid h-7 w-7 place-items-center rounded-md bg-white text-gray-700 shadow-sm"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <span className="w-16 text-right font-bold text-gray-900">
+                    {formatCurrency(l.lineTotal, currency)}
+                  </span>
+                </div>
+              ))}
+
+              <div className="pt-2">
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Add a note for the kitchen (allergies, no onions…)"
+                  className="w-full resize-none rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {cart.length > 0 && (
+          <div className="border-t border-gray-100 px-5 py-4 safe-bottom">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-gray-500">Total</span>
+              <span className="text-xl font-extrabold text-gray-900">
+                {formatCurrency(total, currency)}
+              </span>
+            </div>
+            <button
+              onClick={placeOrder}
+              disabled={placing}
+              className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-bold text-white disabled:opacity-60"
+              style={{ backgroundColor: accent }}
+            >
+              {placing ? 'Placing order…' : 'Place order'}
+              {!placing && <ArrowRight className="h-5 w-5" />}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* --------------------------------------------------------------- screens -- */
+function SessionErrorScreen({ error }) {
+  return (
+    <CenteredCard
+      icon={AlertTriangle}
+      title="Couldn’t start your session"
+      text={
+        /anonymous/i.test(error?.message || '')
+          ? 'Anonymous ordering is disabled. The restaurant needs to enable “Anonymous sign-ins” in Supabase Auth settings.'
+          : error?.message || 'Please try again.'
+      }
+    />
+  )
+}
+
+function NotFoundScreen() {
+  return <CenteredCard icon={Store} title="Restaurant not found" text="This link may be invalid or the restaurant is no longer available." />
+}
+
+function CenteredCard({ icon: Icon, title, text, inline }) {
+  const body = (
+    <div className="w-full max-w-sm rounded-2xl border border-gray-100 bg-white p-7 text-center shadow-sm">
+      <div className="mx-auto mb-3 inline-flex rounded-2xl bg-gray-100 p-3 text-gray-400">
+        <Icon className="h-7 w-7" />
+      </div>
+      <h1 className="text-lg font-bold text-gray-900">{title}</h1>
+      <p className="mt-1 text-sm text-gray-500">{text}</p>
+    </div>
+  )
+  if (inline) return body
+  return <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-5">{body}</div>
+}
