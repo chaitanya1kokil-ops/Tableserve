@@ -11,15 +11,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-})
-
 export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey)
+
+// createClient throws if the URL/key are empty, which would crash the whole app
+// to a blank screen before <SetupNotice /> can render. Fall back to a harmless
+// placeholder when config is missing so the app boots and shows the setup screen.
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  },
+)
 
 /**
  * Public URL for a file stored in the restaurant-images bucket.
