@@ -8,40 +8,28 @@ import {
   Maximize,
   Clock,
   Utensils,
-  CheckCircle2,
+  Check,
+  Play,
   StickyNote,
+  PackageCheck,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
-import { nextStatus } from '../../lib/constants'
 
-// Columns the kitchen cares about (cooking pipeline). "served"/"completed" leave the board.
-const COLUMNS = [
-  {
-    key: 'new',
-    title: 'New',
-    accent: 'text-sky-300',
-    ring: 'border-sky-500/40',
-    action: 'Start cooking',
-  },
-  {
-    key: 'preparing',
-    title: 'Preparing',
-    accent: 'text-amber-300',
-    ring: 'border-amber-500/40',
-    action: 'Mark ready',
-  },
-  {
-    key: 'ready',
-    title: 'Ready · for pickup',
-    accent: 'text-emerald-300',
-    ring: 'border-emerald-500/40',
-    action: 'Picked up',
-  },
-]
+// Per-item cooking flow. `ready` is the end of the kitchen's job for that item.
+const ITEM_NEXT = { new: 'preparing', preparing: 'ready' }
 
-const KITCHEN_STATUSES = ['new', 'preparing', 'ready']
+const ITEM_STYLE = {
+  new: { pill: 'bg-sky-500/15 text-sky-300', label: 'Queued' },
+  preparing: { pill: 'bg-amber-500/15 text-amber-300', label: 'Cooking' },
+  ready: { pill: 'bg-emerald-500/15 text-emerald-300', label: 'Ready' },
+}
+
+const ITEM_ACTION = { new: { label: 'Start', icon: Play }, preparing: { label: 'Ready', icon: Check } }
+
+// Orders leave the board once served/completed/cancelled.
+const ACTIVE_STATUSES = ['new', 'preparing', 'ready']
 
 export default function Kitchen() {
   const { restaurant } = useAuth()
@@ -51,14 +39,14 @@ export default function Kitchen() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [muted, setMuted] = useState(false)
-  const [, forceTick] = useState(0) // re-render every 15s so elapsed timers stay fresh
+  const [, forceTick] = useState(0) // refresh elapsed timers periodically
 
   const reloadTimer = useRef(null)
   const audioRef = useRef(null)
   const seenNewIds = useRef(new Set())
   const firstLoad = useRef(true)
 
-  // --- Sound: a short two-tone chime generated with the Web Audio API. ---
+  // --- Sound: a short two-tone chime via the Web Audio API (no asset needed). ---
   const ensureAudio = useCallback(() => {
     if (!audioRef.current) {
       const Ctx = window.AudioContext || window.webkitAudioContext
@@ -92,7 +80,7 @@ export default function Kitchen() {
       .from('orders')
       .select('*, table:tables(label), items:order_items(*)')
       .eq('restaurant_id', rid)
-      .in('status', KITCHEN_STATUSES)
+      .in('status', ACTIVE_STATUSES)
       .order('created_at', { ascending: true }) // FIFO — oldest first
     if (error) {
       setLoading(false)
@@ -100,7 +88,6 @@ export default function Kitchen() {
     }
     const list = data || []
 
-    // Detect brand-new orders that arrived since last load, then chime.
     let arrivals = 0
     for (const o of list) {
       if (o.status === 'new' && !seenNewIds.current.has(o.id)) {
@@ -145,11 +132,50 @@ export default function Kitchen() {
     }
   }, [rid, load, scheduleReload])
 
-  const advance = async (order) => {
-    const ns = nextStatus(order.status)
+  // Advance a single item (new -> preparing -> ready). The DB trigger rolls the
+  // change up to the order status, so the reception board + customer stay in sync.
+  const advanceItem = async (order, item) => {
+    const cur = item.status || 'new'
+    const ns = ITEM_NEXT[cur]
     if (!ns) return
-    setOrders((list) => list.filter((o) => o.id !== order.id || KITCHEN_STATUSES.includes(ns)))
-    const { error } = await supabase.from('orders').update({ status: ns }).eq('id', order.id)
+    setOrders((list) =>
+      list.map((o) =>
+        o.id === order.id
+          ? { ...o, items: o.items.map((it) => (it.id === item.id ? { ...it, status: ns } : it)) }
+          : o,
+      ),
+    )
+    const { error } = await supabase.from('order_items').update({ status: ns }).eq('id', item.id)
+    if (error) {
+      toast.error('Could not update item.')
+      load()
+    }
+  }
+
+  // Start every not-yet-started item in one tap.
+  const startAll = async (order) => {
+    setOrders((list) =>
+      list.map((o) =>
+        o.id === order.id
+          ? { ...o, items: o.items.map((it) => (it.status === 'ready' ? it : { ...it, status: 'preparing' })) }
+          : o,
+      ),
+    )
+    const { error } = await supabase
+      .from('order_items')
+      .update({ status: 'preparing' })
+      .eq('order_id', order.id)
+      .eq('status', 'new')
+    if (error) {
+      toast.error('Could not update items.')
+      load()
+    }
+  }
+
+  // Whole order handed off to the waiter -> leaves the board.
+  const pickup = async (order) => {
+    setOrders((list) => list.filter((o) => o.id !== order.id))
+    const { error } = await supabase.from('orders').update({ status: 'served' }).eq('id', order.id)
     if (error) {
       toast.error('Could not update order.')
       load()
@@ -157,24 +183,17 @@ export default function Kitchen() {
   }
 
   const toggleMute = () => {
-    ensureAudio() // this click is the user gesture that unlocks audio
+    ensureAudio() // this click unlocks browser audio
     setMuted((m) => !m)
   }
 
   const goFullscreen = () => {
-    const el = document.documentElement
     if (document.fullscreenElement) document.exitFullscreen?.()
-    else el.requestFullscreen?.()
+    else document.documentElement.requestFullscreen?.()
   }
-
-  const grouped = COLUMNS.map((c) => ({
-    ...c,
-    list: orders.filter((o) => o.status === c.key),
-  }))
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-slate-100">
-      {/* Header */}
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-900/80 px-4 py-3 backdrop-blur sm:px-6">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white">
@@ -187,7 +206,7 @@ export default function Kitchen() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              {restaurant.name} · live
+              {restaurant.name} · {orders.length} active
             </p>
           </div>
         </div>
@@ -220,37 +239,24 @@ export default function Kitchen() {
 
       {loading ? (
         <div className="grid min-h-[60vh] place-items-center text-slate-400">Loading kitchen…</div>
+      ) : orders.length === 0 ? (
+        <div className="grid min-h-[60vh] place-items-center px-6 text-center">
+          <div>
+            <ChefHat className="mx-auto h-12 w-12 text-slate-700" />
+            <p className="mt-3 text-lg font-bold text-slate-300">All caught up</p>
+            <p className="text-sm text-slate-500">New orders appear here instantly.</p>
+          </div>
+        </div>
       ) : (
-        <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-3">
-          {grouped.map((col) => (
-            <section key={col.key} className="flex flex-col">
-              <div className="mb-3 flex items-center justify-between px-1">
-                <h2 className={`text-sm font-bold uppercase tracking-wider ${col.accent}`}>
-                  {col.title}
-                </h2>
-                <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold text-slate-200">
-                  {col.list.length}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {col.list.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 py-10 text-center text-sm text-slate-500">
-                    Nothing here
-                  </div>
-                ) : (
-                  col.list.map((order) => (
-                    <Ticket
-                      key={order.id}
-                      order={order}
-                      ring={col.ring}
-                      actionLabel={col.action}
-                      onAdvance={() => advance(order)}
-                    />
-                  ))
-                )}
-              </div>
-            </section>
+        <div className="grid items-start gap-4 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
+          {orders.map((order) => (
+            <Ticket
+              key={order.id}
+              order={order}
+              onAdvanceItem={(it) => advanceItem(order, it)}
+              onStartAll={() => startAll(order)}
+              onPickup={() => pickup(order)}
+            />
           ))}
         </div>
       )}
@@ -258,7 +264,7 @@ export default function Kitchen() {
   )
 }
 
-// Elapsed minutes -> urgency color. Fresh (green) -> warning (amber) -> late (red, pulsing).
+// Elapsed minutes -> urgency color. Fresh (green) -> warning (amber) -> late (red).
 function elapsed(iso) {
   const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000))
   let tone = 'text-emerald-300'
@@ -272,16 +278,26 @@ function elapsed(iso) {
   return { label: mins < 1 ? 'just now' : `${mins} min`, tone, pulse }
 }
 
-function Ticket({ order, ring, actionLabel, onAdvance }) {
+function Ticket({ order, onAdvanceItem, onStartAll, onPickup }) {
   const t = elapsed(order.created_at)
   const items = order.items || []
+  const readyCount = items.filter((it) => (it.status || 'new') === 'ready').length
+  const hasNew = items.some((it) => (it.status || 'new') === 'new')
+  const allReady = items.length > 0 && readyCount === items.length
 
   return (
-    <div className={`rounded-2xl border ${ring} bg-slate-900 shadow-lg`}>
+    <div
+      className={`rounded-2xl border bg-slate-900 shadow-lg ${
+        allReady ? 'border-emerald-500/50' : 'border-white/10'
+      }`}
+    >
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2 text-lg font-extrabold">
           <Utensils className="h-5 w-5 text-slate-400" />
           {order.table?.label || 'No table'}
+          <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-slate-300">
+            {readyCount}/{items.length} ready
+          </span>
         </div>
         <div className={`flex items-center gap-1.5 text-sm font-bold ${t.tone} ${t.pulse}`}>
           <Clock className="h-4 w-4" />
@@ -289,20 +305,51 @@ function Ticket({ order, ring, actionLabel, onAdvance }) {
         </div>
       </div>
 
-      <ul className="space-y-2.5 px-4 py-3">
-        {items.map((it) => (
-          <li key={it.id}>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-black text-brand">{it.quantity}×</span>
-              <span className="text-lg font-bold leading-tight text-white">{it.name_snapshot}</span>
-            </div>
-            {Array.isArray(it.selected_options) && it.selected_options.length > 0 && (
-              <p className="pl-8 text-sm text-slate-300">
-                {it.selected_options.map((o) => `${o.group}: ${o.value}`).join(' · ')}
-              </p>
-            )}
-          </li>
-        ))}
+      <ul className="divide-y divide-white/5 px-2 py-1">
+        {items.map((it) => {
+          const status = it.status || 'new'
+          const style = ITEM_STYLE[status]
+          const action = ITEM_ACTION[status]
+          const done = status === 'ready'
+          return (
+            <li
+              key={it.id}
+              className={`flex items-center gap-3 px-2 py-2.5 ${done ? 'opacity-60' : ''}`}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-black text-brand">{it.quantity}×</span>
+                  <span className="text-lg font-bold leading-tight text-white">
+                    {it.name_snapshot}
+                  </span>
+                </div>
+                {Array.isArray(it.selected_options) && it.selected_options.length > 0 && (
+                  <p className="pl-8 text-sm text-slate-300">
+                    {it.selected_options.map((o) => `${o.group}: ${o.value}`).join(' · ')}
+                  </p>
+                )}
+              </div>
+
+              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${style.pill}`}>
+                {style.label}
+              </span>
+
+              {action ? (
+                <button
+                  onClick={() => onAdvanceItem(it)}
+                  className="flex items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
+                >
+                  <action.icon className="h-4 w-4" />
+                  {action.label}
+                </button>
+              ) : (
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                  <Check className="h-5 w-5" />
+                </span>
+              )}
+            </li>
+          )
+        })}
       </ul>
 
       {order.notes && (
@@ -313,13 +360,24 @@ function Ticket({ order, ring, actionLabel, onAdvance }) {
       )}
 
       <div className="border-t border-white/10 p-3">
-        <button
-          onClick={onAdvance}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-base font-bold text-white transition hover:brightness-110 active:scale-[0.99]"
-        >
-          <CheckCircle2 className="h-5 w-5" />
-          {actionLabel}
-        </button>
+        {allReady ? (
+          <button
+            onClick={onPickup}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-base font-bold text-white transition hover:brightness-110 active:scale-[0.99]"
+          >
+            <PackageCheck className="h-5 w-5" />
+            Order ready · hand off
+          </button>
+        ) : (
+          <button
+            onClick={onStartAll}
+            disabled={!hasNew}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-base font-bold text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Play className="h-5 w-5" />
+            Start all items
+          </button>
+        )}
       </div>
     </div>
   )
