@@ -1,53 +1,96 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
+const MUTE_KEY = 'tableserve:calls:muted'
+
 /**
  * Live feed of PENDING "call server" requests for a restaurant.
- * Uses realtime for instant updates, with a polling fallback so it stays
- * fresh even if realtime delivery is delayed. Chimes when a new call arrives.
+ * Realtime + a 15s polling fallback, and a doorbell chime when a new call
+ * arrives. Exposes a mute toggle (persisted) that doubles as the user gesture
+ * browsers require before audio can play.
  *
- * Returns { calls, resolve }.
+ * Returns { calls, resolve, muted, toggleMute }.
  */
 export function useServerCalls(restaurantId) {
   const [calls, setCalls] = useState([])
+  const [muted, setMuted] = useState(() => {
+    try {
+      return localStorage.getItem(MUTE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
 
   const debounce = useRef(null)
   const audioRef = useRef(null)
   const knownIds = useRef(new Set())
   const firstLoad = useRef(true)
-
-  // Unlock + play a short chime (browsers require a user gesture to start audio,
-  // so we lazily create the context on the first pointer interaction).
+  const mutedRef = useRef(muted)
   useEffect(() => {
-    const unlock = () => {
-      if (!audioRef.current) {
-        const Ctx = window.AudioContext || window.webkitAudioContext
-        if (Ctx) audioRef.current = new Ctx()
-      }
-      audioRef.current?.resume?.()
+    mutedRef.current = muted
+  }, [muted])
+
+  const ensureAudio = useCallback(() => {
+    if (!audioRef.current) {
+      const Ctx = window.AudioContext || window.webkitAudioContext
+      if (Ctx) audioRef.current = new Ctx()
     }
-    window.addEventListener('pointerdown', unlock, { once: true })
-    return () => window.removeEventListener('pointerdown', unlock)
+    audioRef.current?.resume?.()
+    return audioRef.current
   }, [])
 
-  const chime = useCallback(() => {
+  // Unlock audio on the first user interaction (browser autoplay policy).
+  useEffect(() => {
+    const unlock = () => ensureAudio()
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [ensureAudio])
+
+  // Doorbell-style "ding-dong".
+  const playChime = useCallback(() => {
     const ctx = audioRef.current
     if (!ctx || ctx.state !== 'running') return
     const now = ctx.currentTime
-    ;[988, 1319].forEach((freq, i) => {
-      const t = now + i * 0.18
+    ;[
+      { f: 784, t: 0 }, // G5
+      { f: 587, t: 0.22 }, // D5
+    ].forEach(({ f, t }) => {
+      const start = now + t
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
-      osc.type = 'sine'
-      osc.frequency.value = freq
-      gain.gain.setValueAtTime(0.0001, t)
-      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.17)
+      osc.type = 'triangle'
+      osc.frequency.value = f
+      gain.gain.setValueAtTime(0.0001, start)
+      gain.gain.exponentialRampToValueAtTime(0.5, start + 0.03)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.4)
       osc.connect(gain).connect(ctx.destination)
-      osc.start(t)
-      osc.stop(t + 0.18)
+      osc.start(start)
+      osc.stop(start + 0.42)
     })
   }, [])
+
+  const chime = useCallback(() => {
+    if (mutedRef.current) return
+    playChime()
+  }, [playChime])
+
+  const toggleMute = useCallback(() => {
+    ensureAudio() // this click is the gesture that unlocks browser audio
+    setMuted((m) => {
+      const next = !m
+      try {
+        localStorage.setItem(MUTE_KEY, next ? '1' : '0')
+      } catch {
+        /* ignore */
+      }
+      if (!next) setTimeout(playChime, 80) // preview the sound when switching on
+      return next
+    })
+  }, [ensureAudio, playChime])
 
   const load = useCallback(async () => {
     if (!restaurantId) return
@@ -101,7 +144,6 @@ export function useServerCalls(restaurantId) {
       )
       .subscribe()
 
-    // Fallback poll so calls appear even if realtime is delayed/unavailable.
     const poll = setInterval(load, 15000)
 
     return () => {
@@ -111,5 +153,5 @@ export function useServerCalls(restaurantId) {
     }
   }, [restaurantId, load])
 
-  return { calls, resolve }
+  return { calls, resolve, muted, toggleMute }
 }

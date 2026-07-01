@@ -11,6 +11,8 @@ import {
   ChefHat,
   Bell,
   X,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { imageUrl } from '../../lib/supabase'
@@ -30,7 +32,7 @@ const NAV = [
 export default function DashboardLayout() {
   const { restaurant, profile, signOut } = useAuth()
   const status = RESTAURANT_STATUS[restaurant?.status] || RESTAURANT_STATUS.active
-  const { calls, resolve } = useServerCalls(restaurant?.id)
+  const { calls, resolve, muted, toggleMute } = useServerCalls(restaurant?.id)
   const newOrders = useNewOrderCount(restaurant?.id)
 
   return (
@@ -57,6 +59,17 @@ export default function DashboardLayout() {
         </nav>
 
         <div className="border-t border-gray-100 p-3">
+          <button
+            onClick={toggleMute}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          >
+            {muted ? (
+              <VolumeX className="h-4 w-4 text-gray-400" />
+            ) : (
+              <Volume2 className="h-4 w-4 text-emerald-600" />
+            )}
+            {muted ? 'Call sound off' : 'Call sound on'}
+          </button>
           <div className="px-2 py-1.5 text-xs text-gray-500">
             {profile?.full_name || profile?.email}
           </div>
@@ -83,9 +96,22 @@ export default function DashboardLayout() {
             )}
             <span className="line-clamp-1">{restaurant?.name}</span>
           </div>
-          <button onClick={signOut} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
-            <LogOut className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleMute}
+              title={muted ? 'Call sound off' : 'Call sound on'}
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+            >
+              {muted ? (
+                <VolumeX className="h-5 w-5 text-gray-400" />
+              ) : (
+                <Volume2 className="h-5 w-5 text-emerald-600" />
+              )}
+            </button>
+            <button onClick={signOut} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+              <LogOut className="h-5 w-5" />
+            </button>
+          </div>
         </header>
 
         {calls.length > 0 && (
