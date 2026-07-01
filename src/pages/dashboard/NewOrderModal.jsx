@@ -132,11 +132,25 @@ export default function NewOrderModal({ restaurant, onClose, onPlaced }) {
         {loading ? (
           <FullPageSpinner label="Loading menu…" />
         ) : (
-          <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr,340px]">
-            {/* Menu picker */}
-            <div className="flex min-h-0 flex-col border-r border-gray-100">
-              <div className="border-b border-gray-100 p-3">
-                <div className="relative">
+          <>
+            {/* Table picker — full-width, on top for both mobile & desktop */}
+            <div className="border-b border-gray-100 p-3">
+              <label className="mb-1 block text-xs font-semibold text-gray-600">Table</label>
+              <Select value={tableId} onChange={(e) => setTableId(e.target.value)}>
+                <option value="">Select a table…</option>
+                {tables.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Content: single scroll on mobile, two columns on desktop */}
+            <div className="min-h-0 flex-1 overflow-y-auto lg:flex lg:overflow-hidden">
+              {/* Menu */}
+              <div className="p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:border-r lg:border-gray-100">
+                <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     value={query}
@@ -145,62 +159,48 @@ export default function NewOrderModal({ restaurant, onClose, onPlaced }) {
                     className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
                 </div>
-              </div>
-              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
-                {grouped.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-gray-400">No items found.</p>
-                ) : (
-                  grouped.map(({ category, items: catItems }) => (
-                    <div key={category.id}>
-                      <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">
-                        {category.name}
-                      </h3>
-                      <div className="space-y-2">
-                        {catItems.map((item) => (
-                          <button
-                            key={item.id}
-                            onClick={() => quickAdd(item)}
-                            className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2.5 text-left transition hover:border-brand/40 hover:bg-brand/5"
-                          >
-                            <span className="min-w-0">
-                              <span className="block truncate text-sm font-semibold text-gray-900">
-                                {item.name}
+                <div className="space-y-5">
+                  {grouped.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-gray-400">No items found.</p>
+                  ) : (
+                    grouped.map(({ category, items: catItems }) => (
+                      <div key={category.id}>
+                        <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+                          {category.name}
+                        </h3>
+                        <div className="space-y-2">
+                          {catItems.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => quickAdd(item)}
+                              className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2.5 text-left transition hover:border-brand/40 hover:bg-brand/5"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-semibold text-gray-900">
+                                  {item.name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {formatCurrency(item.price, currency)}
+                                  {(optionsByItem[item.id] || []).length > 0 && ' · options'}
+                                </span>
                               </span>
-                              <span className="text-xs text-gray-500">
-                                {formatCurrency(item.price, currency)}
-                                {(optionsByItem[item.id] || []).length > 0 && ' · options'}
+                              <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-brand text-white">
+                                <Plus className="h-4 w-4" />
                               </span>
-                            </span>
-                            <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-brand text-white">
-                              <Plus className="h-4 w-4" />
-                            </span>
-                          </button>
-                        ))}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Order summary */}
-            <div className="flex min-h-0 flex-col">
-              <div className="border-b border-gray-100 p-3">
-                <label className="mb-1 block text-xs font-semibold text-gray-600">Table</label>
-                <Select value={tableId} onChange={(e) => setTableId(e.target.value)}>
-                  <option value="">Select a table…</option>
-                  {tables.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </Select>
+                    ))
+                  )}
+                </div>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              {/* Cart */}
+              <div className="border-t border-gray-100 p-3 lg:min-h-0 lg:w-[340px] lg:overflow-y-auto lg:border-t-0">
                 {cart.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-gray-400">
-                    Tap items on the left to build the order.
+                  <p className="py-8 text-center text-sm text-gray-400">
+                    Tap items above to build the order.
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -253,26 +253,29 @@ export default function NewOrderModal({ restaurant, onClose, onPlaced }) {
                   </div>
                 )}
               </div>
-
-              <div className="border-t border-gray-100 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">{cartCount} item{cartCount === 1 ? '' : 's'}</span>
-                  <span className="text-lg font-extrabold text-gray-900">
-                    {formatCurrency(cartTotal, currency)}
-                  </span>
-                </div>
-                <Button
-                  className="w-full"
-                  size="lg"
-                  loading={placing}
-                  disabled={cart.length === 0 || !tableId}
-                  onClick={place}
-                >
-                  Place order
-                </Button>
-              </div>
             </div>
-          </div>
+
+            {/* Sticky action bar — full width, visible on every screen size */}
+            <div className="border-t border-gray-100 p-3 safe-bottom">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm text-gray-500">
+                  {cartCount} item{cartCount === 1 ? '' : 's'}
+                </span>
+                <span className="text-lg font-extrabold text-gray-900">
+                  {formatCurrency(cartTotal, currency)}
+                </span>
+              </div>
+              <Button
+                className="w-full"
+                size="lg"
+                loading={placing}
+                disabled={cart.length === 0 || !tableId}
+                onClick={place}
+              >
+                Place order
+              </Button>
+            </div>
+          </>
         )}
       </div>
 
@@ -378,7 +381,7 @@ function ItemOptions({ item, groups, currency, onCancel, onAdd }) {
           ))}
         </div>
 
-        <div className="sticky bottom-0 flex items-center gap-3 border-t border-gray-100 bg-white p-4">
+        <div className="sticky bottom-0 flex items-center gap-3 border-t border-gray-100 bg-white p-4 safe-bottom">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
