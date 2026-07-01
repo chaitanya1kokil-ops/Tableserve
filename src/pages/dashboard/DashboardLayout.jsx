@@ -10,12 +10,13 @@ import {
   AlertTriangle,
   ChefHat,
   Bell,
+  X,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { imageUrl } from '../../lib/supabase'
 import { RESTAURANT_STATUS } from '../../lib/constants'
-import { timeAgo } from '../../lib/format'
 import { useServerCalls } from '../../hooks/useServerCalls'
+import { useNewOrderCount } from '../../hooks/useNewOrderCount'
 
 const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard },
@@ -30,6 +31,7 @@ export default function DashboardLayout() {
   const { restaurant, profile, signOut } = useAuth()
   const status = RESTAURANT_STATUS[restaurant?.status] || RESTAURANT_STATUS.active
   const { calls, resolve } = useServerCalls(restaurant?.id)
+  const newOrders = useNewOrderCount(restaurant?.id)
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 lg:flex">
@@ -49,7 +51,7 @@ export default function DashboardLayout() {
             <SideLink
               key={item.to}
               item={item}
-              badge={item.to === '/dashboard/orders' ? calls.length : 0}
+              badge={item.to === '/dashboard/orders' ? newOrders : 0}
             />
           ))}
         </nav>
@@ -88,26 +90,27 @@ export default function DashboardLayout() {
 
         {calls.length > 0 && (
           <div className="z-20 border-b border-orange-200 bg-orange-50 lg:sticky lg:top-0">
-            <div className="mx-auto max-w-5xl space-y-2 px-4 py-3 lg:px-8">
-              {calls.map((c) => (
-                <div key={c.id} className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-orange-800">
-                    <Bell className="h-5 w-5 flex-shrink-0 animate-bounce text-orange-500" />
-                    <span className="truncate">
-                      <strong>{c.table?.label || 'A table'}</strong> is asking for a server
-                    </span>
-                    <span className="flex-shrink-0 text-xs text-orange-400">
-                      · {timeAgo(c.created_at)}
-                    </span>
-                  </div>
+            <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 lg:px-8">
+              <span className="flex flex-shrink-0 items-center gap-2 text-sm font-semibold text-orange-800">
+                <Bell className="h-5 w-5 animate-bounce text-orange-500" />
+                <span className="hidden sm:inline">
+                  {calls.length === 1 ? '1 table needs a server' : `${calls.length} tables need a server`}
+                </span>
+              </span>
+              {/* Chips scroll horizontally, so the bar stays one line no matter how many. */}
+              <div className="flex flex-1 items-center gap-2 overflow-x-auto">
+                {calls.map((c) => (
                   <button
+                    key={c.id}
                     onClick={() => resolve(c)}
-                    className="flex-shrink-0 rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-100"
+                    title="Tap to resolve"
+                    className="flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-orange-300 bg-white py-1 pl-3 pr-2 text-sm font-semibold text-orange-700 transition hover:bg-orange-100"
                   >
-                    Resolve
+                    {c.table?.label || 'Table'}
+                    <X className="h-4 w-4 text-orange-400" />
                   </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -142,9 +145,9 @@ export default function DashboardLayout() {
           >
             <span className="relative">
               <item.icon className="h-5 w-5" />
-              {item.to === '/dashboard/orders' && calls.length > 0 && (
-                <span className="absolute -right-2 -top-1 grid h-4 min-w-[1rem] place-items-center rounded-full bg-orange-500 px-1 text-[10px] font-bold text-white">
-                  {calls.length}
+              {item.to === '/dashboard/orders' && newOrders > 0 && (
+                <span className="absolute -right-2 -top-1 grid h-4 min-w-[1rem] place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">
+                  {newOrders}
                 </span>
               )}
             </span>
@@ -170,7 +173,7 @@ function SideLink({ item, badge = 0 }) {
       <item.icon className="h-5 w-5" />
       <span className="flex-1">{item.label}</span>
       {badge > 0 && (
-        <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-orange-500 px-1 text-xs font-bold text-white">
+        <span className="grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-white px-1 text-xs font-bold text-brand shadow-sm ring-1 ring-black/5">
           {badge}
         </span>
       )}
