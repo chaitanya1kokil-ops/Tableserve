@@ -8,10 +8,12 @@ import {
   ArrowRight,
   Store,
   AlertTriangle,
+  Bell,
 } from 'lucide-react'
 import { supabase, imageUrl } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/format'
 import { useCustomerSession } from '../../hooks/useCustomerSession'
+import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { Button, FullPageSpinner } from '../../components/ui'
 
@@ -20,6 +22,7 @@ export default function CustomerMenu() {
   const navigate = useNavigate()
   const toast = useToast()
   const { ready, error: sessionError } = useCustomerSession()
+  const { session } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [restaurant, setRestaurant] = useState(null)
@@ -32,6 +35,7 @@ export default function CustomerMenu() {
   const [cart, setCart] = useCart(restaurantId, tableId)
   const [activeItem, setActiveItem] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
+  const [calling, setCalling] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -102,6 +106,19 @@ export default function CustomerMenu() {
     toast.success('Added to cart')
   }
 
+  const callServer = async () => {
+    if (calling) return
+    setCalling(true)
+    const { error } = await supabase.from('server_calls').insert({
+      restaurant_id: restaurantId,
+      table_id: tableId,
+      customer_id: session?.user?.id,
+    })
+    setCalling(false)
+    if (error) toast.error('Could not reach the server. Please try again.')
+    else toast.success('Your server has been notified 🙌')
+  }
+
   // --- gates -----------------------------------------------------------------
   if (sessionError) return <SessionErrorScreen error={sessionError} />
   if (!ready || loading) return <FullPageSpinner label="Loading menu…" />
@@ -125,7 +142,14 @@ export default function CustomerMenu() {
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-28" style={{ '--brand': accent }}>
-      <BrandHeader restaurant={restaurant} table={table} accent={accent} />
+      <BrandHeader
+        restaurant={restaurant}
+        table={table}
+        accent={accent}
+        canCall={canOrder}
+        calling={calling}
+        onCall={callServer}
+      />
 
       {!tableId && (
         <div className="mx-auto max-w-2xl px-4 pt-3">
@@ -270,7 +294,7 @@ function useCart(restaurantId, tableId) {
 }
 
 /* --------------------------------------------------------------- header --- */
-function BrandHeader({ restaurant, table, accent }) {
+function BrandHeader({ restaurant, table, accent, canCall, calling, onCall }) {
   return (
     <header className="text-white" style={{ backgroundColor: accent }}>
       <div className="mx-auto max-w-2xl px-4 pb-5 pt-6">
@@ -295,8 +319,20 @@ function BrandHeader({ restaurant, table, accent }) {
           <p className="mt-3 text-sm text-white/90">{restaurant.description}</p>
         )}
         {table && (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">
-            <UtensilsCrossed className="h-4 w-4" /> {table.label}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">
+              <UtensilsCrossed className="h-4 w-4" /> {table.label}
+            </span>
+            {canCall && (
+              <button
+                onClick={onCall}
+                disabled={calling}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-bold shadow-sm transition active:scale-95 disabled:opacity-60"
+                style={{ color: accent }}
+              >
+                <Bell className="h-4 w-4" /> {calling ? 'Calling…' : 'Call server'}
+              </button>
+            )}
           </div>
         )}
       </div>
