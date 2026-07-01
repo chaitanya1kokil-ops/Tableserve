@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Bell, Receipt, Clock, ChevronRight, Ban, Inbox } from 'lucide-react'
+import { Receipt, Clock, ChevronRight, Ban, Inbox, Plus } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, timeAgo } from '../../lib/format'
 import { ORDER_STATUSES, nextStatus } from '../../lib/constants'
 import { Button, Card, Badge, EmptyState, FullPageSpinner } from '../../components/ui'
+import NewOrderModal from './NewOrderModal'
 
 const FILTERS = [
   { key: 'active', label: 'Active', statuses: ['new', 'preparing', 'ready', 'served'] },
@@ -28,6 +29,7 @@ export default function Orders() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('active')
+  const [newOrderOpen, setNewOrderOpen] = useState(false)
   const reloadTimer = useRef(null)
 
   const load = useCallback(async () => {
@@ -113,7 +115,18 @@ export default function Orders() {
             Live · updates automatically
           </p>
         </div>
+        <Button onClick={() => setNewOrderOpen(true)}>
+          <Plus className="h-4 w-4" /> New order
+        </Button>
       </div>
+
+      {newOrderOpen && (
+        <NewOrderModal
+          restaurant={restaurant}
+          onClose={() => setNewOrderOpen(false)}
+          onPlaced={load}
+        />
+      )}
 
       {/* Filter tabs */}
       <div className="mb-5 flex gap-1 rounded-xl bg-gray-100 p-1">
