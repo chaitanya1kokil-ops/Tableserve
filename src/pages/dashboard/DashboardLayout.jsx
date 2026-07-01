@@ -28,7 +28,7 @@ const NAV = [
 ]
 
 export default function DashboardLayout() {
-  const { restaurant, profile, signOut } = useAuth()
+  const { restaurant, signOut } = useAuth()
   const status = RESTAURANT_STATUS[restaurant?.status] || RESTAURANT_STATUS.active
   const { calls, resolve, muted, toggleMute } = useServerCalls(restaurant?.id)
   const newOrders = useNewOrderCount(restaurant?.id)
@@ -57,9 +57,6 @@ export default function DashboardLayout() {
         </nav>
 
         <div className="border-t border-gray-100 p-3">
-          <div className="px-2 py-1.5 text-xs text-gray-500">
-            {profile?.full_name || profile?.email}
-          </div>
           <button
             onClick={signOut}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
