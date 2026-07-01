@@ -91,8 +91,11 @@ export default function CustomerStatus() {
 
   const sessionOrders = orders.filter((o) => o.status !== 'cancelled')
   const sessionTotal = sessionOrders.reduce((s, o) => s + Number(o.total || 0), 0)
-  const hasOpen = sessionOrders.some((o) => o.status !== 'completed')
-  const billRequested = sessionOrders.some((o) => o.bill_requested)
+  const openOrders = sessionOrders.filter((o) => o.status !== 'completed')
+  const hasOpen = openOrders.length > 0
+  // Only "fully requested" when EVERY open order is already flagged — so placing
+  // a new order re-enables the button to request the bill for it too.
+  const allBilled = hasOpen && openOrders.every((o) => o.bill_requested)
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-28" style={{ '--brand': accent }}>
@@ -161,11 +164,11 @@ export default function CustomerStatus() {
                 className="flex-1"
                 style={{ backgroundColor: accent }}
                 loading={requesting}
-                disabled={!hasOpen || billRequested}
+                disabled={!hasOpen || allBilled}
                 onClick={requestBill}
               >
                 <Receipt className="h-4 w-4" />
-                {billRequested ? 'Bill requested' : 'Request bill'}
+                {allBilled ? 'Bill requested' : 'Request bill'}
               </Button>
             </div>
           </div>
