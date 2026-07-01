@@ -151,7 +151,7 @@ export default function DashboardLayout() {
 
         <main className="flex-1 px-4 pb-24 pt-5 lg:px-8 lg:pb-8">
           <div className="mx-auto max-w-5xl">
-            <Outlet />
+            <Outlet context={{ muted, toggleMute }} />
           </div>
         </main>
       </div>

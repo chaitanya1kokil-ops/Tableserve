@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Check, ExternalLink, Store } from 'lucide-react'
+import { useOutletContext } from 'react-router-dom'
+import { Check, ExternalLink, Store, Volume2, VolumeX } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase, uploadImage } from '../../lib/supabase'
@@ -9,6 +10,7 @@ import ImageUpload from '../../components/ImageUpload'
 
 export default function Settings() {
   const { restaurant, refreshRestaurant } = useAuth()
+  const { muted, toggleMute } = useOutletContext()
   const toast = useToast()
 
   const [form, setForm] = useState({
@@ -158,6 +160,44 @@ export default function Settings() {
               </div>
             ))}
           </div>
+        </Card>
+
+        {/* Notifications */}
+        <Card className="p-5">
+          <h2 className="mb-1 font-bold text-gray-900">Notifications</h2>
+          <p className="mb-3 text-sm text-gray-500">
+            Play a chime on this device when a customer taps “Call server”.
+          </p>
+          <button
+            type="button"
+            onClick={toggleMute}
+            className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:bg-gray-50"
+          >
+            <span className="flex items-center gap-3">
+              {muted ? (
+                <VolumeX className="h-5 w-5 text-gray-400" />
+              ) : (
+                <Volume2 className="h-5 w-5 text-emerald-600" />
+              )}
+              <span>
+                <span className="block text-sm font-semibold text-gray-800">Call server sound</span>
+                <span className="block text-xs text-gray-500">
+                  {muted ? 'Muted' : 'On — tap to preview'}
+                </span>
+              </span>
+            </span>
+            <span
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition ${
+                muted ? 'bg-gray-300' : 'bg-emerald-500'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                  muted ? 'translate-x-0.5' : 'translate-x-[22px]'
+                }`}
+              />
+            </span>
+          </button>
         </Card>
 
         {/* Public link */}
