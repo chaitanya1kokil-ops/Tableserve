@@ -83,6 +83,24 @@ Open the printed URL (default <http://localhost:5173>). The dev server also bind
 
 ---
 
+## ▲ Deploy / preview on Vercel
+
+This is a static single-page app (Vite build → `dist/`), so it deploys to Vercel as-is. A `vercel.json` is included that sets the Vite framework preset and — crucially — rewrites all paths to `index.html` so deep links like `/dashboard`, `/admin`, and the customer routes `/r/{id}/t/{id}` work on refresh and when a QR code is scanned directly.
+
+1. **Import the repo** at <https://vercel.com/new> → select this GitHub repository. Vercel auto-detects Vite (build `vite build`, output `dist`).
+2. **Add environment variables** (Project → Settings → Environment Variables), same names as local:
+   ```
+   VITE_SUPABASE_URL=https://YOUR-ref.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-public-key
+   ```
+   Add them to **Production** (and Preview, if you want branch previews to work). Redeploy after adding.
+3. **Deploy.** Every push to `main` publishes production; every branch/PR gets its own preview URL.
+4. **Point Supabase at your domain** — Supabase dashboard → **Authentication → URL Configuration** → add your Vercel URL(s) (e.g. `https://your-app.vercel.app`) to **Site URL** / **Redirect URLs** so owner auth works.
+
+QR codes are generated from `window.location.origin`, so they automatically use whatever domain the site is served from — no config needed. The Vercel deployment is the same website; there is no separate "app" build.
+
+---
+
 ## 👤 First run walkthrough
 
 1. **Sign up** as a restaurant owner at `/signup` → complete onboarding (name, cuisine, logo, accent color).
