@@ -26,11 +26,9 @@ export default function Orders() {
   const rid = restaurant.id
 
   const [orders, setOrders] = useState([])
-  const [calls, setCalls] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('active')
   const reloadTimer = useRef(null)
-  const callsTimer = useRef(null)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -42,42 +40,14 @@ export default function Orders() {
     setLoading(false)
   }, [rid])
 
-  const loadCalls = useCallback(async () => {
-    const { data } = await supabase
-      .from('server_calls')
-      .select('*, table:tables(label)')
-      .eq('restaurant_id', rid)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-    setCalls(data || [])
-  }, [rid])
-
-  const resolveCall = async (call) => {
-    setCalls((list) => list.filter((c) => c.id !== call.id))
-    const { error } = await supabase
-      .from('server_calls')
-      .update({ status: 'resolved', resolved_at: new Date().toISOString() })
-      .eq('id', call.id)
-    if (error) {
-      toast.error('Could not resolve.')
-      loadCalls()
-    }
-  }
-
   // Debounced reload used by realtime events.
   const scheduleReload = useCallback(() => {
     clearTimeout(reloadTimer.current)
     reloadTimer.current = setTimeout(load, 250)
   }, [load])
 
-  const scheduleCallsReload = useCallback(() => {
-    clearTimeout(callsTimer.current)
-    callsTimer.current = setTimeout(loadCalls, 250)
-  }, [loadCalls])
-
   useEffect(() => {
     load()
-    loadCalls()
     const channel = supabase
       .channel(`orders-board-${rid}`)
       .on(
@@ -90,19 +60,13 @@ export default function Orders() {
         { event: '*', schema: 'public', table: 'order_items', filter: `restaurant_id=eq.${rid}` },
         scheduleReload,
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'server_calls', filter: `restaurant_id=eq.${rid}` },
-        scheduleCallsReload,
-      )
       .subscribe()
 
     return () => {
       clearTimeout(reloadTimer.current)
-      clearTimeout(callsTimer.current)
       supabase.removeChannel(channel)
     }
-  }, [rid, load, loadCalls, scheduleReload, scheduleCallsReload])
+  }, [rid, load, scheduleReload])
 
   const updateStatus = async (order, status) => {
     setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, status } : o)))
@@ -150,29 +114,6 @@ export default function Orders() {
           </p>
         </div>
       </div>
-
-      {/* Pending "call server" requests */}
-      {calls.length > 0 && (
-        <div className="mb-5 space-y-2">
-          {calls.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3"
-            >
-              <div className="flex items-center gap-2 text-sm text-orange-800">
-                <Bell className="h-5 w-5 flex-shrink-0 animate-pulse text-orange-500" />
-                <span>
-                  <strong>{c.table?.label || 'A table'}</strong> is asking for a server
-                </span>
-                <span className="text-xs text-orange-400">· {timeAgo(c.created_at)}</span>
-              </div>
-              <Button size="sm" variant="outline" onClick={() => resolveCall(c)}>
-                Resolve
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Filter tabs */}
       <div className="mb-5 flex gap-1 rounded-xl bg-gray-100 p-1">
