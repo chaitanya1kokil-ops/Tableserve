@@ -14,6 +14,7 @@ import Menu from './pages/dashboard/Menu'
 import Tables from './pages/dashboard/Tables'
 import Orders from './pages/dashboard/Orders'
 import Settings from './pages/dashboard/Settings'
+import Kitchen from './pages/dashboard/Kitchen'
 
 import Admin from './pages/admin/Admin'
 
@@ -56,6 +57,16 @@ export default function App() {
         <Route path="orders" element={<Orders />} />
         <Route path="settings" element={<Settings />} />
       </Route>
+
+      {/* Full-screen kitchen display (owner/staff only) */}
+      <Route
+        path="/kitchen"
+        element={
+          <RequireOwner>
+            <Kitchen />
+          </RequireOwner>
+        }
+      />
 
       {/* Platform admin */}
       <Route

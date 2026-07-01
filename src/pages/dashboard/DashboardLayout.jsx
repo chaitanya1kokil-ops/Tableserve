@@ -8,6 +8,7 @@ import {
   LogOut,
   Store,
   AlertTriangle,
+  ChefHat,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { imageUrl } from '../../lib/supabase'
@@ -16,6 +17,7 @@ import { RESTAURANT_STATUS } from '../../lib/constants'
 const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
+  { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode },
   { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
