@@ -9,6 +9,7 @@ import {
   Store,
   AlertTriangle,
   Bell,
+  Receipt,
 } from 'lucide-react'
 import { supabase, imageUrl } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/format'
@@ -149,6 +150,9 @@ export default function CustomerMenu() {
         canCall={canOrder}
         calling={calling}
         onCall={callServer}
+        onViewOrders={
+          tableId ? () => navigate(`/r/${restaurantId}/t/${tableId}/status`) : null
+        }
       />
 
       {!tableId && (
@@ -294,7 +298,7 @@ function useCart(restaurantId, tableId) {
 }
 
 /* --------------------------------------------------------------- header --- */
-function BrandHeader({ restaurant, table, accent, canCall, calling, onCall }) {
+function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onViewOrders }) {
   return (
     <header className="text-white" style={{ backgroundColor: accent }}>
       <div className="mx-auto max-w-2xl px-4 pb-5 pt-6">
@@ -331,6 +335,15 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall }) {
                 style={{ color: accent }}
               >
                 <Bell className="h-4 w-4" /> {calling ? 'Calling…' : 'Call server'}
+              </button>
+            )}
+            {onViewOrders && (
+              <button
+                onClick={onViewOrders}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-bold shadow-sm transition active:scale-95"
+                style={{ color: accent }}
+              >
+                <Receipt className="h-4 w-4" /> My orders
               </button>
             )}
           </div>
