@@ -242,6 +242,7 @@ export default function CustomerMenu() {
           setCart={setCart}
           currency={currency}
           accent={accent}
+          taxRate={Number(restaurant.tax_rate) || 0}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
@@ -589,12 +590,14 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 }
 
 /* ----------------------------------------------------------- cart sheet --- */
-function CartSheet({ cart, setCart, currency, accent, restaurantId, tableId, onClose, onPlaced }) {
+function CartSheet({ cart, setCart, currency, accent, taxRate, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
   const [notes, setNotes] = useState('')
   const [placing, setPlacing] = useState(false)
 
-  const total = cart.reduce((s, l) => s + l.lineTotal, 0)
+  const subtotal = cart.reduce((s, l) => s + l.lineTotal, 0)
+  const tax = Math.round(subtotal * taxRate) / 100
+  const total = subtotal + tax
 
   const changeQty = (lineId, delta) => {
     setCart((c) =>
@@ -703,11 +706,29 @@ function CartSheet({ cart, setCart, currency, accent, restaurantId, tableId, onC
 
         {cart.length > 0 && (
           <div className="border-t border-gray-100 px-5 py-4 safe-bottom">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-gray-500">Total</span>
-              <span className="text-xl font-extrabold text-gray-900">
-                {formatCurrency(total, currency)}
-              </span>
+            <div className="mb-3 space-y-1">
+              {taxRate > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Subtotal</span>
+                    <span className="font-semibold text-gray-700">
+                      {formatCurrency(subtotal, currency)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Tax ({taxRate}%)</span>
+                    <span className="font-semibold text-gray-700">
+                      {formatCurrency(tax, currency)}
+                    </span>
+                  </div>
+                </>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Total</span>
+                <span className="text-xl font-extrabold text-gray-900">
+                  {formatCurrency(total, currency)}
+                </span>
+              </div>
             </div>
             <button
               onClick={placeOrder}

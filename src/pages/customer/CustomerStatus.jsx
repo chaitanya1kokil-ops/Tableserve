@@ -91,6 +91,7 @@ export default function CustomerStatus() {
 
   const sessionOrders = orders.filter((o) => o.status !== 'cancelled')
   const sessionTotal = sessionOrders.reduce((s, o) => s + Number(o.total || 0), 0)
+  const sessionTax = sessionOrders.reduce((s, o) => s + Number(o.tax || 0), 0)
   const openOrders = sessionOrders.filter((o) => o.status !== 'completed')
   const hasOpen = openOrders.length > 0
   // Only "fully requested" when EVERY open order is already flagged — so placing
@@ -147,7 +148,14 @@ export default function CustomerStatus() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom">
           <div className="mx-auto max-w-2xl px-4 py-3">
             <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="text-gray-500">Table total</span>
+              <span className="text-gray-500">
+                Table total
+                {sessionTax > 0 && (
+                  <span className="block text-xs text-gray-400">
+                    incl. {formatCurrency(sessionTax, currency)} tax
+                  </span>
+                )}
+              </span>
               <span className="text-lg font-extrabold text-gray-900">
                 {formatCurrency(sessionTotal, currency)}
               </span>
@@ -234,9 +242,23 @@ function OrderStatusCard({ order, accent, currency }) {
           </div>
         ))}
       </div>
-      <div className="mt-2 flex justify-between border-t border-gray-100 pt-2">
-        <span className="text-sm font-semibold text-gray-500">Order total</span>
-        <span className="font-bold text-gray-900">{formatCurrency(order.total, currency)}</span>
+      <div className="mt-2 space-y-1 border-t border-gray-100 pt-2">
+        {Number(order.tax) > 0 && (
+          <>
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Subtotal</span>
+              <span>{formatCurrency(order.subtotal, currency)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Tax</span>
+              <span>{formatCurrency(order.tax, currency)}</span>
+            </div>
+          </>
+        )}
+        <div className="flex justify-between">
+          <span className="text-sm font-semibold text-gray-500">Order total</span>
+          <span className="font-bold text-gray-900">{formatCurrency(order.total, currency)}</span>
+        </div>
       </div>
     </div>
   )

@@ -21,6 +21,7 @@ export default function Settings() {
     address: restaurant.address || '',
     accent_color: restaurant.accent_color || ACCENT_PRESETS[0],
     currency: restaurant.currency || 'USD',
+    tax_rate: restaurant.tax_rate ?? 0,
   })
   const [hours, setHours] = useState(restaurant.hours || {})
   const [logoFile, setLogoFile] = useState(undefined)
@@ -30,6 +31,9 @@ export default function Settings() {
 
   const save = async () => {
     if (!form.name.trim()) return toast.error('Restaurant name is required.')
+    const taxRate = Number(form.tax_rate)
+    if (Number.isNaN(taxRate) || taxRate < 0 || taxRate > 100)
+      return toast.error('Tax rate must be between 0 and 100.')
     setSaving(true)
     try {
       const payload = {
@@ -40,6 +44,7 @@ export default function Settings() {
         address: form.address.trim() || null,
         accent_color: form.accent_color,
         currency: form.currency,
+        tax_rate: taxRate,
         hours,
       }
 
@@ -96,6 +101,17 @@ export default function Settings() {
                       <option key={c}>{c}</option>
                     ))}
                   </Select>
+                </Field>
+                <Field label="Tax rate (%)">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.tax_rate}
+                    onChange={set('tax_rate')}
+                    placeholder="e.g. 13"
+                  />
                 </Field>
               </div>
             </div>

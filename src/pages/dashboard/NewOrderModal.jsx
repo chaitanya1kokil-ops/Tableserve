@@ -61,7 +61,10 @@ export default function NewOrderModal({ restaurant, onClose, onPlaced }) {
   }, [restaurant.id])
 
   const cartCount = cart.reduce((n, l) => n + l.quantity, 0)
-  const cartTotal = cart.reduce((s, l) => s + l.lineTotal, 0)
+  const taxRate = Number(restaurant.tax_rate) || 0
+  const cartSubtotal = cart.reduce((s, l) => s + l.lineTotal, 0)
+  const cartTax = Math.round(cartSubtotal * taxRate) / 100
+  const cartTotal = cartSubtotal + cartTax
 
   const addLine = (line) => setCart((c) => [...c, line])
   const removeLine = (lineId) => setCart((c) => c.filter((l) => l.lineId !== lineId))
@@ -260,6 +263,12 @@ export default function NewOrderModal({ restaurant, onClose, onPlaced }) {
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm text-gray-500">
                   {cartCount} item{cartCount === 1 ? '' : 's'}
+                  {taxRate > 0 && cartCount > 0 && (
+                    <span className="block text-xs text-gray-400">
+                      {formatCurrency(cartSubtotal, currency)} + {formatCurrency(cartTax, currency)}{' '}
+                      tax ({taxRate}%)
+                    </span>
+                  )}
                 </span>
                 <span className="text-lg font-extrabold text-gray-900">
                   {formatCurrency(cartTotal, currency)}
