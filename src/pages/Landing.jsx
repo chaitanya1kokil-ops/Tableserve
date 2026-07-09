@@ -216,10 +216,10 @@ export default function Landing() {
               </div>
               <div className="grid grid-cols-4 gap-3 bg-white p-4">
                 {[
-                  { t: 'Table 3', s: 'New', c: 'bg-blue-50 text-blue-700', items: ['2× Butter Chicken', '1× Garlic Naan'] },
-                  { t: 'Table 7', s: 'Preparing', c: 'bg-amber-50 text-amber-700', items: ['1× Chilli Paneer', '2× Jeera Rice'] },
-                  { t: 'Table 1', s: 'Ready', c: 'bg-emerald-50 text-emerald-700', items: ['1× Veg Biryani'] },
-                  { t: 'Table 9', s: 'Served', c: 'bg-stone-100 text-stone-600', items: ['3× Momos', '1× Kulfi'] },
+                  { t: 'Table 3', s: 'New', c: 'bg-blue-50 text-blue-700', items: ['2× Margherita Pizza', '1× Caesar Salad'] },
+                  { t: 'Table 7', s: 'Preparing', c: 'bg-amber-50 text-amber-700', items: ['1× Truffle Pasta', '2× Garlic Bread'] },
+                  { t: 'Table 1', s: 'Ready', c: 'bg-emerald-50 text-emerald-700', items: ['1× Grilled Salmon'] },
+                  { t: 'Table 9', s: 'Served', c: 'bg-stone-100 text-stone-600', items: ['2× Tiramisu', '1× Espresso'] },
                 ].map((o) => (
                   <div key={o.t} className="rounded-xl border border-stone-100 p-3">
                     <div className="flex items-center justify-between">
@@ -241,21 +241,21 @@ export default function Landing() {
               <div className="rounded-[2.5rem] border-8 border-stone-900 bg-stone-900 shadow-2xl">
                 <div className="overflow-hidden rounded-[2rem] bg-[#faf6ef]">
                   <div className="bg-stone-900 px-5 py-5 text-white">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">Indian</p>
-                    <p className="font-display text-lg font-semibold">Spice Route</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">Italian</p>
+                    <p className="font-display text-lg font-semibold">Bella Napoli</p>
                     <span className="mt-2 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold ring-1 ring-white/20">
                       Table 7
                     </span>
                   </div>
                   <div className="space-y-2.5 p-3.5">
-                    {['Butter Chicken · $19', 'Garlic Naan · $4.49', 'Mango Kulfi · $8'].map((x) => (
+                    {['Margherita Pizza · $16', 'Truffle Pasta · $19', 'Tiramisu · $8'].map((x) => (
                       <div key={x} className="flex items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm">
                         <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-200 to-red-200" />
                         <span className="text-xs font-medium text-stone-800">{x}</span>
                       </div>
                     ))}
                     <div className="rounded-xl bg-brand py-2.5 text-center text-xs font-semibold text-white">
-                      Place order · $31.49
+                      Place order · $43.00
                     </div>
                   </div>
                 </div>
