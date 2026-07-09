@@ -6,159 +6,116 @@ import {
   Zap,
   ArrowRight,
   Store,
-  ChefHat,
+  Receipt,
   Timer,
-  ClipboardList,
+  ClipboardCheck,
+  Users,
   BarChart3,
   Palette,
   Check,
   LogIn,
-  Smartphone,
-  Frown,
-  FileWarning,
-  Wallet,
-  MonitorPlay,
-  Target,
-  Radio,
-  MousePointerClick,
   Star,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import heroBg from '../../pitch/assets/hero_restaurant_qr.png'
-import problemImg from '../../pitch/assets/problem_slide_chaos.png'
-import kitchenImg from '../../pitch/assets/kitchen_dashboard_mockup.png'
+import { Button } from '../components/ui'
 
-/* ------------------------------------------------------------------ theme -- */
-const GOLD = '#F5A623'
-const ORANGE = '#E8763A'
-const goldGradient = { background: `linear-gradient(135deg, ${GOLD}, ${ORANGE})` }
-
-const gridBg = {
-  backgroundImage:
-    'linear-gradient(rgba(245,166,35,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(245,166,35,0.04) 1px, transparent 1px)',
-  backgroundSize: '60px 60px',
-}
-
-/* ------------------------------------------------------------------- data -- */
-const heroPills = [
-  { icon: QrCode, label: 'QR-Based Ordering', gold: true },
-  { icon: Zap, label: 'Real-time Kitchen Display' },
-  { icon: BarChart3, label: 'Live Analytics', gold: true },
-  { icon: Smartphone, label: 'No App Required' },
-]
-
-const pains = [
+const efficiencyPoints = [
   {
-    icon: Frown,
-    title: 'Customers wait too long to order',
-    desc: 'Peak hours mean 10 to 20 minute waits just to place an order, and some customers simply leave.',
+    icon: Timer,
+    title: 'Turn tables faster',
+    desc: 'Guests order the moment they sit down, with no waiting to flag someone for a menu, an order, or the bill. Every saved minute is a table served sooner.',
   },
   {
-    icon: FileWarning,
-    title: 'Handwritten orders get lost or wrong',
-    desc: 'Order errors cost you remakes, refunds, and bad reviews every single week.',
+    icon: ClipboardCheck,
+    title: 'Zero order-entry errors',
+    desc: 'Orders go straight from the guest to the kitchen exactly as typed: items, modifiers, allergy notes. No misheard dishes, no handwriting to decipher.',
   },
   {
-    icon: Wallet,
-    title: 'Staff costs keep rising',
-    desc: 'A single waiter costs $2,000 to $3,500 a month, and you need two or three just for orders.',
+    icon: Users,
+    title: 'Staff focus on hospitality',
+    desc: 'Servers stop being order-takers. The "Call server" and "Request bill" buttons tell them exactly which table needs them, and why.',
   },
-]
-
-const painStats = [
-  { num: '68%', label: 'of diners prefer self-ordering' },
-  { num: '$400', label: 'avg monthly loss from order errors' },
-  { num: '23%', label: 'higher order value with digital menus' },
+  {
+    icon: BarChart3,
+    title: 'Know your numbers',
+    desc: 'A live overview of revenue, order volume and best-sellers, filterable by day, so you can staff, stock and price with facts, not guesses.',
+  },
 ]
 
 const steps = [
   {
-    n: '01',
-    icon: QrCode,
-    title: 'Customer scans QR',
-    desc: 'A unique QR code sits on every table. Customers scan with any phone camera. No download, no account, no friction.',
+    n: '1',
+    title: 'Build your menu',
+    desc: 'Add categories, items, photos and modifiers in the dashboard. Toggle availability any time and 86 a dish in one tap.',
   },
   {
-    n: '02',
-    icon: MousePointerClick,
-    title: 'Browses & orders',
-    desc: 'Your branded menu with photos, modifiers, and categories. Add to cart, customise, and place the order in under 60 seconds.',
+    n: '2',
+    title: 'Print your QR codes',
+    desc: 'Every table gets its own QR code, generated automatically. Print, place, done.',
   },
   {
-    n: '03',
-    icon: Zap,
-    title: 'Kitchen gets it instantly',
-    desc: 'Orders appear live in your kitchen dashboard. Status updates push back to the customer’s phone in real time.',
+    n: '3',
+    title: 'Serve orders in real time',
+    desc: 'Orders stream onto the live board and kitchen display the second guests confirm. Move them New → Preparing → Ready → Served.',
   },
 ]
 
-const features = [
+const featureBlocks = [
   {
-    icon: ClipboardList,
-    title: 'Menu Management',
-    desc: 'Add categories, items with photos, modifiers and price deltas. Update anytime and it goes live instantly.',
-    badge: 'Instant updates',
+    icon: LayoutDashboard,
+    title: 'A live orders board your whole team can run',
+    points: [
+      'Orders grouped by table, updating in real time without a single refresh',
+      'One-tap status changes with a full-screen kitchen display mode',
+      'Staff can enter phone or walk-up orders from the same screen',
+      'A chime alerts the floor when a guest calls a server',
+    ],
   },
   {
-    icon: QrCode,
-    title: 'QR Code Generator',
-    desc: 'Bulk-create tables and auto-generate unique QR codes per table. Download as PNG or print all at once.',
-    badge: 'Print-ready',
+    icon: UtensilsCrossed,
+    title: 'A menu you can change in seconds, not print runs',
+    points: [
+      'Categories, photos, descriptions and prices, all edited live',
+      'Modifier groups with price deltas: sizes, spice levels, add-ons',
+      'Sold out? Toggle an item off and it vanishes from every table instantly',
+      'Prices shown your way, in your currency and with your tax rate',
+    ],
   },
   {
-    icon: Zap,
-    title: 'Live Orders Board',
-    desc: 'Orders stream in real time. Advance status: New, Preparing, Ready, Served, Completed.',
-    badge: 'Real-time',
-  },
-  {
-    icon: ChefHat,
-    title: 'Kitchen Display',
-    desc: 'Dedicated kitchen view with all active orders, ticket age, and one-tap status advancement.',
-    badge: 'No printer needed',
-  },
-  {
-    icon: BarChart3,
-    title: 'Sales Overview',
-    desc: 'Today’s revenue, average order value, most popular items, and order count at a glance.',
-    badge: 'Live analytics',
+    icon: Receipt,
+    title: 'Billing that adds up by itself',
+    points: [
+      'Taxes calculated automatically at your local rate on every order',
+      'Running table totals across multiple orders in a sitting',
+      'Guests request the bill with one tap and servers see it immediately',
+      'Clean subtotal / tax / total breakdowns on every receipt view',
+    ],
   },
   {
     icon: Palette,
-    title: 'Your Branding',
-    desc: 'Upload your logo and set your accent colour. Customers see your brand on every screen, not ours.',
-    badge: 'White-label',
+    title: 'Your restaurant, your brand',
+    points: [
+      'Your logo, accent color and story on every guest-facing page',
+      'An elegant mobile menu that feels like your restaurant, not ours',
+      'No app downloads and no guest sign-ups. Scanning is enough',
+      'Multi-tenant by design: your data is isolated and yours alone',
+    ],
   },
 ]
 
-const kitchenPoints = [
-  {
-    icon: MonitorPlay,
-    title: 'Big-screen display mode',
-    desc: 'Mount a tablet or TV in the kitchen and orders appear the moment they are placed.',
-  },
-  {
-    icon: Target,
-    title: 'Zero miscommunication',
-    desc: 'Every modifier and special request is captured digitally. No more misread handwriting.',
-  },
-  {
-    icon: Radio,
-    title: 'Real-time, always',
-    desc: 'Powered by Supabase Realtime with sub-second latency from order to kitchen screen.',
-  },
-  {
-    icon: Check,
-    title: 'One-tap status updates',
-    desc: 'Advance from Preparing to Ready with a single tap. Customers are notified instantly.',
-  },
-]
-
-const roiCards = [
-  { num: '$2,500', color: 'text-emerald-400', label: 'Monthly savings on staff', note: 'Reduce 1 waiter shift/day at $15/hr' },
-  { num: '23%', color: 'text-[#F5A623]', label: 'Higher avg order value', note: 'Customers order more when browsing at their own pace' },
-  { num: '$400', color: 'text-emerald-400', label: 'Saved from fewer errors', note: 'No more remakes, refunds, or waste' },
-  { num: '14x', color: 'text-[#F5A623]', label: 'Return on investment', note: '$149/mo cost vs $2,000+/mo savings' },
+const included = [
+  'Unlimited menu items & categories',
+  'Unlimited tables with printable QR codes',
+  'Real-time orders board',
+  'Full-screen kitchen display',
+  'Guest "Call server" button',
+  'One-tap bill requests',
+  'Automatic tax calculation',
+  'Staff order entry',
+  'Sales overview & order history',
+  'Custom branding & accent color',
+  'Works on any phone, no app',
+  'Secure guest sessions',
 ]
 
 const plans = [
@@ -167,16 +124,14 @@ const plans = [
     price: 59,
     desc: 'Perfect for cafes & food trucks',
     features: ['Up to 10 tables', 'Unlimited menu items', 'Live orders board', 'QR code generator', 'Email support'],
-    cta: 'Get Started',
-    to: '/signup',
+    cta: 'Get started',
   },
   {
     tier: 'Growth',
     price: 149,
     desc: 'For busy restaurants that mean business',
     features: ['Up to 30 tables', 'Custom branding & logo', 'Kitchen display mode', 'Sales analytics dashboard', 'Priority support'],
-    cta: 'Start 14-Day Free Trial',
-    to: '/signup',
+    cta: 'Start 14-day free trial',
     featured: true,
   },
   {
@@ -184,57 +139,49 @@ const plans = [
     price: 299,
     desc: 'Multi-location & high-volume venues',
     features: ['Unlimited tables', 'Multiple locations', 'Advanced analytics', 'White-label QR codes', 'Dedicated support'],
-    cta: 'Contact Us',
-    to: '/signup',
+    cta: 'Contact us',
   },
 ]
 
-/* -------------------------------------------------------------- component -- */
 export default function Landing() {
   const { user, isAnonymous, profile, restaurant } = useAuth()
   const loggedIn = user && !isAnonymous
+
   const ctaTo = profile?.role === 'platform_admin' ? '/admin' : restaurant ? '/dashboard' : '/onboarding'
 
   return (
-    <div className="min-h-[100dvh] bg-[#0A0F1E] text-[#F0F4FF]">
+    <div className="min-h-[100dvh] bg-white text-stone-900">
       {/* ------------------------------------------------------------ nav -- */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0A0F1E]/90 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-stone-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <a href="#top" className="flex items-center gap-2 font-extrabold">
-            <span className="grid h-8 w-8 place-items-center rounded-lg text-black" style={goldGradient}>
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
               <Store className="h-5 w-5" />
             </span>
             TableServe
           </a>
-          <nav className="hidden items-center gap-6 text-sm font-medium text-[#8899BB] md:flex">
-            <a href="#problem" className="transition hover:text-white">The Problem</a>
-            <a href="#how" className="transition hover:text-white">How it works</a>
-            <a href="#features" className="transition hover:text-white">Features</a>
-            <a href="#pricing" className="transition hover:text-white">Pricing</a>
+          <nav className="hidden items-center gap-6 text-sm font-medium text-stone-600 md:flex">
+            <a href="#efficiency" className="hover:text-stone-900">Why TableServe</a>
+            <a href="#how" className="hover:text-stone-900">How it works</a>
+            <a href="#features" className="hover:text-stone-900">Features</a>
+            <a href="#pricing" className="hover:text-stone-900">Pricing</a>
           </nav>
           <div className="flex items-center gap-2">
             {loggedIn ? (
-              <Link
-                to={ctaTo}
-                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-black transition hover:opacity-90"
-                style={goldGradient}
-              >
-                Dashboard <ArrowRight className="h-4 w-4" />
+              <Link to={ctaTo}>
+                <Button size="sm">
+                  Dashboard <ArrowRight className="h-4 w-4" />
+                </Button>
               </Link>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="flex items-center gap-1.5 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold transition hover:bg-white/5"
-                >
-                  <LogIn className="h-4 w-4" /> Log in
+                <Link to="/login">
+                  <Button variant="outline" size="sm">
+                    <LogIn className="h-4 w-4" /> Log in
+                  </Button>
                 </Link>
-                <Link
-                  to="/signup"
-                  className="hidden rounded-xl px-4 py-2 text-sm font-bold text-black transition hover:opacity-90 sm:block"
-                  style={goldGradient}
-                >
-                  Start Free Trial
+                <Link to="/signup" className="hidden sm:block">
+                  <Button size="sm">Start free trial</Button>
                 </Link>
               </>
             )}
@@ -245,362 +192,407 @@ export default function Landing() {
       {/* ----------------------------------------------------------- hero -- */}
       <section id="top" className="relative overflow-hidden">
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-100"
-          style={{ backgroundImage: `url(${heroBg})`, filter: 'brightness(0.18) saturate(0.6)' }}
-        />
-        <div className="absolute inset-0" style={gridBg} />
-        <div
           className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
           style={{
             background:
-              'radial-gradient(ellipse 80% 60% at 20% 20%, rgba(245,166,35,0.12), transparent 60%), radial-gradient(ellipse 60% 60% at 80% 80%, rgba(232,118,58,0.10), transparent 60%)',
+              'radial-gradient(70% 55% at 50% -10%, rgba(239,68,68,.09), transparent 65%)',
           }}
         />
-        <div className="relative mx-auto max-w-6xl px-5 pb-20 pt-16 text-center sm:pt-28">
-          <p
-            className="mb-5 bg-clip-text text-xs font-bold uppercase tracking-[0.4em] text-transparent"
-            style={{ backgroundImage: `linear-gradient(135deg, ${GOLD}, ${ORANGE})` }}
-          >
-            TableServe
-          </p>
-          <h1 className="mx-auto max-w-4xl font-display text-5xl font-semibold leading-[1.05] sm:text-7xl">
-            The Future of
-            <br />
-            <span className="text-[#F5A623]">Restaurant Ordering</span>
-          </h1>
-          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-[#8899BB] sm:text-lg">
-            Customers scan, tap, and order. No app, no waiter, no wait.
-            <br className="hidden sm:block" />
-            You get real-time orders, happier tables, and more revenue.
-          </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              to={loggedIn ? ctaTo : '/signup'}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl px-8 py-4 font-bold text-black transition hover:-translate-y-0.5 sm:w-auto"
-              style={goldGradient}
-            >
-              {loggedIn ? 'Open your dashboard' : 'Start Free Trial'}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to="/login"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 px-8 py-4 font-bold transition hover:bg-white/5 sm:w-auto"
-            >
-              <LogIn className="h-4 w-4" /> Log in
-            </Link>
+        <div className="relative mx-auto max-w-6xl px-5 pb-10 pt-14 sm:pt-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-brand">
+              <Zap className="h-3.5 w-3.5" /> QR ordering, live orders and billing in one platform
+            </span>
+            <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-6xl">
+              Run a more efficient restaurant,
+              <br className="hidden sm:block" /> one <span className="text-brand">QR code</span> at a time
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-lg text-stone-600">
+              TableServe turns every table into a self-serve ordering point. Guests scan, browse
+              your branded menu and order in under a minute, while your team watches everything
+              flow through one live board, from first tap to final bill.
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link to={loggedIn ? ctaTo : '/signup'} className="w-full sm:w-auto">
+                <Button size="lg" className="w-full">
+                  {loggedIn ? 'Open your dashboard' : 'Start free trial'}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="/login" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full">
+                  <LogIn className="h-4 w-4" /> Log in
+                </Button>
+              </Link>
+            </div>
+            <p className="mt-4 text-xs text-stone-400">
+              No app for guests to install. No hardware to buy. Set up in an afternoon.
+            </p>
           </div>
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
-            {heroPills.map((p) => (
-              <span
-                key={p.label}
-                className={`flex items-center gap-2 rounded-full border px-5 py-2.5 text-[13px] font-medium backdrop-blur ${
-                  p.gold
-                    ? 'border-[#F5A623]/30 bg-white/[0.04] text-[#FFD07B]'
-                    : 'border-white/10 bg-white/[0.04] text-[#8899BB]'
-                }`}
-              >
-                <p.icon className="h-4 w-4" /> {p.label}
-              </span>
-            ))}
+
+          {/* mockups */}
+          <div className="mt-14 grid items-center gap-8 lg:grid-cols-[1fr,auto]">
+            {/* dashboard mockup */}
+            <div className="hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl lg:block">
+              {/* browser chrome */}
+              <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-4 py-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+                <span className="ml-4 flex-1 rounded-md bg-white px-3 py-1 text-center text-[11px] text-stone-400 ring-1 ring-stone-200">
+                  tableserve-app.vercel.app/dashboard/orders
+                </span>
+                <span className="w-10" />
+              </div>
+              {/* board header */}
+              <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="font-display text-base font-semibold text-stone-900">
+                    Live orders
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    </span>
+                    LIVE
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-stone-400">
+                  <span className="rounded-lg bg-stone-100 px-2 py-1 font-semibold text-stone-600">
+                    12 open
+                  </span>
+                  <span className="rounded-lg bg-stone-100 px-2 py-1 font-semibold text-stone-600">
+                    $612 today
+                  </span>
+                </div>
+              </div>
+              {/* order cards */}
+              <div className="grid grid-cols-4 gap-3 bg-[#faf6ef] p-4">
+                {[
+                  {
+                    t: 'Table 3', time: '12:42', s: 'New',
+                    chip: 'bg-blue-100 text-blue-700', bar: 'bg-blue-400',
+                    btn: 'bg-blue-600 text-white', action: 'Start preparing',
+                    items: [['2×', 'Margherita Pizza', '$32'], ['1×', 'Caesar Salad', '$12']],
+                    total: '$49.72',
+                  },
+                  {
+                    t: 'Table 7', time: '12:36', s: 'Preparing',
+                    chip: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400',
+                    btn: 'bg-amber-500 text-white', action: 'Mark ready',
+                    items: [['1×', 'Penne Pomodoro', '$19'], ['2×', 'Garlic Bread', '$9']],
+                    total: '$31.64',
+                  },
+                  {
+                    t: 'Table 1', time: '12:31', s: 'Ready',
+                    chip: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-400',
+                    btn: 'bg-emerald-600 text-white', action: 'Mark served',
+                    items: [['1×', 'Grilled Salmon', '$21']],
+                    total: '$23.73',
+                  },
+                  {
+                    t: 'Table 9', time: '12:18', s: 'Served',
+                    chip: 'bg-stone-200 text-stone-600', bar: 'bg-stone-300',
+                    btn: 'bg-white text-stone-600 ring-1 ring-stone-200', action: 'Complete',
+                    items: [['2×', 'Tiramisu', '$16'], ['1×', 'Espresso', '$4']],
+                    total: '$22.60',
+                  },
+                ].map((o) => (
+                  <div key={o.t} className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-100">
+                    <div className={`h-1 w-full ${o.bar}`} />
+                    <div className="p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-stone-900">{o.t}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${o.chip}`}>
+                          {o.s}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-stone-400">{o.time}</p>
+                      <div className="mt-2 space-y-1 border-t border-stone-100 pt-2">
+                        {o.items.map(([q, n, p]) => (
+                          <div key={n} className="flex items-baseline gap-1.5 text-[11px]">
+                            <span className="font-bold text-stone-700">{q}</span>
+                            <span className="flex-1 truncate text-stone-600">{n}</span>
+                            <span className="text-stone-400">{p}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2 flex items-center justify-between border-t border-stone-100 pt-2 text-[11px]">
+                        <span className="text-stone-400">Total incl. tax</span>
+                        <span className="font-bold text-stone-900">{o.total}</span>
+                      </div>
+                      <div className={`mt-2.5 rounded-lg py-1.5 text-center text-[11px] font-semibold ${o.btn}`}>
+                        {o.action}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* phone mockup with iPhone-like 9:19.5 proportions */}
+            <div className="mx-auto w-full max-w-[270px]">
+              <div className="rounded-[3rem] border-[10px] border-stone-900 bg-stone-900 shadow-2xl">
+                <div className="relative flex aspect-[9/19.5] flex-col overflow-hidden rounded-[2.4rem] bg-[#faf6ef]">
+                  {/* dynamic island */}
+                  <div className="absolute left-1/2 top-2.5 z-10 h-[22px] w-24 -translate-x-1/2 rounded-full bg-black" />
+                  <div className="bg-stone-900 px-5 pb-5 pt-11 text-white">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">Italian</p>
+                    <p className="font-display text-lg font-semibold">Bella Napoli</p>
+                    <span className="mt-2 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold ring-1 ring-white/20">
+                      Table 7
+                    </span>
+                  </div>
+                  <div className="flex-1 space-y-2.5 overflow-hidden p-3.5">
+                    <p className="px-1 font-display text-sm font-semibold text-stone-900">Popular</p>
+                    {[
+                      {
+                        name: 'Margherita Pizza',
+                        price: '$16',
+                        img: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=96&h=96&fit=crop&q=60',
+                      },
+                      {
+                        name: 'Penne Pomodoro',
+                        price: '$19',
+                        img: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=96&h=96&fit=crop&q=60',
+                      },
+                      {
+                        name: 'Garden Salad',
+                        price: '$12',
+                        img: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=96&h=96&fit=crop&q=60',
+                      },
+                      {
+                        name: 'Tiramisu',
+                        price: '$8',
+                        img: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=96&h=96&fit=crop&q=60',
+                      },
+                    ].map((x) => (
+                      <div key={x.name} className="flex items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm">
+                        <img
+                          src={x.img}
+                          alt=""
+                          loading="lazy"
+                          className="h-11 w-11 rounded-lg object-cover"
+                        />
+                        <span className="flex-1 text-xs font-medium text-stone-800">{x.name}</span>
+                        <span className="text-xs font-semibold text-stone-900">{x.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3.5 pt-0">
+                    <div className="rounded-xl bg-brand py-3 text-center text-xs font-semibold text-white">
+                      Place order · $55.00
+                    </div>
+                    <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-stone-300" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* -------------------------------------------------------- problem -- */}
-      <section id="problem" className="relative border-t border-white/5 bg-[#0F1729]">
-        <div className="absolute inset-0" style={gridBg} />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 sm:py-24 lg:grid-cols-2">
-          <img
-            src={problemImg}
-            alt="A slammed dining room with staff running between tables"
-            className="rounded-2xl shadow-[0_40px_80px_rgba(0,0,0,0.6)]"
-            loading="lazy"
-          />
-          <div>
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-[#E74C3C]">The Problem</p>
-            <h2 className="font-display text-4xl font-semibold leading-tight sm:text-5xl">
-              Your staff is
-              <br />
-              stretched thin
+      {/* ----------------------------------------------------- efficiency -- */}
+      <section id="efficiency" className="border-t border-stone-100 bg-[#faf6ef]">
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-semibold sm:text-4xl">
+              Built to make service <span className="text-brand">faster</span>
             </h2>
-            <div className="mt-8 space-y-5">
-              {pains.map((p) => (
-                <div key={p.title} className="flex items-start gap-4">
-                  <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg border border-[#E74C3C]/30 bg-[#E74C3C]/15 text-[#E74C3C]">
-                    <p.icon className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="font-semibold">{p.title}</p>
-                    <p className="mt-1 text-sm leading-relaxed text-[#8899BB]">{p.desc}</p>
-                  </div>
+            <p className="mt-3 text-stone-600">
+              Every part of TableServe removes a bottleneck between your guests, your kitchen and
+              your floor staff.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2">
+            {efficiencyPoints.map((f) => (
+              <div key={f.title} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100">
+                <div className="mb-3 inline-flex rounded-xl bg-red-50 p-2.5 text-brand">
+                  <f.icon className="h-5 w-5" />
                 </div>
-              ))}
-            </div>
-            <div className="mt-8 flex flex-wrap gap-4">
-              {painStats.map((s) => (
-                <div key={s.num} className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-4 text-center">
-                  <p className="text-3xl font-black text-[#E74C3C]">{s.num}</p>
-                  <p className="mt-1 max-w-[9rem] text-xs text-[#8899BB]">{s.label}</p>
-                </div>
-              ))}
-            </div>
+                <h3 className="font-bold">{f.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ how -- */}
-      <section id="how" className="relative">
-        <div className="absolute inset-0" style={gridBg} />
-        <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-24">
-          <div className="text-center">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-emerald-400">The Solution</p>
-            <h2 className="font-display text-4xl font-semibold sm:text-5xl">3 Steps. Zero Friction.</h2>
-          </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {steps.map((s) => (
-              <div
-                key={s.n}
-                className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center backdrop-blur transition hover:-translate-y-1.5 hover:border-[#F5A623]/30"
-              >
-                <p
-                  className="bg-clip-text text-6xl font-black text-transparent"
-                  style={{ backgroundImage: `linear-gradient(135deg, ${GOLD}, ${ORANGE})` }}
-                >
-                  {s.n}
-                </p>
-                <span className="mt-4 inline-grid h-12 w-12 place-items-center rounded-2xl border border-[#F5A623]/20 bg-[#F5A623]/10 text-[#F5A623]">
-                  <s.icon className="h-6 w-6" />
-                </span>
-                <h3 className="mt-4 text-lg font-bold">{s.title}</h3>
-                <p className="mt-2.5 text-sm leading-relaxed text-[#8899BB]">{s.desc}</p>
-              </div>
-            ))}
-          </div>
+      <section id="how" className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="font-display text-3xl font-semibold sm:text-4xl">Live in three steps</h2>
+          <p className="mt-3 text-stone-600">From signup to serving your first QR order in an afternoon.</p>
+        </div>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {steps.map((s) => (
+            <div key={s.n} className="relative rounded-2xl border border-stone-100 p-6">
+              <span className="font-display text-5xl font-semibold text-red-100">{s.n}</span>
+              <h3 className="mt-3 font-bold">{s.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{s.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* ------------------------------------------------------- features -- */}
-      <section id="features" className="relative border-t border-white/5 bg-[#0F1729]">
-        <div className="absolute inset-0" style={gridBg} />
-        <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-24">
-          <div className="text-center">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-[#E8763A]">Everything You Need</p>
-            <h2 className="font-display text-4xl font-semibold sm:text-5xl">One platform. Complete control.</h2>
+      <section id="features" className="border-t border-stone-100 bg-[#faf6ef]">
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-semibold sm:text-4xl">
+              Everything a busy floor needs
+            </h2>
           </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 transition hover:-translate-y-1 hover:border-[#F5A623]/25 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)]"
-              >
-                <span className="inline-grid h-11 w-11 place-items-center rounded-xl border border-[#F5A623]/20 bg-[#F5A623]/10 text-[#F5A623]">
-                  <f.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-bold">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#8899BB]">{f.desc}</p>
-                <span className="mt-3 inline-block rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-400">
-                  {f.badge}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* -------------------------------------------------------- kitchen -- */}
-      <section className="grid lg:grid-cols-2">
-        <div className="flex flex-col justify-center px-5 py-16 sm:px-12 sm:py-24 lg:px-16">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-[#F5A623]">Kitchen-First Design</p>
-          <h2 className="font-display text-4xl font-semibold leading-tight sm:text-5xl">
-            Your kitchen,
-            <br />
-            <span className="text-[#F5A623]">always in sync</span>
-          </h2>
-          <div className="mt-9 space-y-6">
-            {kitchenPoints.map((k) => (
-              <div key={k.title} className="flex items-start gap-4">
-                <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg border border-[#F5A623]/20 bg-[#F5A623]/10 text-[#F5A623]">
-                  <k.icon className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="font-semibold">{k.title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-[#8899BB]">{k.desc}</p>
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            {featureBlocks.map((b) => (
+              <div key={b.title} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100 sm:p-7">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-red-50 text-brand">
+                    <b.icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="font-bold leading-snug">{b.title}</h3>
                 </div>
+                <ul className="space-y-2.5">
+                  {b.points.map((p) => (
+                    <li key={p} className="flex items-start gap-2.5 text-sm text-stone-600">
+                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>
-        </div>
-        <div className="relative min-h-[320px]">
-          <img src={kitchenImg} alt="Kitchen display board full of live orders" className="h-full w-full object-cover" loading="lazy" />
-          <div
-            className="absolute inset-0"
-            style={{ background: 'linear-gradient(to right, #0A0F1E 0%, transparent 40%)' }}
-          />
-        </div>
-      </section>
 
-      {/* ------------------------------------------------------------ roi -- */}
-      <section className="relative border-t border-white/5">
-        <div className="absolute inset-0" style={gridBg} />
-        <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-24">
-          <div className="text-center">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-emerald-400">Your Return on Investment</p>
-            <h2 className="font-display text-4xl font-semibold sm:text-5xl">Pay $149/mo. Save $2,000+/mo.</h2>
-          </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {roiCards.map((r) => (
-              <div key={r.label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 text-center">
-                <p className={`text-4xl font-black ${r.color}`}>{r.num}</p>
-                <p className="mt-2 text-sm font-semibold">{r.label}</p>
-                <p className="mt-1.5 text-xs leading-relaxed text-[#8899BB]">{r.note}</p>
+          {/* included strip */}
+          <div className="mt-12 rounded-2xl bg-stone-900 p-7 text-white sm:p-9">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h3 className="font-display text-2xl font-semibold">Everything included</h3>
+              <div className="flex items-center gap-2 text-sm text-white/70">
+                <QrCode className="h-4 w-4" /> Included in every plan. No per-order fees.
               </div>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-6">
-            <div className="w-full rounded-2xl border border-[#E74C3C]/20 bg-[#E74C3C]/10 px-8 py-4 text-center sm:w-auto">
-              <p className="text-[11px] text-[#8899BB]">Monthly cost</p>
-              <p className="text-2xl font-black text-[#E74C3C]">$149</p>
             </div>
-            <span className="text-xl text-[#8899BB]">vs</span>
-            <div className="w-full rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-8 py-4 text-center sm:w-auto">
-              <p className="text-[11px] text-[#8899BB]">Monthly savings</p>
-              <p className="text-2xl font-black text-emerald-400">$2,900+</p>
-            </div>
-            <span className="text-xl text-[#8899BB]">=</span>
-            <div className="w-full rounded-2xl border border-[#F5A623]/20 bg-[#F5A623]/10 px-8 py-4 text-center sm:w-auto">
-              <p className="text-[11px] text-[#8899BB]">Net monthly gain</p>
-              <p className="text-2xl font-black text-[#F5A623]">$2,751</p>
+            <div className="mt-6 grid gap-x-6 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              {included.map((x) => (
+                <div key={x} className="flex items-center gap-2.5 text-sm text-white/85">
+                  <Check className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+                  {x}
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
       {/* -------------------------------------------------------- pricing -- */}
-      <section id="pricing" className="relative border-t border-white/5 bg-[#0F1729]">
-        <div className="absolute inset-0" style={gridBg} />
-        <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-24">
-          <div className="text-center">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.35em] text-[#F5A623]">Simple Pricing</p>
-            <h2 className="font-display text-4xl font-semibold sm:text-5xl">Start free. Scale as you grow.</h2>
-          </div>
-          <div className="mt-14 grid items-stretch gap-6 lg:grid-cols-3">
-            {plans.map((p) => (
-              <div
-                key={p.tier}
-                className={`relative flex flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 ${
+      <section id="pricing" className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="font-display text-3xl font-semibold sm:text-4xl">
+            Start free. Scale as you grow.
+          </h2>
+          <p className="mt-3 text-stone-600">
+            Every plan starts with a <span className="font-semibold text-stone-900">14-day free trial</span>.
+            No credit card required.
+          </p>
+        </div>
+        <div className="mt-12 grid items-stretch gap-5 lg:grid-cols-3">
+          {plans.map((p) => (
+            <div
+              key={p.tier}
+              className={`relative flex flex-col rounded-3xl bg-white p-7 shadow-sm transition hover:-translate-y-1 ${
+                p.featured ? 'ring-2 ring-brand' : 'ring-1 ring-stone-200'
+              }`}
+            >
+              {p.featured && (
+                <span className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-4 py-1.5 text-[11px] font-extrabold text-white">
+                  <Star className="h-3 w-3 fill-white" /> Most popular
+                </span>
+              )}
+              <p className={`text-[13px] font-bold uppercase tracking-[0.2em] ${p.featured ? 'text-brand' : 'text-stone-400'}`}>
+                {p.tier}
+              </p>
+              <p className="mt-3 font-display text-5xl font-semibold text-stone-900">
+                <sup className="align-top text-2xl text-stone-400">$</sup>
+                {p.price}
+                <span className="ml-1 text-sm font-normal text-stone-400">/mo</span>
+              </p>
+              <p className="mb-6 mt-3 border-b border-stone-100 pb-6 text-sm text-stone-500">{p.desc}</p>
+              <div className="space-y-2.5">
+                {p.features.map((f) => (
+                  <p key={f} className="flex items-center gap-2 text-sm text-stone-600">
+                    <Check className="h-4 w-4 flex-shrink-0 text-emerald-500" /> {f}
+                  </p>
+                ))}
+              </div>
+              <Link
+                to="/signup"
+                className={`mt-8 rounded-xl py-3 text-center text-sm font-bold transition ${
                   p.featured
-                    ? 'border-[#F5A623]/40 bg-gradient-to-br from-[#F5A623]/[0.12] to-[#E8763A]/[0.08]'
-                    : 'border-white/10 bg-white/[0.04]'
+                    ? 'bg-brand text-white hover:opacity-90'
+                    : 'text-stone-700 ring-1 ring-stone-200 hover:bg-stone-50'
                 }`}
               >
-                {p.featured && (
-                  <span
-                    className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full px-4 py-1.5 text-[11px] font-extrabold text-black"
-                    style={goldGradient}
-                  >
-                    <Star className="h-3 w-3 fill-black" /> Most Popular
-                  </span>
-                )}
-                <p className={`text-[13px] font-bold uppercase tracking-[0.2em] ${p.featured ? 'text-[#F5A623]' : 'text-[#8899BB]'}`}>
-                  {p.tier}
-                </p>
-                <p className="mt-3 text-5xl font-black">
-                  <sup className="align-top text-2xl text-[#F5A623]">$</sup>
-                  {p.price}
-                  <span className="ml-1 text-sm font-normal text-[#8899BB]">/mo</span>
-                </p>
-                <p className="mb-6 mt-3 border-b border-white/10 pb-6 text-sm text-[#8899BB]">{p.desc}</p>
-                <div className="space-y-2.5">
-                  {p.features.map((f) => (
-                    <p key={f} className="flex items-center gap-2 text-sm text-[#cdd5e0]">
-                      <Check className="h-4 w-4 flex-shrink-0 text-emerald-400" /> {f}
-                    </p>
-                  ))}
-                </div>
-                <Link
-                  to={p.to}
-                  className={`mt-8 rounded-xl py-3.5 text-center text-sm font-bold transition ${
-                    p.featured ? 'text-black hover:opacity-90' : 'border border-white/15 hover:bg-white/5'
-                  }`}
-                  style={p.featured ? goldGradient : undefined}
-                >
-                  {p.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-          <p className="mt-9 text-center text-sm text-[#8899BB]">
-            All plans include a <strong className="text-[#F5A623]">14-day free trial</strong>. No credit card required.
-          </p>
+                {p.cta}
+              </Link>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* ------------------------------------------------------------ cta -- */}
-      <section className="relative overflow-hidden border-t border-white/5">
-        <div className="absolute inset-0" style={gridBg} />
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,166,35,0.12), transparent 60%)',
-          }}
-        />
-        <div className="relative mx-auto max-w-4xl px-5 py-20 text-center sm:py-28">
-          <p className="mb-6 text-xs font-bold uppercase tracking-[0.35em] text-[#F5A623]">Let&rsquo;s Get Started</p>
-          <h2 className="font-display text-5xl font-semibold leading-[1.05] sm:text-6xl">
-            Ready to transform
-            <br />
-            your <span className="text-[#F5A623]">restaurant?</span>
-          </h2>
-          <p className="mx-auto mt-6 max-w-lg text-lg leading-relaxed text-[#8899BB]">
-            Setup takes under 10 minutes and your first 14 days are completely free. No credit card,
-            no commitment.
-          </p>
-          <div className="mt-11 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link
-              to={loggedIn ? ctaTo : '/signup'}
-              className="w-full rounded-2xl px-10 py-4 text-base font-bold text-black transition hover:-translate-y-0.5 sm:w-auto"
-              style={goldGradient}
-            >
-              {loggedIn ? 'Open your dashboard' : 'Start Free Trial'}
-            </Link>
-            <Link
-              to="/login"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 px-10 py-4 text-base font-bold transition hover:bg-white/5 sm:w-auto"
-            >
-              Log in <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="mt-12 flex flex-col items-center justify-center gap-3 text-[13px] text-[#8899BB] sm:flex-row sm:gap-8">
-            {['No app download for customers', 'Setup in under 10 minutes', 'Cancel anytime'].map((t) => (
-              <span key={t} className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-emerald-400" /> {t}
-              </span>
-            ))}
+      <section className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="relative overflow-hidden rounded-3xl bg-brand px-6 py-12 text-center text-white sm:px-12">
+          <div
+            className="pointer-events-none absolute inset-0"
+            aria-hidden="true"
+            style={{ background: 'radial-gradient(80% 120% at 50% -20%, rgba(255,255,255,.18), transparent 60%)' }}
+          />
+          <div className="relative">
+            <h2 className="font-display text-3xl font-semibold sm:text-4xl">
+              Ready to serve smarter?
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-white/85">
+              Create your restaurant, build your menu and print your first QR codes today.
+            </p>
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link to={loggedIn ? ctaTo : '/signup'}>
+                <Button size="lg" className="bg-white !text-stone-900 hover:bg-stone-100">
+                  {loggedIn ? 'Open your dashboard' : 'Start free trial'}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="/login" className="text-sm font-semibold text-white/90 underline-offset-4 hover:underline">
+                or log in to your account
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* --------------------------------------------------------- footer -- */}
-      <footer className="border-t border-white/10">
+      <footer className="border-t border-stone-100">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-5 py-10 sm:flex-row">
           <div>
             <div className="flex items-center gap-2 font-extrabold">
-              <span className="grid h-7 w-7 place-items-center rounded-lg text-black" style={goldGradient}>
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand text-white">
                 <Store className="h-4 w-4" />
               </span>
               TableServe
             </div>
-            <p className="mt-2 text-xs text-[#8899BB]">Scan. Order. Enjoy. QR ordering for modern restaurants.</p>
+            <p className="mt-2 text-xs text-stone-400">
+              Scan. Order. Enjoy. QR ordering for modern restaurants.
+            </p>
           </div>
-          <div className="flex items-center gap-6 text-sm text-[#8899BB]">
-            <a href="#features" className="transition hover:text-white">Features</a>
-            <a href="#pricing" className="transition hover:text-white">Pricing</a>
-            <Link to="/login" className="transition hover:text-white">Log in</Link>
-            <Link to="/signup" className="font-semibold text-[#F5A623]">Sign up</Link>
+          <div className="flex items-center gap-6 text-sm text-stone-500">
+            <a href="#efficiency" className="hover:text-stone-900">Why TableServe</a>
+            <a href="#features" className="hover:text-stone-900">Features</a>
+            <Link to="/login" className="hover:text-stone-900">Log in</Link>
+            <Link to="/signup" className="font-semibold text-brand">Sign up</Link>
           </div>
         </div>
-        <div className="border-t border-white/10 py-4 text-center text-xs text-[#8899BB]/70">
+        <div className="border-t border-stone-100 py-4 text-center text-xs text-stone-400">
           © {new Date().getFullYear()} TableServe. All rights reserved.
         </div>
       </footer>
