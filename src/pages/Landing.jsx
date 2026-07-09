@@ -248,10 +248,28 @@ export default function Landing() {
                     </span>
                   </div>
                   <div className="space-y-2.5 p-3.5">
-                    {['Margherita Pizza · $16', 'Truffle Pasta · $19', 'Tiramisu · $8'].map((x) => (
-                      <div key={x} className="flex items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm">
-                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-200 to-red-200" />
-                        <span className="text-xs font-medium text-stone-800">{x}</span>
+                    {[
+                      {
+                        name: 'Margherita Pizza · $16',
+                        img: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=96&h=96&fit=crop&q=60',
+                      },
+                      {
+                        name: 'Penne Pomodoro · $19',
+                        img: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=96&h=96&fit=crop&q=60',
+                      },
+                      {
+                        name: 'Tiramisu · $8',
+                        img: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=96&h=96&fit=crop&q=60',
+                      },
+                    ].map((x) => (
+                      <div key={x.name} className="flex items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm">
+                        <img
+                          src={x.img}
+                          alt=""
+                          loading="lazy"
+                          className="h-10 w-10 rounded-lg object-cover"
+                        />
+                        <span className="text-xs font-medium text-stone-800">{x.name}</span>
                       </div>
                     ))}
                     <div className="rounded-xl bg-brand py-2.5 text-center text-xs font-semibold text-white">
