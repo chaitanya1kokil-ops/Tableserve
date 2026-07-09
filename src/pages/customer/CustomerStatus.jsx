@@ -118,7 +118,7 @@ export default function CustomerStatus() {
             )}
             <div>
               <h1 className="font-display text-xl font-semibold">{restaurant?.name}</h1>
-              <p className="text-sm text-amber-200/80">Your orders</p>
+              <p className="text-sm text-amber-200/80">Your order</p>
             </div>
           </div>
         </div>
@@ -145,11 +145,7 @@ export default function CustomerStatus() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <OrderStatusCard key={order.id} order={order} accent={accent} currency={currency} />
-            ))}
-          </div>
+          <CombinedOrderCard orders={orders} accent={accent} currency={currency} />
         )}
       </div>
 
@@ -196,78 +192,100 @@ export default function CustomerStatus() {
   )
 }
 
-function OrderStatusCard({ order, accent, currency }) {
-  if (order.status === 'cancelled') {
-    return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 opacity-70 shadow-sm">
-        <div className="flex items-center justify-between">
-          <Badge className={ORDER_STATUSES.cancelled.color}>Cancelled</Badge>
-          <span className="text-xs text-gray-400">{formatTime(order.created_at)}</span>
-        </div>
-      </div>
-    )
-  }
+// All of a table's orders merged into one card. Each place_order call is a
+// "round" of items; the kitchen still sees rounds as separate order tickets.
+function CombinedOrderCard({ orders, accent, currency }) {
+  // Oldest first, so items read in the sequence they were added.
+  const rounds = [...orders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const active = rounds.filter((o) => o.status !== 'cancelled')
+  // Track the newest round that is still in progress.
+  const current = [...active].reverse().find((o) => o.status !== 'completed')
+  const allDone = active.length > 0 && !current
+  const currentIndex = current ? STEPS.findIndex((s) => s.key === current.status) : STEPS.length - 1
 
-  const completed = order.status === 'completed'
-  const currentIndex = completed ? STEPS.length - 1 : STEPS.findIndex((s) => s.key === order.status)
+  const subtotal = active.reduce((s, o) => s + Number(o.subtotal ?? o.total ?? 0), 0)
+  const tax = active.reduce((s, o) => s + Number(o.tax || 0), 0)
+  const total = active.reduce((s, o) => s + Number(o.total || 0), 0)
+  const billRequested = active.some((o) => o.bill_requested)
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-xs text-gray-400">
-          <Clock className="h-3.5 w-3.5" />
-          {formatTime(order.created_at)}
-        </span>
-        {order.bill_requested && (
+        <h2 className="font-bold text-gray-900">Your order</h2>
+        {billRequested && (
           <Badge className="bg-orange-100 text-orange-700">
             <Receipt className="h-3 w-3" /> Bill requested
           </Badge>
         )}
       </div>
 
-      {completed ? (
+      {allDone ? (
         <div className="my-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-emerald-700">
           <PartyPopper className="h-5 w-5" />
-          <span className="font-semibold">Enjoy! This order is complete.</span>
+          <span className="font-semibold">Enjoy! Everything has been served.</span>
         </div>
       ) : (
-        <Stepper steps={STEPS} currentIndex={currentIndex} accent={accent} />
+        <>
+          {active.length > 1 && (
+            <p className="mt-0.5 text-xs text-gray-400">Tracking your latest items</p>
+          )}
+          <Stepper steps={STEPS} currentIndex={currentIndex} accent={accent} />
+        </>
       )}
 
-      <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-3">
-        {(order.items || []).map((it) => (
-          <div key={it.id} className="flex justify-between gap-3 text-sm">
-            <span className="text-gray-700">
-              <span className="font-semibold">{it.quantity}×</span> {it.name_snapshot}
-              {Array.isArray(it.selected_options) && it.selected_options.length > 0 && (
-                <span className="text-gray-400">
-                  {' '}
-                  ({it.selected_options.map((o) => o.value).join(', ')})
+      <div className="mt-1 space-y-3">
+        {rounds.map((o, i) => {
+          const st = ORDER_STATUSES[o.status] || ORDER_STATUSES.new
+          const cancelled = o.status === 'cancelled'
+          return (
+            <div key={o.id} className="border-t border-gray-100 pt-3">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <Clock className="h-3.5 w-3.5" />
+                  {rounds.length > 1 && <>Round {i + 1} · </>}
+                  {formatTime(o.created_at)}
                 </span>
-              )}
-            </span>
-            <span className="whitespace-nowrap text-gray-500">
-              {formatCurrency(it.line_total, currency)}
-            </span>
-          </div>
-        ))}
+                <Badge className={st.color}>{st.label}</Badge>
+              </div>
+              <div className={`space-y-1.5 ${cancelled ? 'opacity-50' : ''}`}>
+                {(o.items || []).map((it) => (
+                  <div key={it.id} className="flex justify-between gap-3 text-sm">
+                    <span className={`text-gray-700 ${cancelled ? 'line-through' : ''}`}>
+                      <span className="font-semibold">{it.quantity}×</span> {it.name_snapshot}
+                      {Array.isArray(it.selected_options) && it.selected_options.length > 0 && (
+                        <span className="text-gray-400">
+                          {' '}
+                          ({it.selected_options.map((op) => op.value).join(', ')})
+                        </span>
+                      )}
+                    </span>
+                    <span className={`whitespace-nowrap text-gray-500 ${cancelled ? 'line-through' : ''}`}>
+                      {formatCurrency(it.line_total, currency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
-      <div className="mt-2 space-y-1 border-t border-gray-100 pt-2">
-        {Number(order.tax) > 0 && (
+
+      <div className="mt-3 space-y-1 border-t border-gray-100 pt-3">
+        {tax > 0 && (
           <>
             <div className="flex justify-between text-sm text-gray-500">
               <span>Subtotal</span>
-              <span>{formatCurrency(order.subtotal, currency)}</span>
+              <span>{formatCurrency(subtotal, currency)}</span>
             </div>
             <div className="flex justify-between text-sm text-gray-500">
               <span>Tax</span>
-              <span>{formatCurrency(order.tax, currency)}</span>
+              <span>{formatCurrency(tax, currency)}</span>
             </div>
           </>
         )}
         <div className="flex justify-between">
           <span className="text-sm font-semibold text-gray-500">Order total</span>
-          <span className="font-bold text-gray-900">{formatCurrency(order.total, currency)}</span>
+          <span className="font-bold text-gray-900">{formatCurrency(total, currency)}</span>
         </div>
       </div>
     </div>
