@@ -5,6 +5,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['Fraunces', 'Georgia', 'serif'],
       },
       colors: {
         // Per-restaurant accent color is injected at runtime via the CSS variable

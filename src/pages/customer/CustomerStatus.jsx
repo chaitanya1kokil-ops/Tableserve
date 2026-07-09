@@ -99,23 +99,33 @@ export default function CustomerStatus() {
   const allBilled = hasOpen && openOrders.every((o) => o.bill_requested)
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 pb-28" style={{ '--brand': accent }}>
-      <header className="text-white" style={{ backgroundColor: accent }}>
-        <div className="mx-auto max-w-2xl px-4 pb-6 pt-6">
+    <div className="min-h-[100dvh] bg-[#faf6ef] pb-28" style={{ '--brand': accent }}>
+      <header className="relative overflow-hidden bg-stone-900 text-white">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: `radial-gradient(120% 90% at 85% -10%, ${accent}59, transparent 60%), radial-gradient(90% 70% at -10% 115%, ${accent}33, transparent 65%)`,
+          }}
+        />
+        <div className="relative mx-auto max-w-2xl px-4 pb-6 pt-6">
           <div className="flex items-center gap-3">
             {restaurant?.logo_url ? (
-              <img src={imageUrl(restaurant.logo_url)} alt="" className="h-12 w-12 rounded-2xl border-2 border-white/30 object-cover" />
+              <img src={imageUrl(restaurant.logo_url)} alt="" className="h-12 w-12 rounded-2xl object-cover ring-1 ring-white/25" />
             ) : (
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/20">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/20">
                 <Store className="h-6 w-6" />
               </span>
             )}
             <div>
-              <h1 className="text-xl font-extrabold">{restaurant?.name}</h1>
-              <p className="text-sm text-white/80">Your orders</p>
+              <h1 className="font-display text-xl font-semibold">{restaurant?.name}</h1>
+              <p className="text-sm text-amber-200/80">Your orders</p>
             </div>
           </div>
         </div>
+        <div
+          className="relative h-px w-full"
+          style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
+        />
       </header>
 
       <div className="mx-auto max-w-2xl px-4 py-5">

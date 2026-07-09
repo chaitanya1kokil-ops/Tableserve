@@ -142,7 +142,7 @@ export default function CustomerMenu() {
   if (uncategorized.length) grouped.push({ category: { id: 'uncat', name: 'More' }, items: uncategorized })
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 pb-28" style={{ '--brand': accent }}>
+    <div className="min-h-[100dvh] bg-[#faf6ef] pb-28" style={{ '--brand': accent }}>
       <BrandHeader
         restaurant={restaurant}
         table={table}
@@ -174,7 +174,13 @@ export default function CustomerMenu() {
           <div className="mx-auto max-w-2xl space-y-8 px-4 py-5">
             {grouped.map(({ category, items: catItems }) => (
               <section key={category.id} id={`cat-${category.id}`} className="scroll-mt-28">
-                <h2 className="mb-3 text-xl font-extrabold text-gray-900">{category.name}</h2>
+                <h2 className="mb-3 font-display text-2xl font-semibold text-stone-900">
+                  {category.name}
+                  <span
+                    className="mt-1.5 block h-[3px] w-9 rounded-full opacity-80"
+                    style={{ backgroundColor: accent }}
+                  />
+                </h2>
                 <div className="space-y-3">
                   {catItems.map((item) => (
                     <MenuItemRow
@@ -301,31 +307,44 @@ function useCart(restaurantId, tableId) {
 /* --------------------------------------------------------------- header --- */
 function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onViewOrders }) {
   return (
-    <header className="text-white" style={{ backgroundColor: accent }}>
-      <div className="mx-auto max-w-2xl px-4 pb-5 pt-6">
-        <div className="flex items-center gap-3">
+    <header className="relative overflow-hidden bg-stone-900 text-white">
+      {/* ember glow tinted by the restaurant accent */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `radial-gradient(120% 90% at 85% -10%, ${accent}59, transparent 60%), radial-gradient(90% 70% at -10% 115%, ${accent}33, transparent 65%)`,
+        }}
+      />
+      <div className="relative mx-auto max-w-2xl px-4 pb-6 pt-7">
+        <div className="flex items-center gap-4">
           {restaurant.logo_url ? (
             <img
               src={imageUrl(restaurant.logo_url)}
               alt=""
-              className="h-14 w-14 rounded-2xl border-2 border-white/30 object-cover"
+              className="h-14 w-14 rounded-2xl object-cover ring-1 ring-white/25"
             />
           ) : (
-            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/20">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/20">
               <Store className="h-7 w-7" />
             </span>
           )}
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-extrabold">{restaurant.name}</h1>
-            {restaurant.cuisine && <p className="text-sm text-white/80">{restaurant.cuisine}</p>}
+            {restaurant.cuisine && (
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200/80">
+                {restaurant.cuisine}
+              </p>
+            )}
+            <h1 className="truncate font-display text-[1.75rem] font-semibold leading-tight">
+              {restaurant.name}
+            </h1>
           </div>
         </div>
         {restaurant.description && (
-          <p className="mt-3 text-sm text-white/90">{restaurant.description}</p>
+          <p className="mt-3 text-sm leading-relaxed text-white/70">{restaurant.description}</p>
         )}
         {table && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold ring-1 ring-white/20">
               <UtensilsCrossed className="h-4 w-4" /> {table.label}
             </span>
             {canCall && (
@@ -350,6 +369,11 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onVi
           </div>
         )}
       </div>
+      {/* gold hairline */}
+      <div
+        className="relative h-px w-full"
+        style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
+      />
     </header>
   )
 }
@@ -381,14 +405,16 @@ function CategoryNav({ groups }) {
   }
 
   return (
-    <div className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur">
+    <div className="sticky top-0 z-30 border-b border-stone-200/70 bg-[#faf6ef]/95 backdrop-blur">
       <div ref={navRef} className="no-scrollbar mx-auto flex max-w-2xl gap-2 overflow-x-auto px-4 py-3">
         {groups.map(({ category }) => (
           <button
             key={category.id}
             onClick={() => jump(category.id)}
             className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-              active === category.id ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600'
+              active === category.id
+                ? 'bg-brand text-white shadow-sm'
+                : 'bg-white text-stone-600 ring-1 ring-stone-200'
             }`}
           >
             {category.name}
@@ -401,13 +427,13 @@ function CategoryNav({ groups }) {
 
 function MenuItemRow({ item, hasOptions, currency, onOpen, onQuickAdd }) {
   return (
-    <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm">
+    <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-100">
       <button onClick={onOpen} className="min-w-0 flex-1 text-left">
-        <p className="font-bold text-gray-900">{item.name}</p>
+        <p className="font-bold text-stone-900">{item.name}</p>
         {item.description && (
-          <p className="mt-0.5 line-clamp-2 text-sm text-gray-500">{item.description}</p>
+          <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{item.description}</p>
         )}
-        <p className="mt-1.5 font-semibold text-gray-900">{formatCurrency(item.price, currency)}</p>
+        <p className="mt-1.5 font-semibold text-brand">{formatCurrency(item.price, currency)}</p>
       </button>
       <div className="relative flex-shrink-0">
         <button onClick={onOpen} className="block h-24 w-24 overflow-hidden rounded-xl bg-gray-100">
@@ -503,7 +529,7 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <h3 className="text-xl font-extrabold text-gray-900">{item.name}</h3>
+          <h3 className="font-display text-2xl font-semibold text-stone-900">{item.name}</h3>
           {item.description && <p className="mt-1 text-sm text-gray-500">{item.description}</p>}
           <p className="mt-2 text-lg font-bold text-gray-900">{formatCurrency(item.price, currency)}</p>
 
@@ -646,7 +672,7 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, restaurantId, tab
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-white animate-slide-up sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h3 className="text-lg font-bold text-gray-900">Your order</h3>
+          <h3 className="font-display text-xl font-semibold text-stone-900">Your order</h3>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">
             <X className="h-5 w-5" />
           </button>
