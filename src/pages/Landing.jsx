@@ -22,12 +22,12 @@ const efficiencyPoints = [
   {
     icon: Timer,
     title: 'Turn tables faster',
-    desc: 'Guests order the moment they sit down — no waiting to flag someone for a menu, an order, or the bill. Every saved minute is a table served sooner.',
+    desc: 'Guests order the moment they sit down, with no waiting to flag someone for a menu, an order, or the bill. Every saved minute is a table served sooner.',
   },
   {
     icon: ClipboardCheck,
     title: 'Zero order-entry errors',
-    desc: 'Orders go straight from the guest to the kitchen exactly as typed — items, modifiers, allergy notes. No misheard dishes, no handwriting to decipher.',
+    desc: 'Orders go straight from the guest to the kitchen exactly as typed: items, modifiers, allergy notes. No misheard dishes, no handwriting to decipher.',
   },
   {
     icon: Users,
@@ -37,7 +37,7 @@ const efficiencyPoints = [
   {
     icon: BarChart3,
     title: 'Know your numbers',
-    desc: 'A live overview of revenue, order volume and best-sellers — filterable by day — so you can staff, stock and price with facts, not guesses.',
+    desc: 'A live overview of revenue, order volume and best-sellers, filterable by day, so you can staff, stock and price with facts, not guesses.',
   },
 ]
 
@@ -45,7 +45,7 @@ const steps = [
   {
     n: '1',
     title: 'Build your menu',
-    desc: 'Add categories, items, photos and modifiers in the dashboard. Toggle availability any time — 86 a dish in one tap.',
+    desc: 'Add categories, items, photos and modifiers in the dashboard. Toggle availability any time and 86 a dish in one tap.',
   },
   {
     n: '2',
@@ -64,7 +64,7 @@ const featureBlocks = [
     icon: LayoutDashboard,
     title: 'A live orders board your whole team can run',
     points: [
-      'Orders grouped by table, updating in real time — no refresh, no polling',
+      'Orders grouped by table, updating in real time without a single refresh',
       'One-tap status changes with a full-screen kitchen display mode',
       'Staff can enter phone or walk-up orders from the same screen',
       'A chime alerts the floor when a guest calls a server',
@@ -74,10 +74,10 @@ const featureBlocks = [
     icon: UtensilsCrossed,
     title: 'A menu you can change in seconds, not print runs',
     points: [
-      'Categories, photos, descriptions and prices — edited live',
+      'Categories, photos, descriptions and prices, all edited live',
       'Modifier groups with price deltas: sizes, spice levels, add-ons',
       'Sold out? Toggle an item off and it vanishes from every table instantly',
-      'Guests browse in their language of prices — your currency, your tax rate',
+      'Prices shown your way, in your currency and with your tax rate',
     ],
   },
   {
@@ -86,7 +86,7 @@ const featureBlocks = [
     points: [
       'Taxes calculated automatically at your local rate on every order',
       'Running table totals across multiple orders in a sitting',
-      'Guests request the bill with one tap — servers see it immediately',
+      'Guests request the bill with one tap and servers see it immediately',
       'Clean subtotal / tax / total breakdowns on every receipt view',
     ],
   },
@@ -96,7 +96,7 @@ const featureBlocks = [
     points: [
       'Your logo, accent color and story on every guest-facing page',
       'An elegant mobile menu that feels like your restaurant, not ours',
-      'No app downloads and no guest sign-ups — scanning is enough',
+      'No app downloads and no guest sign-ups. Scanning is enough',
       'Multi-tenant by design: your data is isolated and yours alone',
     ],
   },
@@ -113,7 +113,7 @@ const included = [
   'Staff order entry',
   'Sales overview & order history',
   'Custom branding & accent color',
-  'Works on any phone — no app',
+  'Works on any phone, no app',
   'Secure guest sessions',
 ]
 
@@ -175,7 +175,7 @@ export default function Landing() {
         <div className="relative mx-auto max-w-6xl px-5 pb-10 pt-14 sm:pt-20">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-brand">
-              <Zap className="h-3.5 w-3.5" /> QR ordering, live orders & billing — one platform
+              <Zap className="h-3.5 w-3.5" /> QR ordering, live orders and billing in one platform
             </span>
             <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-6xl">
               Run a more efficient restaurant,
@@ -183,7 +183,7 @@ export default function Landing() {
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-stone-600">
               TableServe turns every table into a self-serve ordering point. Guests scan, browse
-              your branded menu and order in under a minute — while your team watches everything
+              your branded menu and order in under a minute, while your team watches everything
               flow through one live board, from first tap to final bill.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -207,36 +207,105 @@ export default function Landing() {
           {/* mockups */}
           <div className="mt-14 grid items-center gap-8 lg:grid-cols-[1fr,auto]">
             {/* dashboard mockup */}
-            <div className="hidden overflow-hidden rounded-2xl border border-stone-200 shadow-xl lg:block">
+            <div className="hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl lg:block">
+              {/* browser chrome */}
               <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-4 py-2.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
-                <span className="ml-3 text-xs text-stone-400">tableserve — live orders</span>
+                <span className="ml-4 flex-1 rounded-md bg-white px-3 py-1 text-center text-[11px] text-stone-400 ring-1 ring-stone-200">
+                  tableserve-app.vercel.app/dashboard/orders
+                </span>
+                <span className="w-10" />
               </div>
-              <div className="grid grid-cols-4 gap-3 bg-white p-4">
+              {/* board header */}
+              <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="font-display text-base font-semibold text-stone-900">
+                    Live orders
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    </span>
+                    LIVE
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-stone-400">
+                  <span className="rounded-lg bg-stone-100 px-2 py-1 font-semibold text-stone-600">
+                    12 open
+                  </span>
+                  <span className="rounded-lg bg-stone-100 px-2 py-1 font-semibold text-stone-600">
+                    $612 today
+                  </span>
+                </div>
+              </div>
+              {/* order cards */}
+              <div className="grid grid-cols-4 gap-3 bg-[#faf6ef] p-4">
                 {[
-                  { t: 'Table 3', s: 'New', c: 'bg-blue-50 text-blue-700', items: ['2× Margherita Pizza', '1× Caesar Salad'] },
-                  { t: 'Table 7', s: 'Preparing', c: 'bg-amber-50 text-amber-700', items: ['1× Truffle Pasta', '2× Garlic Bread'] },
-                  { t: 'Table 1', s: 'Ready', c: 'bg-emerald-50 text-emerald-700', items: ['1× Grilled Salmon'] },
-                  { t: 'Table 9', s: 'Served', c: 'bg-stone-100 text-stone-600', items: ['2× Tiramisu', '1× Espresso'] },
+                  {
+                    t: 'Table 3', time: '12:42', s: 'New',
+                    chip: 'bg-blue-100 text-blue-700', bar: 'bg-blue-400',
+                    btn: 'bg-blue-600 text-white', action: 'Start preparing',
+                    items: [['2×', 'Margherita Pizza', '$32'], ['1×', 'Caesar Salad', '$12']],
+                    total: '$49.72',
+                  },
+                  {
+                    t: 'Table 7', time: '12:36', s: 'Preparing',
+                    chip: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400',
+                    btn: 'bg-amber-500 text-white', action: 'Mark ready',
+                    items: [['1×', 'Penne Pomodoro', '$19'], ['2×', 'Garlic Bread', '$9']],
+                    total: '$31.64',
+                  },
+                  {
+                    t: 'Table 1', time: '12:31', s: 'Ready',
+                    chip: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-400',
+                    btn: 'bg-emerald-600 text-white', action: 'Mark served',
+                    items: [['1×', 'Grilled Salmon', '$21']],
+                    total: '$23.73',
+                  },
+                  {
+                    t: 'Table 9', time: '12:18', s: 'Served',
+                    chip: 'bg-stone-200 text-stone-600', bar: 'bg-stone-300',
+                    btn: 'bg-white text-stone-600 ring-1 ring-stone-200', action: 'Complete',
+                    items: [['2×', 'Tiramisu', '$16'], ['1×', 'Espresso', '$4']],
+                    total: '$22.60',
+                  },
                 ].map((o) => (
-                  <div key={o.t} className="rounded-xl border border-stone-100 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold">{o.t}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${o.c}`}>{o.s}</span>
-                    </div>
-                    <div className="mt-2 space-y-1">
-                      {o.items.map((i) => (
-                        <p key={i} className="text-xs text-stone-500">{i}</p>
-                      ))}
+                  <div key={o.t} className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-100">
+                    <div className={`h-1 w-full ${o.bar}`} />
+                    <div className="p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-stone-900">{o.t}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${o.chip}`}>
+                          {o.s}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-stone-400">{o.time}</p>
+                      <div className="mt-2 space-y-1 border-t border-stone-100 pt-2">
+                        {o.items.map(([q, n, p]) => (
+                          <div key={n} className="flex items-baseline gap-1.5 text-[11px]">
+                            <span className="font-bold text-stone-700">{q}</span>
+                            <span className="flex-1 truncate text-stone-600">{n}</span>
+                            <span className="text-stone-400">{p}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2 flex items-center justify-between border-t border-stone-100 pt-2 text-[11px]">
+                        <span className="text-stone-400">Total incl. tax</span>
+                        <span className="font-bold text-stone-900">{o.total}</span>
+                      </div>
+                      <div className={`mt-2.5 rounded-lg py-1.5 text-center text-[11px] font-semibold ${o.btn}`}>
+                        {o.action}
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* phone mockup — iPhone-like 9:19.5 proportions */}
+            {/* phone mockup with iPhone-like 9:19.5 proportions */}
             <div className="mx-auto w-full max-w-[270px]">
               <div className="rounded-[3rem] border-[10px] border-stone-900 bg-stone-900 shadow-2xl">
                 <div className="relative flex aspect-[9/19.5] flex-col overflow-hidden rounded-[2.4rem] bg-[#faf6ef]">
@@ -431,7 +500,7 @@ export default function Landing() {
               TableServe
             </div>
             <p className="mt-2 text-xs text-stone-400">
-              Scan. Order. Enjoy. — QR ordering for modern restaurants.
+              Scan. Order. Enjoy. QR ordering for modern restaurants.
             </p>
           </div>
           <div className="flex items-center gap-6 text-sm text-stone-500">
