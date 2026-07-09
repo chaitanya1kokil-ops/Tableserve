@@ -236,29 +236,40 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* phone mockup */}
-            <div className="mx-auto w-full max-w-[280px]">
-              <div className="rounded-[2.5rem] border-8 border-stone-900 bg-stone-900 shadow-2xl">
-                <div className="overflow-hidden rounded-[2rem] bg-[#faf6ef]">
-                  <div className="bg-stone-900 px-5 py-5 text-white">
+            {/* phone mockup — iPhone-like 9:19.5 proportions */}
+            <div className="mx-auto w-full max-w-[270px]">
+              <div className="rounded-[3rem] border-[10px] border-stone-900 bg-stone-900 shadow-2xl">
+                <div className="relative flex aspect-[9/19.5] flex-col overflow-hidden rounded-[2.4rem] bg-[#faf6ef]">
+                  {/* dynamic island */}
+                  <div className="absolute left-1/2 top-2.5 z-10 h-[22px] w-24 -translate-x-1/2 rounded-full bg-black" />
+                  <div className="bg-stone-900 px-5 pb-5 pt-11 text-white">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/80">Italian</p>
                     <p className="font-display text-lg font-semibold">Bella Napoli</p>
                     <span className="mt-2 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold ring-1 ring-white/20">
                       Table 7
                     </span>
                   </div>
-                  <div className="space-y-2.5 p-3.5">
+                  <div className="flex-1 space-y-2.5 overflow-hidden p-3.5">
+                    <p className="px-1 font-display text-sm font-semibold text-stone-900">Popular</p>
                     {[
                       {
-                        name: 'Margherita Pizza · $16',
+                        name: 'Margherita Pizza',
+                        price: '$16',
                         img: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=96&h=96&fit=crop&q=60',
                       },
                       {
-                        name: 'Penne Pomodoro · $19',
+                        name: 'Penne Pomodoro',
+                        price: '$19',
                         img: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=96&h=96&fit=crop&q=60',
                       },
                       {
-                        name: 'Tiramisu · $8',
+                        name: 'Garden Salad',
+                        price: '$12',
+                        img: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=96&h=96&fit=crop&q=60',
+                      },
+                      {
+                        name: 'Tiramisu',
+                        price: '$8',
                         img: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=96&h=96&fit=crop&q=60',
                       },
                     ].map((x) => (
@@ -267,14 +278,18 @@ export default function Landing() {
                           src={x.img}
                           alt=""
                           loading="lazy"
-                          className="h-10 w-10 rounded-lg object-cover"
+                          className="h-11 w-11 rounded-lg object-cover"
                         />
-                        <span className="text-xs font-medium text-stone-800">{x.name}</span>
+                        <span className="flex-1 text-xs font-medium text-stone-800">{x.name}</span>
+                        <span className="text-xs font-semibold text-stone-900">{x.price}</span>
                       </div>
                     ))}
-                    <div className="rounded-xl bg-brand py-2.5 text-center text-xs font-semibold text-white">
-                      Place order · $43.00
+                  </div>
+                  <div className="p-3.5 pt-0">
+                    <div className="rounded-xl bg-brand py-3 text-center text-xs font-semibold text-white">
+                      Place order · $55.00
                     </div>
+                    <div className="mx-auto mt-2.5 h-1 w-24 rounded-full bg-stone-300" />
                   </div>
                 </div>
               </div>
