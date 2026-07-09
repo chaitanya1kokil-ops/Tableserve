@@ -36,7 +36,7 @@ export default function DashboardLayout() {
   return (
     <div
       className="min-h-[100dvh] bg-[#faf6ef] lg:flex"
-      style={{ '--brand': restaurant?.accent_color || '#ef4444' }}
+      style={{ '--brand': restaurant?.accent_color || '#b45309' }}
     >
       {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-r border-gray-100 bg-white lg:flex">
@@ -192,7 +192,7 @@ function RestaurantBadge({ restaurant }) {
       ) : (
         <span
           className="grid h-10 w-10 place-items-center rounded-lg text-white"
-          style={{ backgroundColor: restaurant?.accent_color || '#ef4444' }}
+          style={{ backgroundColor: restaurant?.accent_color || '#b45309' }}
         >
           <Store className="h-5 w-5" />
         </span>

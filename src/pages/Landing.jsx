@@ -196,12 +196,12 @@ export default function Landing() {
           aria-hidden="true"
           style={{
             background:
-              'radial-gradient(70% 55% at 50% -10%, rgba(239,68,68,.09), transparent 65%)',
+              'radial-gradient(70% 55% at 50% -10%, rgba(180,83,9,.10), transparent 65%)',
           }}
         />
         <div className="relative mx-auto max-w-6xl px-5 pb-10 pt-14 sm:pt-20">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-brand">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-brand">
               <Zap className="h-3.5 w-3.5" /> QR ordering, live orders and billing in one platform
             </span>
             <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-6xl">
@@ -409,7 +409,7 @@ export default function Landing() {
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
             {efficiencyPoints.map((f) => (
               <div key={f.title} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100">
-                <div className="mb-3 inline-flex rounded-xl bg-red-50 p-2.5 text-brand">
+                <div className="mb-3 inline-flex rounded-xl bg-amber-50 p-2.5 text-brand">
                   <f.icon className="h-5 w-5" />
                 </div>
                 <h3 className="font-bold">{f.title}</h3>
@@ -429,7 +429,7 @@ export default function Landing() {
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {steps.map((s) => (
             <div key={s.n} className="relative rounded-2xl border border-stone-100 p-6">
-              <span className="font-display text-5xl font-semibold text-red-100">{s.n}</span>
+              <span className="font-display text-5xl font-semibold text-amber-100">{s.n}</span>
               <h3 className="mt-3 font-bold">{s.title}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{s.desc}</p>
             </div>
@@ -449,7 +449,7 @@ export default function Landing() {
             {featureBlocks.map((b) => (
               <div key={b.title} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100 sm:p-7">
                 <div className="mb-4 flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-red-50 text-brand">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-brand">
                     <b.icon className="h-5 w-5" />
                   </span>
                   <h3 className="font-bold leading-snug">{b.title}</h3>

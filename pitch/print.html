@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TableServe Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #F5A623; --gold-light: #FFD07B; --navy: #0A0F1E;
+      --accent: #E8763A; --green: #2ECC71; --red: #E74C3C;
+      --text: #F0F4FF; --muted: #8899BB;
+      --card-bg: rgba(255,255,255,0.06); --card-border: rgba(255,255,255,0.1);
+    }
+    html { background: var(--navy); font-family: 'Inter', sans-serif; color: var(--text); }
+    body { margin: 0; padding: 0; }
+
+    .slide {
+      width: 1440px; height: 810px;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 70px; overflow: hidden; position: relative;
+      page-break-after: always; break-after: page;
+    }
+    .slide > * { position: relative; z-index: 1; }
+
+    .bg-grid {
+      position: absolute; inset: 0; z-index: 0;
+      background-image: linear-gradient(rgba(245,166,35,0.05) 1px,transparent 1px), linear-gradient(90deg,rgba(245,166,35,0.05) 1px,transparent 1px);
+      background-size: 60px 60px;
+    }
+    .bg-g1 { background: radial-gradient(ellipse 80% 60% at 20% 20%,rgba(245,166,35,0.15) 0%,transparent 60%),radial-gradient(ellipse 60% 60% at 80% 80%,rgba(232,118,58,0.12) 0%,transparent 60%),var(--navy); }
+    .bg-g2 { background: radial-gradient(ellipse 70% 50% at 80% 10%,rgba(46,204,113,0.12) 0%,transparent 60%),radial-gradient(ellipse 50% 50% at 10% 90%,rgba(245,166,35,0.10) 0%,transparent 60%),#0F1729; }
+    .bg-g3 { background: radial-gradient(ellipse 90% 70% at 50% 50%,rgba(232,118,58,0.10) 0%,transparent 70%),var(--navy); }
+
+    /* ── SLIDE 1 HERO ── */
+    #s1 { background: var(--navy); text-align: center; }
+    #s1 .bg-img { position:absolute;inset:0;z-index:0;background:url('assets/hero_restaurant_qr.png') center/cover no-repeat;filter:brightness(0.2) saturate(0.5); }
+    .logo-badge { background:linear-gradient(135deg,var(--gold),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:13px;font-weight:700;letter-spacing:6px;text-transform:uppercase;margin-bottom:20px;display:block; }
+    #s1 h1 { font-family:'Playfair Display',serif;font-size:82px;font-weight:800;line-height:1.0;margin-bottom:22px; }
+    #s1 h1 span { color:var(--gold); }
+    .tagline { font-size:20px;color:var(--muted);max-width:620px;line-height:1.6;margin-bottom:44px; }
+    .hero-pills { display:flex;gap:12px;flex-wrap:wrap;justify-content:center; }
+    .pill { padding:10px 22px;border-radius:100px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);font-size:13px;font-weight:500;color:var(--muted); }
+    .pill.gold { border-color:rgba(245,166,35,0.3);color:var(--gold-light); }
+
+    /* ── SLIDE 2 PROBLEM ── */
+    #s2 .split { display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;width:100%; }
+    #s2 img { width:100%;border-radius:18px;box-shadow:0 30px 60px rgba(0,0,0,0.5); }
+    .pain-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--red);text-transform:uppercase;margin-bottom:14px;display:block; }
+    #s2 h2 { font-family:'Playfair Display',serif;font-size:50px;font-weight:800;line-height:1.1;margin-bottom:28px; }
+    .pain-item { display:flex;align-items:flex-start;gap:14px;margin-bottom:18px; }
+    .pain-icon { width:36px;height:36px;border-radius:8px;background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+    .pain-title { font-weight:600;font-size:15px;margin-bottom:3px; }
+    .pain-desc { font-size:13px;color:var(--muted);line-height:1.5; }
+    .stat-row { display:flex;gap:16px;margin-top:28px; }
+    .stat-box { background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2);border-radius:14px;padding:18px 20px;text-align:center;flex:1; }
+    .stat-num { font-size:30px;font-weight:900;color:var(--red); }
+    .stat-lbl { font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4; }
+
+    /* ── SLIDE 3 SOLUTION ── */
+    #s3 .center-top { text-align:center;margin-bottom:50px; }
+    .sol-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--green);text-transform:uppercase;margin-bottom:14px;display:block; }
+    #s3 h2 { font-family:'Playfair Display',serif;font-size:56px;font-weight:800; }
+    .steps-row { display:flex;gap:24px;width:100%; }
+    .step-card { flex:1;background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;padding:36px 28px;text-align:center; }
+    .step-num { font-size:60px;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--gold),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px; }
+    .step-icon { font-size:34px;margin-bottom:14px; }
+    .step-title { font-size:18px;font-weight:700;margin-bottom:10px; }
+    .step-desc { font-size:14px;color:var(--muted);line-height:1.6; }
+
+    /* ── SLIDE 4 DEMO ── */
+    #s4 .demo-layout { display:flex;gap:56px;align-items:center;width:100%; }
+    #s4 .demo-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;display:block; }
+    #s4 h2 { font-family:'Playfair Display',serif;font-size:50px;font-weight:800;margin-bottom:36px; }
+    #s4 h2 span { color:var(--gold); }
+    .phone-frame { width:230px;flex-shrink:0;background:#111827;border-radius:40px;border:2px solid rgba(255,255,255,0.12);padding:16px;box-shadow:0 40px 80px rgba(0,0,0,0.6); }
+    .phone-notch { width:80px;height:22px;background:#111827;border-radius:0 0 14px 14px;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.07);border-top:none; }
+    .phone-screen { border-radius:24px;overflow:hidden;height:400px;background:linear-gradient(160deg,#1a0a00,#0d1117);padding:16px; }
+    .dmenu-header { background:linear-gradient(135deg,#8B1A1A,#C0392B);border-radius:12px;padding:14px;margin-bottom:12px; }
+    .dmenu-logo { font-weight:800;font-size:14px;color:white; }
+    .dmenu-sub { font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px; }
+    .dmenu-cat { font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:2px;margin:10px 0 8px; }
+    .dmenu-item { background:rgba(255,255,255,0.07);border-radius:10px;padding:10px;margin-bottom:8px;display:flex;gap:10px;align-items:center; }
+    .ditem-img { width:44px;height:44px;border-radius:8px;flex-shrink:0; }
+    .ditem-name { font-size:11px;font-weight:600; }
+    .ditem-price { font-size:11px;color:var(--gold);font-weight:700;margin-top:2px; }
+    .ditem-add { margin-left:auto;background:var(--gold);color:#000;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0; }
+    .demo-steps-panel { flex:1; }
+    .demo-step-item { display:flex;align-items:flex-start;gap:16px;padding:20px;border-radius:16px;border:1px solid transparent;margin-bottom:12px;background:rgba(245,166,35,0.05);border-color:rgba(245,166,35,0.15); }
+    .dsn { width:36px;height:36px;border-radius:10px;background:var(--gold);color:#000;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .dst { font-weight:700;font-size:15px;margin-bottom:4px; }
+    .dsd { font-size:13px;color:var(--muted);line-height:1.5; }
+
+    /* ── SLIDE 5 FEATURES ── */
+    #s5 .feat-header { text-align:center;margin-bottom:40px; }
+    .feat-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--accent);text-transform:uppercase;margin-bottom:14px;display:block; }
+    #s5 h2 { font-family:'Playfair Display',serif;font-size:50px;font-weight:800; }
+    .feat-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:18px;width:100%; }
+    .feat-card { background:var(--card-bg);border:1px solid var(--card-border);border-radius:20px;padding:26px 22px; }
+    .feat-emoji { font-size:28px;margin-bottom:12px;display:block; }
+    .feat-title { font-size:15px;font-weight:700;margin-bottom:7px; }
+    .feat-desc { font-size:13px;color:var(--muted);line-height:1.55; }
+    .feat-badge { display:inline-block;margin-top:10px;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.2);color:var(--green); }
+
+    /* ── SLIDE 6 KITCHEN ── */
+    #s6 { padding:0; }
+    #s6 .split { display:grid;grid-template-columns:1fr 1fr;height:100%;width:100%; }
+    #s6 .left { display:flex;flex-direction:column;justify-content:center;padding:80px 60px;background:var(--navy); }
+    #s6 .right { position:relative;overflow:hidden; }
+    #s6 .right img { width:100%;height:100%;object-fit:cover; }
+    #s6 .right::after { content:'';position:absolute;inset:0;background:linear-gradient(to right,var(--navy) 0%,transparent 35%); }
+    .kit-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:block; }
+    #s6 h2 { font-family:'Playfair Display',serif;font-size:46px;font-weight:800;line-height:1.1;margin-bottom:28px; }
+    .kit-point { display:flex;gap:14px;align-items:flex-start;margin-bottom:20px; }
+    .kit-icon { font-size:20px;margin-top:2px; }
+    .kit-text-title { font-weight:700;font-size:15px; }
+    .kit-text-desc { font-size:13px;color:var(--muted);margin-top:2px;line-height:1.5; }
+
+    /* ── SLIDE 7 ROI ── */
+    #s7 .roi-header { text-align:center;margin-bottom:36px; }
+    .roi-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--green);text-transform:uppercase;margin-bottom:14px;display:block; }
+    #s7 h2 { font-family:'Playfair Display',serif;font-size:50px;font-weight:800; }
+    .roi-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:18px;width:100%;margin-bottom:28px; }
+    .roi-card { background:var(--card-bg);border:1px solid var(--card-border);border-radius:22px;padding:26px 18px;text-align:center; }
+    .roi-num { font-size:42px;font-weight:900;line-height:1;margin-bottom:8px; }
+    .roi-num.green { color:var(--green); } .roi-num.gold { color:var(--gold); }
+    .roi-label { font-size:14px;font-weight:600;margin-bottom:5px; }
+    .roi-note { font-size:11px;color:var(--muted); }
+    .roi-compare { display:flex;gap:20px;justify-content:center;align-items:center; }
+    .rc { border-radius:14px;padding:16px 28px;text-align:center; }
+    .rc-label { font-size:11px;color:var(--muted);margin-bottom:4px; }
+    .rc-val { font-size:26px;font-weight:900; }
+
+    /* ── SLIDE 8 PRICING ── */
+    #s8 .pricing-header { text-align:center;margin-bottom:40px; }
+    .pricing-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;display:block; }
+    #s8 h2 { font-family:'Playfair Display',serif;font-size:50px;font-weight:800; }
+    .pricing-row { display:flex;gap:20px;width:100%;align-items:stretch; }
+    .price-card { flex:1;background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;padding:30px 26px;display:flex;flex-direction:column; }
+    .price-card.featured { background:linear-gradient(145deg,rgba(245,166,35,0.12),rgba(232,118,58,0.08));border-color:rgba(245,166,35,0.4);position:relative; }
+    .price-badge { position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--gold),var(--accent));color:#000;font-size:11px;font-weight:800;padding:5px 16px;border-radius:100px;white-space:nowrap; }
+    .price-tier { font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:10px; }
+    .price-amount { font-size:46px;font-weight:900;line-height:1; }
+    .price-amount sup { font-size:22px;vertical-align:top;margin-top:8px;color:var(--gold); }
+    .price-mo { font-size:13px;color:var(--muted);margin-left:3px;font-weight:400; }
+    .price-desc { font-size:13px;color:var(--muted);margin:10px 0 20px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:20px; }
+    .price-feature { font-size:13px;color:#cdd5e0;margin-bottom:9px;display:flex;align-items:center;gap:8px; }
+    .price-feature::before { content:'✓';color:var(--green);font-weight:700; }
+    .price-cta { margin-top:auto;padding-top:20px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text);border-radius:12px;padding:13px;font-size:13px;font-weight:700;text-align:center; }
+    .price-card.featured .price-cta { background:linear-gradient(135deg,var(--gold),var(--accent));border:none;color:#000; }
+    .price-trial { text-align:center;margin-top:16px;font-size:13px;color:var(--muted); }
+    .price-trial strong { color:var(--gold); }
+
+    /* ── SLIDE 9 CTA ── */
+    #s9 { text-align:center; }
+    .cta-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:24px;display:block; }
+    #s9 h2 { font-family:'Playfair Display',serif;font-size:70px;font-weight:800;line-height:1.05;margin-bottom:24px; }
+    #s9 h2 em { font-style:normal;color:var(--gold); }
+    #s9 .cta-sub { font-size:20px;color:var(--muted);max-width:520px;margin:0 auto 44px;line-height:1.7; }
+    .cta-buttons { display:flex;gap:16px;justify-content:center; }
+    .btn-primary { padding:18px 44px;border-radius:14px;font-size:16px;font-weight:700;background:linear-gradient(135deg,var(--gold),var(--accent));color:#000;border:none; }
+    .btn-secondary { padding:18px 44px;border-radius:14px;font-size:16px;font-weight:700;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.2); }
+    .cta-trust { display:flex;gap:32px;justify-content:center;margin-top:44px; }
+    .trust-item { font-size:14px;color:var(--muted);display:flex;align-items:center;gap:8px; }
+    .trust-item::before { content:'✓';color:var(--green);font-weight:700; }
+
+    @media print {
+      html, body { width: 1440px; height: auto; background: transparent; }
+      .slide { page-break-after: always; break-after: page; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SLIDE 1 HERO -->
+<div class="slide bg-g1" id="s1">
+  <div class="bg-img"></div>
+  <div class="bg-grid"></div>
+  <span class="logo-badge">🍽️ &nbsp; TableServe</span>
+  <h1>The Future of<br /><span>Restaurant Ordering</span></h1>
+  <p class="tagline">Customers scan, tap, and order — no app, no waiter, no wait.<br />You get real-time orders, happier tables, and more revenue.</p>
+  <div class="hero-pills">
+    <span class="pill gold">📱 QR-Based Ordering</span>
+    <span class="pill">⚡ Real-time Kitchen Display</span>
+    <span class="pill gold">📊 Live Analytics</span>
+    <span class="pill">🔒 No App Required</span>
+  </div>
+</div>
+
+<!-- SLIDE 2 PROBLEM -->
+<div class="slide bg-g2" id="s2">
+  <div class="bg-grid"></div>
+  <div class="split">
+    <img src="assets/problem_slide_chaos.png" alt="Restaurant chaos" />
+    <div>
+      <span class="pain-tag">⚠ The Problem</span>
+      <h2>Your staff is<br />stretched thin</h2>
+      <div class="pain-item"><div class="pain-icon">😤</div><div><div class="pain-title">Customers wait too long to order</div><div class="pain-desc">Peak hours mean 10–20 min wait just to take an order — customers leave before being seated</div></div></div>
+      <div class="pain-item"><div class="pain-icon">📝</div><div><div class="pain-title">Handwritten orders get lost or wrong</div><div class="pain-desc">Order errors cost you remakes, refunds, and bad reviews every single week</div></div></div>
+      <div class="pain-item"><div class="pain-icon">💸</div><div><div class="pain-title">Staff costs keep rising</div><div class="pain-desc">A single waiter costs $2,000–$3,500/month — you need 2–3 just to take orders</div></div></div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-num">68%</div><div class="stat-lbl">of diners prefer self-ordering</div></div>
+        <div class="stat-box"><div class="stat-num">$400</div><div class="stat-lbl">avg loss/mo from errors</div></div>
+        <div class="stat-box"><div class="stat-num">23%</div><div class="stat-lbl">higher order value digitally</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3 SOLUTION -->
+<div class="slide bg-g1" id="s3">
+  <div class="bg-grid"></div>
+  <div class="center-top">
+    <span class="sol-tag">✅ The Solution</span>
+    <h2>3 Steps. Zero Friction.</h2>
+  </div>
+  <div class="steps-row">
+    <div class="step-card"><div class="step-num">01</div><div class="step-icon">📲</div><div class="step-title">Customer Scans QR</div><p class="step-desc">A unique QR code sits on every table. Customers scan with any phone camera — no download, no account, no friction whatsoever.</p></div>
+    <div class="step-card"><div class="step-num">02</div><div class="step-icon">🛒</div><div class="step-title">Browses &amp; Orders</div><p class="step-desc">Your branded menu with photos, modifiers, and categories. Add to cart, customise, and place the order — in under 60 seconds.</p></div>
+    <div class="step-card"><div class="step-num">03</div><div class="step-icon">⚡</div><div class="step-title">Kitchen Gets It Instantly</div><p class="step-desc">Orders appear live in your kitchen dashboard. Status updates push back to the customer's phone in real time. No calls, no shouting.</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 4 DEMO -->
+<div class="slide bg-g3" id="s4">
+  <div class="bg-grid"></div>
+  <span class="demo-tag">🎬 How It Works</span>
+  <h2>See it in <span>30 seconds</span></h2>
+  <div class="demo-layout">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <div class="dmenu-header"><div class="dmenu-logo">🍕 La Bella Cucina</div><div class="dmenu-sub">Table 4 · Scan to order</div></div>
+        <div class="dmenu-cat">🥗 Starters</div>
+        <div class="dmenu-item"><div class="ditem-img" style="background:linear-gradient(135deg,#8B4513,#D2691E)"></div><div style="flex:1"><div class="ditem-name">Bruschetta</div><div class="ditem-price">$8.00</div></div><div class="ditem-add">+</div></div>
+        <div class="dmenu-cat">🍝 Mains</div>
+        <div class="dmenu-item" style="border:1px solid rgba(245,166,35,0.3)"><div class="ditem-img" style="background:linear-gradient(135deg,#c0392b,#922b21)"></div><div style="flex:1"><div class="ditem-name">Pasta Arrabbiata</div><div class="ditem-price">$18.00</div></div><div class="ditem-add" style="background:var(--green);font-size:10px">1✓</div></div>
+        <div class="dmenu-item"><div class="ditem-img" style="background:linear-gradient(135deg,#1a5276,#2e86c1)"></div><div style="flex:1"><div class="ditem-name">Grilled Sea Bass</div><div class="ditem-price">$28.00</div></div><div class="ditem-add">+</div></div>
+      </div>
+    </div>
+    <div class="demo-steps-panel">
+      <div class="demo-step-item"><div class="dsn">1</div><div><div class="dst">Customer browses menu</div><div class="dsd">Your fully branded menu with categories, photos &amp; modifiers — loads on any phone, no app needed.</div></div></div>
+      <div class="demo-step-item"><div class="dsn">2</div><div><div class="dst">Reviews cart &amp; places order</div><div class="dsd">Taps "Place Order" and the order fires directly to your kitchen. Zero delay, zero miscommunication.</div></div></div>
+      <div class="demo-step-item"><div class="dsn">3</div><div><div class="dst">Real-time status tracking</div><div class="dsd">Live updates push to the customer as kitchen advances the order. No more "how much longer?" calls.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5 FEATURES -->
+<div class="slide bg-g2" id="s5">
+  <div class="bg-grid"></div>
+  <div class="feat-header">
+    <span class="feat-tag">⚙ Everything You Need</span>
+    <h2>One platform. Complete control.</h2>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-card"><span class="feat-emoji">📋</span><div class="feat-title">Menu Management</div><p class="feat-desc">Add categories, items with photos, modifiers and price deltas. Update anytime — live instantly.</p><span class="feat-badge">Instant updates</span></div>
+    <div class="feat-card"><span class="feat-emoji">📱</span><div class="feat-title">QR Code Generator</div><p class="feat-desc">Bulk-create tables and auto-generate unique QR codes per table. Download as PNG or print all.</p><span class="feat-badge">Print-ready</span></div>
+    <div class="feat-card"><span class="feat-emoji">⚡</span><div class="feat-title">Live Orders Board</div><p class="feat-desc">Orders stream in real-time. Advance status: New → Preparing → Ready → Served → Completed.</p><span class="feat-badge">Real-time</span></div>
+    <div class="feat-card"><span class="feat-emoji">👨‍🍳</span><div class="feat-title">Kitchen Display</div><p class="feat-desc">Dedicated kitchen view with all active orders, ticket age, and one-tap status advancement.</p><span class="feat-badge">No printer needed</span></div>
+    <div class="feat-card"><span class="feat-emoji">📊</span><div class="feat-title">Sales Overview</div><p class="feat-desc">Today's revenue, average order value, most popular items, and order count — at a glance.</p><span class="feat-badge">Live analytics</span></div>
+    <div class="feat-card"><span class="feat-emoji">🎨</span><div class="feat-title">Your Branding</div><p class="feat-desc">Upload your logo, set your accent colour. Customers see your brand — not ours — everywhere.</p><span class="feat-badge">White-label</span></div>
+  </div>
+</div>
+
+<!-- SLIDE 6 KITCHEN -->
+<div class="slide" id="s6" style="background:var(--navy)">
+  <div class="split">
+    <div class="left">
+      <span class="kit-tag">🍳 Kitchen-First Design</span>
+      <h2>Your kitchen,<br /><span style="color:var(--gold)">always in sync</span></h2>
+      <div class="kit-point"><span class="kit-icon">📺</span><div><div class="kit-text-title">Big-screen display mode</div><div class="kit-text-desc">Mount a tablet or TV in the kitchen — orders appear the moment they're placed.</div></div></div>
+      <div class="kit-point"><span class="kit-icon">🎯</span><div><div class="kit-text-title">Zero miscommunication</div><div class="kit-text-desc">Every modifier and special request captured digitally. No more misread handwriting.</div></div></div>
+      <div class="kit-point"><span class="kit-icon">📡</span><div><div class="kit-text-title">Real-time, always</div><div class="kit-text-desc">Powered by Supabase Realtime — sub-second latency from order placed to kitchen screen.</div></div></div>
+      <div class="kit-point"><span class="kit-icon">✅</span><div><div class="kit-text-title">One-tap status updates</div><div class="kit-text-desc">Advance from Preparing → Ready with a single tap. Customers notified instantly.</div></div></div>
+    </div>
+    <div class="right"><img src="assets/kitchen_dashboard_mockup.png" alt="Kitchen display" /></div>
+  </div>
+</div>
+
+<!-- SLIDE 7 ROI -->
+<div class="slide bg-g1" id="s7">
+  <div class="bg-grid"></div>
+  <div class="roi-header">
+    <span class="roi-tag">💰 Return on Investment</span>
+    <h2>Pay $149/mo. Save $2,000+/mo.</h2>
+  </div>
+  <div class="roi-grid">
+    <div class="roi-card"><div class="roi-num green">$2,500</div><div class="roi-label">Monthly staff savings</div><div class="roi-note">Reduce 1 waiter shift/day at $15/hr</div></div>
+    <div class="roi-card"><div class="roi-num gold">23%</div><div class="roi-label">Higher avg order value</div><div class="roi-note">Customers order more when browsing freely</div></div>
+    <div class="roi-card"><div class="roi-num green">$400</div><div class="roi-label">Saved from fewer errors</div><div class="roi-note">No remakes, refunds, or waste</div></div>
+    <div class="roi-card"><div class="roi-num gold">14×</div><div class="roi-label">Return on investment</div><div class="roi-note">$149/mo vs $2,000+/mo in savings</div></div>
+  </div>
+  <div class="roi-compare">
+    <div class="rc" style="background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2)"><div class="rc-label">Monthly cost</div><div class="rc-val" style="color:var(--red)">$149</div></div>
+    <div style="font-size:22px;color:var(--muted)">vs</div>
+    <div class="rc" style="background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2)"><div class="rc-label">Monthly savings</div><div class="rc-val" style="color:var(--green)">$2,900+</div></div>
+    <div style="font-size:22px;color:var(--muted)">=</div>
+    <div class="rc" style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2)"><div class="rc-label">Net monthly gain</div><div class="rc-val" style="color:var(--gold)">$2,751</div></div>
+  </div>
+</div>
+
+<!-- SLIDE 8 PRICING -->
+<div class="slide bg-g2" id="s8">
+  <div class="bg-grid"></div>
+  <div class="pricing-header">
+    <span class="pricing-tag">💳 Simple Pricing</span>
+    <h2>Start free. Scale as you grow.</h2>
+  </div>
+  <div class="pricing-row">
+    <div class="price-card">
+      <div class="price-tier">Starter</div>
+      <div class="price-amount"><sup>$</sup>59<span class="price-mo">/mo</span></div>
+      <div class="price-desc">Perfect for cafés &amp; food trucks</div>
+      <div class="price-feature">Up to 10 tables</div>
+      <div class="price-feature">Unlimited menu items</div>
+      <div class="price-feature">Live orders board</div>
+      <div class="price-feature">QR code generator</div>
+      <div class="price-feature">Email support</div>
+      <div class="price-cta">Get Started</div>
+    </div>
+    <div class="price-card featured">
+      <div class="price-badge">⭐ Most Popular</div>
+      <div class="price-tier" style="color:var(--gold)">Growth</div>
+      <div class="price-amount"><sup>$</sup>149<span class="price-mo">/mo</span></div>
+      <div class="price-desc">For busy restaurants that mean business</div>
+      <div class="price-feature">Up to 30 tables</div>
+      <div class="price-feature">Custom branding &amp; logo</div>
+      <div class="price-feature">Kitchen display mode</div>
+      <div class="price-feature">Sales analytics dashboard</div>
+      <div class="price-feature">Priority support</div>
+      <div class="price-cta">Start 14-Day Free Trial</div>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Pro</div>
+      <div class="price-amount"><sup>$</sup>299<span class="price-mo">/mo</span></div>
+      <div class="price-desc">Multi-location &amp; high-volume venues</div>
+      <div class="price-feature">Unlimited tables</div>
+      <div class="price-feature">Multiple locations</div>
+      <div class="price-feature">Advanced analytics</div>
+      <div class="price-feature">White-label QR codes</div>
+      <div class="price-feature">Dedicated support</div>
+      <div class="price-cta">Contact Us</div>
+    </div>
+  </div>
+  <p class="price-trial">🎁 All plans include a <strong>14-day free trial</strong> — no credit card required</p>
+</div>
+
+<!-- SLIDE 9 CTA -->
+<div class="slide bg-g1" id="s9">
+  <div class="bg-grid"></div>
+  <span class="cta-tag">🚀 Let's Get Started</span>
+  <h2>Ready to transform<br />your <em>restaurant?</em></h2>
+  <p class="cta-sub">Setup takes under 10 minutes and your first 14 days are completely free. No credit card, no commitment.</p>
+  <div class="cta-buttons">
+    <div class="btn-primary">Start Free Trial</div>
+    <div class="btn-secondary">Book a Live Demo →</div>
+  </div>
+  <div class="cta-trust">
+    <span class="trust-item">No app download for customers</span>
+    <span class="trust-item">Setup in under 10 minutes</span>
+    <span class="trust-item">Cancel anytime</span>
+  </div>
+</div>
+
+</body>
+</html>

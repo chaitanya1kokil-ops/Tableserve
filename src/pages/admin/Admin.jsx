@@ -171,7 +171,7 @@ function RestaurantRow({ restaurant: r, onSetStatus }) {
         ) : (
           <span
             className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-xl text-white"
-            style={{ backgroundColor: r.accent_color || '#ef4444' }}
+            style={{ backgroundColor: r.accent_color || '#b45309' }}
           >
             <Store className="h-6 w-6" />
           </span>

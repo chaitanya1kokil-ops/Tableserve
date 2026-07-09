@@ -74,7 +74,7 @@ export default function CustomerStatus() {
     }
   }, [ready, tableId, load, scheduleReload])
 
-  const accent = restaurant?.accent_color || '#ef4444'
+  const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
 
   const requestBill = async () => {

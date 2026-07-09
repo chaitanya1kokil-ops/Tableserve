@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TableServe — Restaurant Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #F5A623; --gold-light: #FFD07B; --navy: #0A0F1E; --navy-mid: #0F1729;
+      --navy-light: #1A2540; --accent: #E8763A; --green: #2ECC71; --red: #E74C3C;
+      --text: #F0F4FF; --muted: #8899BB; --card-bg: rgba(255,255,255,0.04);
+      --card-border: rgba(255,255,255,0.08);
+    }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--navy); font-family: 'Inter', sans-serif; color: var(--text); }
+    #deck { width: 100vw; height: 100vh; position: relative; }
+    .slide {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; padding: 60px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.6s ease, transform 0.6s ease; transform: translateY(30px); overflow: hidden;
+    }
+    .slide.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+    .slide.out { opacity: 0; transform: translateY(-30px); }
+    .bg-grid {
+      position: absolute; inset: 0; z-index: 0;
+      background-image: linear-gradient(rgba(245,166,35,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(245,166,35,0.04) 1px,transparent 1px);
+      background-size: 60px 60px;
+    }
+    .bg-gradient-1 { background: radial-gradient(ellipse 80% 60% at 20% 20%,rgba(245,166,35,0.12) 0%,transparent 60%),radial-gradient(ellipse 60% 60% at 80% 80%,rgba(232,118,58,0.10) 0%,transparent 60%),var(--navy); }
+    .bg-gradient-2 { background: radial-gradient(ellipse 70% 50% at 80% 10%,rgba(46,204,113,0.1) 0%,transparent 60%),radial-gradient(ellipse 50% 50% at 10% 90%,rgba(245,166,35,0.08) 0%,transparent 60%),var(--navy-mid); }
+    .bg-gradient-3 { background: radial-gradient(ellipse 90% 70% at 50% 50%,rgba(232,118,58,0.08) 0%,transparent 70%),var(--navy); }
+    .slide > * { position: relative; z-index: 1; }
+    /* SLIDE 1 HERO */
+    #s1 { background: var(--navy); }
+    #s1 .bg-img { position:absolute;inset:0;z-index:0;background:url('assets/hero_restaurant_qr.png') center/cover no-repeat;filter:brightness(0.18) saturate(0.6); }
+    #s1 .logo-badge { background:linear-gradient(135deg,var(--gold),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:14px;font-weight:700;letter-spacing:6px;text-transform:uppercase;margin-bottom:20px; }
+    #s1 h1 { font-family:'Playfair Display',serif;font-size:clamp(52px,7vw,90px);font-weight:800;line-height:1.05;text-align:center;margin-bottom:24px; }
+    #s1 h1 span { color:var(--gold); }
+    #s1 .tagline { font-size:clamp(16px,2vw,22px);color:var(--muted);text-align:center;max-width:600px;line-height:1.6;margin-bottom:48px; }
+    #s1 .hero-pills { display:flex;gap:12px;flex-wrap:wrap;justify-content:center; }
+    .pill { padding:10px 22px;border-radius:100px;border:1px solid var(--card-border);background:var(--card-bg);font-size:13px;font-weight:500;color:var(--muted);backdrop-filter:blur(12px); }
+    .pill.gold { border-color:rgba(245,166,35,0.3);color:var(--gold-light); }
+    /* SLIDE 2 */
+    #s2 .split { display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;width:100%;max-width:1100px; }
+    #s2 img { width:100%;border-radius:20px;box-shadow:0 40px 80px rgba(0,0,0,0.6); }
+    #s2 .pain-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--red);text-transform:uppercase;margin-bottom:16px; }
+    #s2 h2 { font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,52px);font-weight:800;line-height:1.1;margin-bottom:32px; }
+    .pain-item { display:flex;align-items:flex-start;gap:14px;margin-bottom:20px; }
+    .pain-icon { width:36px;height:36px;border-radius:8px;background:rgba(231,76,60,0.15);border:1px solid rgba(231,76,60,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+    .pain-title { font-weight:600;font-size:15px;margin-bottom:4px; }
+    .pain-desc { font-size:13px;color:var(--muted);line-height:1.5; }
+    .stat-row { display:flex;gap:24px;margin-top:32px; }
+    .stat-box { background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:20px 24px;text-align:center; }
+    .stat-num { font-size:32px;font-weight:900;color:var(--red); }
+    .stat-lbl { font-size:12px;color:var(--muted);margin-top:4px; }
+    /* SLIDE 3 */
+    #s3 .center-top { text-align:center;margin-bottom:56px; }
+    #s3 .sol-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--green);text-transform:uppercase;margin-bottom:16px; }
+    #s3 h2 { font-family:'Playfair Display',serif;font-size:clamp(32px,4vw,52px);font-weight:800; }
+    .steps-row { display:flex;gap:24px;width:100%;max-width:1100px; }
+    .step-card { flex:1;background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;padding:36px 28px;text-align:center;backdrop-filter:blur(12px);transition:transform 0.3s,border-color 0.3s;position:relative;overflow:hidden; }
+    .step-card:hover { transform:translateY(-6px);border-color:rgba(245,166,35,0.3); }
+    .step-num { font-size:64px;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--gold),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px; }
+    .step-icon { font-size:36px;margin-bottom:16px; }
+    .step-title { font-size:18px;font-weight:700;margin-bottom:10px; }
+    .step-desc { font-size:14px;color:var(--muted);line-height:1.6; }
+    /* SLIDE 4 DEMO */
+    #s4 { padding:40px; }
+    #s4 .demo-header { text-align:center;margin-bottom:36px; }
+    #s4 .demo-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:12px; }
+    #s4 h2 { font-family:'Playfair Display',serif;font-size:clamp(28px,3.5vw,44px);font-weight:800; }
+    #s4 .demo-wrap { display:flex;gap:48px;align-items:center;width:100%;max-width:1100px; }
+    .phone-frame { width:220px;flex-shrink:0;background:#111827;border-radius:40px;border:2px solid rgba(255,255,255,0.15);padding:16px;box-shadow:0 40px 80px rgba(0,0,0,0.7),0 0 0 8px rgba(255,255,255,0.03);position:relative; }
+    .phone-notch { width:80px;height:24px;background:#111827;border-radius:0 0 16px 16px;margin:0 auto 12px;border:2px solid rgba(255,255,255,0.08);border-top:none; }
+    .phone-screen { border-radius:24px;overflow:hidden;height:400px;position:relative;background:#0d1117; }
+    .demo-screen { position:absolute;inset:0;padding:16px;opacity:0;transition:opacity 0.5s; }
+    .demo-screen.show { opacity:1; }
+    .dscreen-menu { background:linear-gradient(160deg,#1a0a00,#0d1117); }
+    .dmenu-header { background:linear-gradient(135deg,#8B1A1A,#C0392B);border-radius:12px;padding:14px;margin-bottom:12px; }
+    .dmenu-logo { font-weight:800;font-size:14px;color:white; }
+    .dmenu-sub { font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px; }
+    .dmenu-cat { font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:2px;margin:10px 0 8px; }
+    .dmenu-item { background:rgba(255,255,255,0.06);border-radius:10px;padding:10px;margin-bottom:8px;display:flex;gap:10px;align-items:center; }
+    .ditem-img { width:44px;height:44px;border-radius:8px;flex-shrink:0; }
+    .ditem-name { font-size:11px;font-weight:600; }
+    .ditem-price { font-size:11px;color:var(--gold);font-weight:700;margin-top:2px; }
+    .ditem-add { margin-left:auto;background:var(--gold);color:#000;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0; }
+    .dscreen-cart { background:#0d1117; }
+    .dcart-title { font-weight:800;font-size:14px;margin-bottom:14px; }
+    .dcart-item { border-bottom:1px solid rgba(255,255,255,0.06);padding:10px 0;display:flex;justify-content:space-between; }
+    .dcart-name { font-size:11px;font-weight:500; }
+    .dcart-price { font-size:11px;color:var(--gold);font-weight:700; }
+    .dcart-total { background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.2);border-radius:10px;padding:12px;margin-top:12px; }
+    .dcart-total-row { display:flex;justify-content:space-between;font-size:12px;font-weight:700; }
+    .dcart-btn { background:linear-gradient(135deg,var(--gold),var(--accent));color:#000;font-weight:800;font-size:13px;border:none;border-radius:12px;width:100%;padding:14px;margin-top:12px;cursor:pointer; }
+    .dscreen-status { background:#0d1117;display:flex;flex-direction:column;align-items:center;padding:24px 16px; }
+    .dstatus-icon { font-size:40px;margin-bottom:12px; }
+    .dstatus-title { font-size:13px;font-weight:800;margin-bottom:8px; }
+    .dstatus-sub { font-size:10px;color:var(--muted);text-align:center;margin-bottom:20px; }
+    .dstatus-track { width:100%; }
+    .dstatus-step { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+    .dstep-dot { width:28px;height:28px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0; }
+    .dstep-dot.done { border-color:var(--green);background:rgba(46,204,113,0.15);color:var(--green); }
+    .dstep-dot.active { border-color:var(--gold);background:rgba(245,166,35,0.15);color:var(--gold);animation:pulse-dot 1.5s infinite; }
+    .dstep-dot.pending { border-color:rgba(255,255,255,0.15);color:var(--muted); }
+    @keyframes pulse-dot { 0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,0.4)} 50%{box-shadow:0 0 0 8px rgba(245,166,35,0)} }
+    .dstep-label { font-size:11px;font-weight:500; }
+    .demo-steps { flex:1; }
+    .demo-step-item { display:flex;align-items:flex-start;gap:16px;padding:20px;border-radius:16px;cursor:pointer;transition:all 0.3s;border:1px solid transparent;margin-bottom:12px; }
+    .demo-step-item.active { background:rgba(245,166,35,0.06);border-color:rgba(245,166,35,0.2); }
+    .demo-step-item:hover { background:rgba(255,255,255,0.03); }
+    .demo-step-num { width:36px;height:36px;border-radius:10px;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.2);color:var(--gold);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .demo-step-item.active .demo-step-num { background:var(--gold);color:#000; }
+    .demo-step-title { font-weight:700;font-size:15px;margin-bottom:4px; }
+    .demo-step-desc { font-size:13px;color:var(--muted);line-height:1.5; }
+    .demo-progress { display:flex;gap:6px;margin-bottom:24px; }
+    .demo-dot { width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,0.15);transition:all 0.3s; }
+    .demo-dot.active { width:24px;background:var(--gold); }
+    /* SLIDE 5 FEATURES */
+    #s5 .feat-header { text-align:center;margin-bottom:44px; }
+    #s5 h2 { font-family:'Playfair Display',serif;font-size:clamp(30px,4vw,48px);font-weight:800; }
+    #s5 .feat-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--accent);text-transform:uppercase;margin-bottom:14px; }
+    .feat-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:18px;width:100%;max-width:1100px; }
+    .feat-card { background:var(--card-bg);border:1px solid var(--card-border);border-radius:20px;padding:26px 22px;transition:transform 0.3s,border-color 0.3s,box-shadow 0.3s; }
+    .feat-card:hover { transform:translateY(-4px);border-color:rgba(245,166,35,0.25);box-shadow:0 20px 40px rgba(0,0,0,0.3); }
+    .feat-emoji { font-size:30px;margin-bottom:12px;display:block; }
+    .feat-title { font-size:15px;font-weight:700;margin-bottom:8px; }
+    .feat-desc { font-size:13px;color:var(--muted);line-height:1.6; }
+    .feat-badge { display:inline-block;margin-top:10px;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.2);color:var(--green); }
+    /* SLIDE 6 KITCHEN */
+    #s6 { padding:0; }
+    #s6 .split { display:grid;grid-template-columns:1fr 1fr;height:100%; }
+    #s6 .left { display:flex;flex-direction:column;justify-content:center;padding:80px 60px;background:var(--navy); }
+    #s6 .right { position:relative;overflow:hidden; }
+    #s6 .right img { width:100%;height:100%;object-fit:cover; }
+    #s6 .right::after { content:'';position:absolute;inset:0;background:linear-gradient(to right,var(--navy) 0%,transparent 40%); }
+    #s6 .kit-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:16px; }
+    #s6 h2 { font-family:'Playfair Display',serif;font-size:clamp(30px,3.5vw,46px);font-weight:800;line-height:1.1;margin-bottom:28px; }
+    .kit-point { display:flex;gap:14px;align-items:flex-start;margin-bottom:20px; }
+    .kit-icon { font-size:20px;margin-top:2px; }
+    .kit-text-title { font-weight:700;font-size:15px; }
+    .kit-text-desc { font-size:13px;color:var(--muted);margin-top:2px;line-height:1.5; }
+    /* SLIDE 7 ROI */
+    #s7 .roi-header { text-align:center;margin-bottom:40px; }
+    #s7 .roi-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--green);text-transform:uppercase;margin-bottom:16px; }
+    #s7 h2 { font-family:'Playfair Display',serif;font-size:clamp(28px,3.5vw,46px);font-weight:800; }
+    .roi-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:20px;width:100%;max-width:1100px; }
+    .roi-card { background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;padding:28px 20px;text-align:center; }
+    .roi-num { font-size:44px;font-weight:900;line-height:1;margin-bottom:8px; }
+    .roi-num.green { color:var(--green); }
+    .roi-num.gold { color:var(--gold); }
+    .roi-label { font-size:14px;font-weight:600;margin-bottom:6px; }
+    .roi-note { font-size:12px;color:var(--muted); }
+    /* SLIDE 8 PRICING */
+    #s8 .pricing-header { text-align:center;margin-bottom:44px; }
+    #s8 .pricing-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:16px; }
+    #s8 h2 { font-family:'Playfair Display',serif;font-size:clamp(30px,4vw,50px);font-weight:800; }
+    .pricing-row { display:flex;gap:20px;width:100%;max-width:1000px;align-items:stretch; }
+    .price-card { flex:1;background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;padding:32px 28px;display:flex;flex-direction:column;transition:transform 0.3s; }
+    .price-card:hover { transform:translateY(-6px); }
+    .price-card.featured { background:linear-gradient(145deg,rgba(245,166,35,0.12),rgba(232,118,58,0.08));border-color:rgba(245,166,35,0.4);position:relative; }
+    .price-badge { position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--gold),var(--accent));color:#000;font-size:11px;font-weight:800;padding:6px 18px;border-radius:100px;white-space:nowrap; }
+    .price-tier { font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:12px; }
+    .price-amount { font-size:48px;font-weight:900;line-height:1; }
+    .price-amount sup { font-size:24px;vertical-align:top;margin-top:10px;color:var(--gold); }
+    .price-mo { font-size:14px;color:var(--muted);margin-left:4px;font-weight:400; }
+    .price-desc { font-size:13px;color:var(--muted);margin:12px 0 24px;border-bottom:1px solid var(--card-border);padding-bottom:24px; }
+    .price-feature { font-size:13px;color:#cdd5e0;margin-bottom:10px;display:flex;align-items:center;gap:8px; }
+    .price-feature::before { content:'✓';color:var(--green);font-weight:700; }
+    .price-cta { margin-top:auto;padding-top:24px;background:transparent;border:1px solid rgba(255,255,255,0.15);color:var(--text);border-radius:12px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.3s;width:100%; }
+    .price-card.featured .price-cta { background:linear-gradient(135deg,var(--gold),var(--accent));border:none;color:#000; }
+    .price-trial { text-align:center;margin-top:20px;font-size:13px;color:var(--muted); }
+    .price-trial strong { color:var(--gold); }
+    /* SLIDE 9 CTA */
+    #s9 { text-align:center; }
+    #s9 .cta-tag { font-size:12px;font-weight:700;letter-spacing:4px;color:var(--gold);text-transform:uppercase;margin-bottom:24px; }
+    #s9 h2 { font-family:'Playfair Display',serif;font-size:clamp(40px,6vw,72px);font-weight:800;line-height:1.05;margin-bottom:24px; }
+    #s9 h2 em { font-style:normal;color:var(--gold); }
+    #s9 .cta-sub { font-size:18px;color:var(--muted);max-width:500px;margin:0 auto 48px;line-height:1.7; }
+    .cta-buttons { display:flex;gap:16px;justify-content:center;flex-wrap:wrap; }
+    .btn-primary { padding:18px 40px;border-radius:16px;font-size:16px;font-weight:700;background:linear-gradient(135deg,var(--gold),var(--accent));color:#000;border:none;cursor:pointer;transition:transform 0.2s,opacity 0.2s; }
+    .btn-primary:hover { transform:translateY(-2px);opacity:0.9; }
+    .btn-secondary { padding:18px 40px;border-radius:16px;font-size:16px;font-weight:700;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.2);cursor:pointer;transition:all 0.2s; }
+    .btn-secondary:hover { background:rgba(255,255,255,0.06); }
+    .cta-trust { display:flex;gap:32px;justify-content:center;margin-top:48px; }
+    .trust-item { font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px; }
+    .trust-item::before { content:'✓';color:var(--green);font-weight:700; }
+    /* NAV */
+    #nav { position:fixed;bottom:32px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:100;background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid var(--card-border);border-radius:100px;padding:10px 16px; }
+    .nav-dot { width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,0.2);cursor:pointer;transition:all 0.3s; }
+    .nav-dot.active { width:24px;background:var(--gold); }
+    .nav-arrow { width:36px;height:36px;border-radius:50%;border:1px solid var(--card-border);background:transparent;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
+    .nav-arrow:hover { background:rgba(255,255,255,0.08); }
+    #slide-counter { font-size:12px;color:var(--muted);min-width:36px;text-align:center; }
+    /* Particles */
+    .particles { position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none; }
+    .particle { position:absolute;border-radius:50%;background:var(--gold);opacity:0.06;animation:float-particle linear infinite; }
+    @keyframes float-particle { 0%{transform:translateY(100vh) rotate(0deg);opacity:0} 10%{opacity:0.06} 90%{opacity:0.06} 100%{transform:translateY(-100px) rotate(720deg);opacity:0} }
+    /* Entrance animations */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .slide.active .anim-1 { animation:fadeUp 0.6s ease 0.1s both; }
+    .slide.active .anim-2 { animation:fadeUp 0.6s ease 0.25s both; }
+    .slide.active .anim-3 { animation:fadeUp 0.6s ease 0.4s both; }
+    .slide.active .anim-4 { animation:fadeUp 0.6s ease 0.55s both; }
+    .slide.active .anim-5 { animation:fadeUp 0.6s ease 0.7s both; }
+  </style>
+</head>
+<body>
+<div id="deck">
+
+  <!-- SLIDE 1: HERO -->
+  <section class="slide bg-gradient-1 active" id="s1">
+    <div class="bg-img"></div>
+    <div class="particles" id="p1"></div>
+    <div class="bg-grid"></div>
+    <p class="logo-badge anim-1">&#127869;&#65039; &nbsp; TableServe</p>
+    <h1 class="anim-2">The Future of<br /><span>Restaurant Ordering</span></h1>
+    <p class="tagline anim-3">Customers scan, tap, and order — no app, no waiter, no wait.<br />You get real-time orders, happier tables, and more revenue.</p>
+    <div class="hero-pills anim-4">
+      <span class="pill gold">&#128241; QR-Based Ordering</span>
+      <span class="pill">&#9889; Real-time Kitchen Display</span>
+      <span class="pill gold">&#128202; Live Analytics</span>
+      <span class="pill">&#128274; No App Required</span>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: PROBLEM -->
+  <section class="slide bg-gradient-2" id="s2">
+    <div class="bg-grid"></div>
+    <div class="split">
+      <img src="assets/problem_slide_chaos.png" alt="Restaurant chaos" class="anim-1" />
+      <div>
+        <p class="pain-tag anim-2">&#9888; The Problem</p>
+        <h2 class="anim-2">Your staff is<br />stretched thin</h2>
+        <div class="anim-3">
+          <div class="pain-item">
+            <div class="pain-icon">&#128544;</div>
+            <div><div class="pain-title">Customers wait too long to order</div><div class="pain-desc">Peak hours mean 10–20 min wait just to take an order — customers leave</div></div>
+          </div>
+          <div class="pain-item">
+            <div class="pain-icon">&#128221;</div>
+            <div><div class="pain-title">Handwritten orders get lost or wrong</div><div class="pain-desc">Order errors cost you remakes, refunds, and bad reviews every week</div></div>
+          </div>
+          <div class="pain-item">
+            <div class="pain-icon">&#128176;</div>
+            <div><div class="pain-title">Staff costs keep rising</div><div class="pain-desc">A single waiter costs $2,000–$3,500/month. You need 2–3 just for orders</div></div>
+          </div>
+        </div>
+        <div class="stat-row anim-4">
+          <div class="stat-box"><div class="stat-num">68%</div><div class="stat-lbl">of diners prefer<br/>self-ordering</div></div>
+          <div class="stat-box"><div class="stat-num">$400</div><div class="stat-lbl">avg monthly loss<br/>from order errors</div></div>
+          <div class="stat-box"><div class="stat-num">23%</div><div class="stat-lbl">higher order value<br/>with digital menus</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: SOLUTION -->
+  <section class="slide bg-gradient-1" id="s3">
+    <div class="bg-grid"></div>
+    <div class="center-top">
+      <p class="sol-tag anim-1">&#9989; The Solution</p>
+      <h2 class="anim-2">3 Steps. Zero Friction.</h2>
+    </div>
+    <div class="steps-row anim-3">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-icon">&#128242;</div>
+        <div class="step-title">Customer Scans QR</div>
+        <p class="step-desc">A unique QR code sits on every table. Customers scan with any phone camera — no download, no account, no friction.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-icon">&#128722;</div>
+        <div class="step-title">Browses &amp; Orders</div>
+        <p class="step-desc">Your branded menu with photos, modifiers, and categories. Add to cart, customise, and place the order — under 60 seconds.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-icon">&#9889;</div>
+        <div class="step-title">Kitchen Gets It Instantly</div>
+        <p class="step-desc">Orders appear live in your kitchen dashboard. Status updates push back to the customer's phone in real time.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: DEMO -->
+  <section class="slide bg-gradient-3" id="s4">
+    <div class="bg-grid"></div>
+    <div class="demo-header">
+      <p class="demo-tag anim-1">&#127916; Live Demo</p>
+      <h2 class="anim-2">See it in <span style="color:var(--gold)">30 seconds</span></h2>
+    </div>
+    <div class="demo-wrap anim-3">
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="demo-screen dscreen-menu show" id="ds1">
+            <div class="dmenu-header"><div class="dmenu-logo">&#127829; La Bella Cucina</div><div class="dmenu-sub">Table 4 &nbsp;&#183;&nbsp; Scan to order</div></div>
+            <div class="dmenu-cat">&#129361; Starters</div>
+            <div class="dmenu-item"><div class="ditem-img" style="background:linear-gradient(135deg,#8B4513,#D2691E)"></div><div style="flex:1"><div class="ditem-name">Bruschetta</div><div class="ditem-price">$8.00</div></div><div class="ditem-add">+</div></div>
+            <div class="dmenu-cat">&#127837; Mains</div>
+            <div class="dmenu-item" style="border:1px solid rgba(245,166,35,0.3)"><div class="ditem-img" style="background:linear-gradient(135deg,#c0392b,#922b21)"></div><div style="flex:1"><div class="ditem-name">Pasta Arrabbiata</div><div class="ditem-price">$18.00</div></div><div class="ditem-add" style="background:var(--green);font-size:10px;width:28px;height:28px">1&#10003;</div></div>
+            <div class="dmenu-item"><div class="ditem-img" style="background:linear-gradient(135deg,#1a5276,#2e86c1)"></div><div style="flex:1"><div class="ditem-name">Grilled Sea Bass</div><div class="ditem-price">$28.00</div></div><div class="ditem-add">+</div></div>
+          </div>
+          <div class="demo-screen dscreen-cart" id="ds2">
+            <div class="dcart-title">&#128722; Your Order</div>
+            <div class="dcart-item"><span class="dcart-name">Bruschetta x1</span><span class="dcart-price">$8.00</span></div>
+            <div class="dcart-item"><span class="dcart-name">Pasta Arrabbiata x1</span><span class="dcart-price">$18.00</span></div>
+            <div class="dcart-item"><span class="dcart-name">Sparkling Water x2</span><span class="dcart-price">$6.00</span></div>
+            <div class="dcart-total"><div class="dcart-total-row"><span>Total</span><span style="color:var(--gold)">$32.00</span></div></div>
+            <button class="dcart-btn">Place Order &#10003;</button>
+          </div>
+          <div class="demo-screen dscreen-status" id="ds3">
+            <div class="dstatus-icon">&#127881;</div>
+            <div class="dstatus-title">Order Placed!</div>
+            <div class="dstatus-sub">Order #47 · Table 4<br/>We're on it — sit back and relax</div>
+            <div class="dstatus-track">
+              <div class="dstatus-step"><div class="dstep-dot done">&#10003;</div><div class="dstep-label">Order Received</div></div>
+              <div class="dstatus-step"><div class="dstep-dot active">&#8943;</div><div class="dstep-label" style="color:var(--gold)">Preparing in kitchen</div></div>
+              <div class="dstatus-step"><div class="dstep-dot pending">&#9675;</div><div class="dstep-label" style="color:var(--muted)">Ready to serve</div></div>
+              <div class="dstatus-step"><div class="dstep-dot pending">&#9675;</div><div class="dstep-label" style="color:var(--muted)">Served — enjoy!</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-steps">
+        <div class="demo-progress">
+          <div class="demo-dot active" id="dp0"></div>
+          <div class="demo-dot" id="dp1"></div>
+          <div class="demo-dot" id="dp2"></div>
+        </div>
+        <div class="demo-step-item active" id="dstep0" onclick="setDemoStep(0)">
+          <div class="demo-step-num">1</div>
+          <div><div class="demo-step-title">Browse the menu</div><div class="demo-step-desc">Your fully branded menu with categories, photos, and modifiers — loads instantly on any phone, no app needed.</div></div>
+        </div>
+        <div class="demo-step-item" id="dstep1" onclick="setDemoStep(1)">
+          <div class="demo-step-num">2</div>
+          <div><div class="demo-step-title">Review cart &amp; place order</div><div class="demo-step-desc">Customer reviews items and taps Place Order. The order fires directly to your kitchen — zero delay.</div></div>
+        </div>
+        <div class="demo-step-item" id="dstep2" onclick="setDemoStep(2)">
+          <div class="demo-step-num">3</div>
+          <div><div class="demo-step-title">Live order tracking</div><div class="demo-step-desc">Real-time status updates push to the customer as your kitchen advances the order. No more "how long?" questions.</div></div>
+        </div>
+        <div style="margin-top:20px;font-size:12px;color:var(--muted)">&#9679; Auto-advances every 4s &nbsp;·&nbsp; or click to navigate</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: FEATURES -->
+  <section class="slide bg-gradient-2" id="s5">
+    <div class="bg-grid"></div>
+    <div class="feat-header">
+      <p class="feat-tag anim-1">&#9881; Everything You Need</p>
+      <h2 class="anim-2">One platform. Complete control.</h2>
+    </div>
+    <div class="feat-grid anim-3">
+      <div class="feat-card"><span class="feat-emoji">&#128203;</span><div class="feat-title">Menu Management</div><p class="feat-desc">Add categories, items with photos, modifiers and price deltas. Update anytime — goes live instantly.</p><span class="feat-badge">Instant updates</span></div>
+      <div class="feat-card"><span class="feat-emoji">&#128241;</span><div class="feat-title">QR Code Generator</div><p class="feat-desc">Bulk-create tables and auto-generate unique QR codes per table. Download as PNG or print all at once.</p><span class="feat-badge">Print-ready</span></div>
+      <div class="feat-card"><span class="feat-emoji">&#9889;</span><div class="feat-title">Live Orders Board</div><p class="feat-desc">Orders stream in real-time. Advance status: New &#8594; Preparing &#8594; Ready &#8594; Served &#8594; Completed.</p><span class="feat-badge">Real-time</span></div>
+      <div class="feat-card"><span class="feat-emoji">&#128104;&#8205;&#127859;</span><div class="feat-title">Kitchen Display</div><p class="feat-desc">Dedicated kitchen view with all active orders, ticket age, and one-tap status advancement.</p><span class="feat-badge">No printer needed</span></div>
+      <div class="feat-card"><span class="feat-emoji">&#128202;</span><div class="feat-title">Sales Overview</div><p class="feat-desc">Today's revenue, average order value, most popular items, and order count — at a glance.</p><span class="feat-badge">Live analytics</span></div>
+      <div class="feat-card"><span class="feat-emoji">&#127912;</span><div class="feat-title">Your Branding</div><p class="feat-desc">Upload your logo, set your accent colour. Customers see your brand — not ours — on every screen.</p><span class="feat-badge">White-label</span></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: KITCHEN -->
+  <section class="slide" id="s6">
+    <div class="split" style="width:100%;height:100%">
+      <div class="left">
+        <p class="kit-tag anim-1">&#127859; Kitchen-First Design</p>
+        <h2 class="anim-2">Your kitchen,<br /><span style="color:var(--gold)">always in sync</span></h2>
+        <div class="anim-3">
+          <div class="kit-point"><span class="kit-icon">&#128250;</span><div><div class="kit-text-title">Big-screen display mode</div><div class="kit-text-desc">Mount a tablet or TV in the kitchen — orders appear the moment they're placed.</div></div></div>
+          <div class="kit-point"><span class="kit-icon">&#127919;</span><div><div class="kit-text-title">Zero miscommunication</div><div class="kit-text-desc">Every modifier and special request is captured digitally. No more misread handwriting.</div></div></div>
+          <div class="kit-point"><span class="kit-icon">&#128225;</span><div><div class="kit-text-title">Real-time, always</div><div class="kit-text-desc">Powered by Supabase Realtime — sub-second latency from order to kitchen screen.</div></div></div>
+          <div class="kit-point"><span class="kit-icon">&#9989;</span><div><div class="kit-text-title">One-tap status updates</div><div class="kit-text-desc">Advance from Preparing &#8594; Ready with a single tap. Customers are notified instantly.</div></div></div>
+        </div>
+      </div>
+      <div class="right"><img src="assets/kitchen_dashboard_mockup.png" alt="Kitchen display" /></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: ROI -->
+  <section class="slide bg-gradient-1" id="s7">
+    <div class="bg-grid"></div>
+    <div class="roi-header">
+      <p class="roi-tag anim-1">&#128176; Your Return on Investment</p>
+      <h2 class="anim-2">Pay $149/mo. Save $2,000+/mo.</h2>
+    </div>
+    <div class="roi-grid anim-3">
+      <div class="roi-card"><div class="roi-num green">$2,500</div><div class="roi-label">Monthly savings on staff</div><div class="roi-note">Reduce 1 waiter shift/day at $15/hr</div></div>
+      <div class="roi-card"><div class="roi-num gold">23%</div><div class="roi-label">Higher avg order value</div><div class="roi-note">Customers order more when browsing at their own pace</div></div>
+      <div class="roi-card"><div class="roi-num green">$400</div><div class="roi-label">Saved from fewer errors</div><div class="roi-note">No more remakes, refunds, or waste</div></div>
+      <div class="roi-card"><div class="roi-num gold">14x</div><div class="roi-label">Return on investment</div><div class="roi-note">$149/mo cost vs $2,000+/mo savings</div></div>
+    </div>
+    <div class="anim-4" style="margin-top:28px;display:flex;gap:24px;justify-content:center;align-items:center">
+      <div style="background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2);border-radius:16px;padding:16px 32px;text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Monthly cost</div><div style="font-size:28px;font-weight:900;color:var(--red)">$149</div></div>
+      <div style="font-size:24px;color:var(--muted)">vs</div>
+      <div style="background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:16px;padding:16px 32px;text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Monthly savings</div><div style="font-size:28px;font-weight:900;color:var(--green)">$2,900+</div></div>
+      <div style="font-size:24px;color:var(--muted)">=</div>
+      <div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);border-radius:16px;padding:16px 32px;text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Net monthly gain</div><div style="font-size:28px;font-weight:900;color:var(--gold)">$2,751</div></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8: PRICING -->
+  <section class="slide bg-gradient-2" id="s8">
+    <div class="bg-grid"></div>
+    <div class="pricing-header">
+      <p class="pricing-tag anim-1">&#128179; Simple Pricing</p>
+      <h2 class="anim-2">Start free. Scale as you grow.</h2>
+    </div>
+    <div class="pricing-row anim-3">
+      <div class="price-card">
+        <div class="price-tier">Starter</div>
+        <div class="price-amount"><sup>$</sup>59<span class="price-mo">/mo</span></div>
+        <div class="price-desc">Perfect for cafes &amp; food trucks</div>
+        <div class="price-feature">Up to 10 tables</div>
+        <div class="price-feature">Unlimited menu items</div>
+        <div class="price-feature">Live orders board</div>
+        <div class="price-feature">QR code generator</div>
+        <div class="price-feature">Email support</div>
+        <button class="price-cta">Get Started</button>
+      </div>
+      <div class="price-card featured">
+        <div class="price-badge">&#11088; Most Popular</div>
+        <div class="price-tier" style="color:var(--gold)">Growth</div>
+        <div class="price-amount"><sup>$</sup>149<span class="price-mo">/mo</span></div>
+        <div class="price-desc">For busy restaurants that mean business</div>
+        <div class="price-feature">Up to 30 tables</div>
+        <div class="price-feature">Custom branding &amp; logo</div>
+        <div class="price-feature">Kitchen display mode</div>
+        <div class="price-feature">Sales analytics dashboard</div>
+        <div class="price-feature">Priority support</div>
+        <button class="price-cta">Start 14-Day Free Trial</button>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">Pro</div>
+        <div class="price-amount"><sup>$</sup>299<span class="price-mo">/mo</span></div>
+        <div class="price-desc">Multi-location &amp; high-volume venues</div>
+        <div class="price-feature">Unlimited tables</div>
+        <div class="price-feature">Multiple locations</div>
+        <div class="price-feature">Advanced analytics</div>
+        <div class="price-feature">White-label QR codes</div>
+        <div class="price-feature">Dedicated support</div>
+        <button class="price-cta">Contact Us</button>
+      </div>
+    </div>
+    <p class="price-trial anim-4">&#127873; All plans include a <strong>14-day free trial</strong> — no credit card required</p>
+  </section>
+
+  <!-- SLIDE 9: CTA -->
+  <section class="slide bg-gradient-1" id="s9">
+    <div class="particles" id="p9"></div>
+    <div class="bg-grid"></div>
+    <p class="cta-tag anim-1">&#128640; Let's Get Started</p>
+    <h2 class="anim-2">Ready to transform<br />your <em>restaurant?</em></h2>
+    <p class="cta-sub anim-3">Setup takes under 10 minutes and your first 14 days are completely free. No credit card, no commitment.</p>
+    <div class="cta-buttons anim-4">
+      <button class="btn-primary">Start Free Trial</button>
+      <button class="btn-secondary">Book a Live Demo &#8594;</button>
+    </div>
+    <div class="cta-trust anim-5">
+      <span class="trust-item">No app download for customers</span>
+      <span class="trust-item">Setup in under 10 minutes</span>
+      <span class="trust-item">Cancel anytime</span>
+    </div>
+  </section>
+
+</div>
+
+<div id="nav">
+  <button class="nav-arrow" onclick="prevSlide()">&#8249;</button>
+  <div id="dots"></div>
+  <span id="slide-counter">1 / 9</span>
+  <button class="nav-arrow" onclick="nextSlide()">&#8250;</button>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+let cur = 0;
+const TOTAL = slides.length;
+const dotsEl = document.getElementById('dots');
+for (let i = 0; i < TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'nav-dot' + (i===0?' active':'');
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+}
+function goTo(n) {
+  slides[cur].classList.remove('active'); slides[cur].classList.add('out');
+  const prev = cur; cur = n; slides[cur].classList.add('active');
+  setTimeout(() => slides[prev].classList.remove('out'), 650);
+  document.querySelectorAll('.nav-dot').forEach((d,i) => d.classList.toggle('active', i===cur));
+  document.getElementById('slide-counter').textContent = (cur+1)+' / '+TOTAL;
+}
+function nextSlide() { goTo((cur+1)%TOTAL); }
+function prevSlide() { goTo((cur-1+TOTAL)%TOTAL); }
+document.addEventListener('keydown', e => {
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();nextSlide();}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();prevSlide();}
+});
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX);
+document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)dx<0?nextSlide():prevSlide();});
+
+// Demo auto-advance
+let demoStep=0, demoTimer;
+function setDemoStep(n) {
+  clearInterval(demoTimer);
+  demoStep=n;
+  ['ds1','ds2','ds3'].forEach((id,i)=>document.getElementById(id).classList.toggle('show',i===n));
+  ['dstep0','dstep1','dstep2'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i===n));
+  ['dp0','dp1','dp2'].forEach((id,i)=>document.getElementById(id).classList.toggle('active',i===n));
+  demoTimer=setInterval(()=>{demoStep=(demoStep+1)%3;setDemoStep(demoStep);},4000);
+}
+demoTimer=setInterval(()=>{demoStep=(demoStep+1)%3;setDemoStep(demoStep);},4000);
+
+// Particles
+function makeParticles(id,n){
+  const c=document.getElementById(id); if(!c)return;
+  for(let i=0;i<n;i++){
+    const p=document.createElement('div'); p.className='particle';
+    const sz=Math.random()*4+2;
+    p.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+(Math.random()*100)+'%;animation-duration:'+(8+Math.random()*12)+'s;animation-delay:'+(Math.random()*10)+'s;';
+    c.appendChild(p);
+  }
+}
+makeParticles('p1',20); makeParticles('p9',20);
+</script>
+</body>
+</html>

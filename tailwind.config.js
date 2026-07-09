@@ -10,7 +10,7 @@ export default {
       colors: {
         // Per-restaurant accent color is injected at runtime via the CSS variable
         // --brand (see CustomerMenu). Use `text-brand`, `bg-brand`, etc.
-        brand: 'var(--brand, #ef4444)',
+        brand: 'var(--brand, #b45309)',
       },
       keyframes: {
         'fade-in': {

@@ -95,7 +95,7 @@ export default function CustomerMenu() {
     if (ready) load()
   }, [ready, load])
 
-  const accent = restaurant?.accent_color || '#ef4444'
+  const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
   const canOrder = Boolean(tableId) && restaurant?.status === 'active'
 

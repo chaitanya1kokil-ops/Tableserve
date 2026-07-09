@@ -90,7 +90,7 @@ export default function Overview() {
   }, [load])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
-  const accent = restaurant.accent_color || '#ef4444'
+  const accent = restaurant.accent_color || '#b45309'
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
