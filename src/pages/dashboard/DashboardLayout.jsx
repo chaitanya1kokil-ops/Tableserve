@@ -34,7 +34,10 @@ export default function DashboardLayout() {
   const newOrders = useNewOrderCount(restaurant?.id)
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 lg:flex">
+    <div
+      className="min-h-[100dvh] bg-[#faf6ef] lg:flex"
+      style={{ '--brand': restaurant?.accent_color || '#ef4444' }}
+    >
       {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-r border-gray-100 bg-white lg:flex">
         <div className="flex items-center gap-2 px-5 py-5 font-extrabold text-gray-900">

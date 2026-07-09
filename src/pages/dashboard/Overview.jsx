@@ -90,6 +90,9 @@ export default function Overview() {
   }, [load])
 
   const firstName = (profile?.full_name || '').split(' ')[0]
+  const accent = restaurant.accent_color || '#ef4444'
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   // Stats for the selected range.
   const paid = orders.filter((o) => o.status !== 'cancelled')
@@ -102,7 +105,6 @@ export default function Overview() {
 
   const stats = [
     { label: 'Orders', value: orders.length, icon: ShoppingBag, tint: 'bg-blue-50 text-blue-600' },
-    { label: 'Revenue', value: formatCurrency(revenue, currency), icon: TrendingUp, tint: 'bg-emerald-50 text-emerald-600' },
     { label: 'Avg. order', value: formatCurrency(avg, currency), icon: CircleDollarSign, tint: 'bg-violet-50 text-violet-600' },
     { label: 'Items sold', value: itemsSold, icon: Utensils, tint: 'bg-amber-50 text-amber-600' },
   ]
@@ -129,11 +131,11 @@ export default function Overview() {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {firstName ? `Hi ${firstName} 👋` : 'Overview'}
+        <h1 className="font-display text-3xl font-semibold text-stone-900">
+          {firstName ? `${greeting}, ${firstName}` : 'Overview'}
         </h1>
-        <p className="text-sm text-gray-500">
-          {restaurant.name} · showing <span className="font-semibold text-gray-700">{range.label}</span>
+        <p className="mt-1 text-sm text-stone-500">
+          {restaurant.name} · showing <span className="font-semibold text-stone-700">{range.label}</span>
         </p>
       </div>
 
@@ -150,7 +152,9 @@ export default function Overview() {
                   setPeriod(p.key)
                 }}
                 className={`flex-shrink-0 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                  active ? 'bg-brand text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  active
+                    ? 'bg-brand text-white shadow-sm'
+                    : 'bg-white text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50'
                 }`}
               >
                 {p.label}
@@ -175,14 +179,32 @@ export default function Overview() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {/* Featured revenue card */}
+            <div className="relative overflow-hidden rounded-2xl bg-stone-900 p-4 text-white shadow-sm">
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: `radial-gradient(130% 110% at 100% 0%, ${accent}59, transparent 65%)`,
+                }}
+              />
+              <div className="relative">
+                <div className="mb-2 inline-flex rounded-xl bg-white/10 p-2 ring-1 ring-white/15">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <p className="font-display text-2xl font-semibold">
+                  {formatCurrency(revenue, currency)}
+                </p>
+                <p className="text-xs text-white/60">Revenue</p>
+              </div>
+            </div>
             {stats.map((s) => (
-              <Card key={s.label} className="p-4">
+              <div key={s.label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100">
                 <div className={`mb-2 inline-flex rounded-xl p-2 ${s.tint}`}>
                   <s.icon className="h-5 w-5" />
                 </div>
-                <p className="text-2xl font-extrabold text-gray-900">{s.value}</p>
-                <p className="text-xs text-gray-500">{s.label}</p>
-              </Card>
+                <p className="font-display text-2xl font-semibold text-stone-900">{s.value}</p>
+                <p className="text-xs text-stone-500">{s.label}</p>
+              </div>
             ))}
           </div>
 
@@ -191,7 +213,7 @@ export default function Overview() {
             <Card className="p-5">
               <div className="mb-4 flex items-center gap-2">
                 <Flame className="h-5 w-5 text-orange-500" />
-                <h2 className="font-bold text-gray-900">Popular items</h2>
+                <h2 className="font-display text-lg font-semibold text-stone-900">Popular items</h2>
               </div>
               {popular.length === 0 ? (
                 <p className="py-6 text-center text-sm text-gray-400">No sales in this period.</p>
@@ -221,8 +243,8 @@ export default function Overview() {
             {/* Orders in period */}
             <Card className="p-5">
               <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="font-bold text-gray-900">
-                  Orders <span className="text-gray-400">({orders.length})</span>
+                <h2 className="font-display text-lg font-semibold text-stone-900">
+                  Orders <span className="text-stone-400">({orders.length})</span>
                 </h2>
                 <div className="w-40 flex-shrink-0">
                   <Select value={sort} onChange={(e) => setSort(e.target.value)} className="!py-2 text-sm">
