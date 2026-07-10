@@ -162,11 +162,11 @@ export default function Orders() {
               : 'Orders will show up once customers start ordering.'
           }
         />
-      ) : filter === 'completed' ? (
-        /* Completed: one accumulated card per table, expandable — no card-per-round scroll. */
+      ) : filter === 'completed' || filter === 'all' ? (
+        /* Completed & All: one accumulated card per table, expandable — no card-per-round scroll. */
         <div className="grid gap-3 lg:grid-cols-2">
           {groupKeys.map((tableLabel) => (
-            <CompletedTableCard
+            <TableHistoryCard
               key={tableLabel}
               label={tableLabel}
               orders={groups[tableLabel]}
@@ -295,11 +295,16 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
   )
 }
 
-// One card per table in the Completed tab: rounds accumulate here instead of
-// stacking as individual cards. Tap to expand the round-by-round detail.
-function CompletedTableCard({ label, orders, currency }) {
+// One card per table in the Completed/All tabs: rounds accumulate here instead
+// of stacking as individual cards. Tap to expand the round-by-round detail.
+// The strip and badge take the color of the most urgent status at the table.
+const STATUS_URGENCY = ['new', 'preparing', 'ready', 'served', 'cancelled', 'completed']
+
+function TableHistoryCard({ label, orders, currency }) {
   const [open, setOpen] = useState(false)
-  const status = ORDER_STATUSES.completed
+  const topStatus =
+    STATUS_URGENCY.find((s) => orders.some((o) => o.status === s)) || 'completed'
+  const status = ORDER_STATUSES[topStatus]
   const total = orders.reduce((s, o) => s + Number(o.total || 0), 0)
   const itemCount = orders.reduce(
     (n, o) => n + (o.items || []).reduce((a, it) => a + (it.quantity || 0), 0),
@@ -337,22 +342,31 @@ function CompletedTableCard({ label, orders, currency }) {
 
       {open && (
         <div className="divide-y divide-gray-100 border-t border-gray-100">
-          {orders.map((o) => (
-            <div key={o.id} className="px-4 py-3">
-              <div className="mb-1 flex items-center justify-between text-xs text-stone-400">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  {timeAgo(o.created_at)}
-                </span>
-                <span className="font-bold text-stone-700">
-                  {formatCurrency(o.total, currency)}
-                </span>
+          {orders.map((o) => {
+            const st = ORDER_STATUSES[o.status] || ORDER_STATUSES.new
+            return (
+              <div key={o.id} className="px-4 py-3">
+                <div className="mb-1 flex items-center justify-between text-xs text-stone-400">
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {timeAgo(o.created_at)}
+                    </span>
+                    <Badge className={st.color}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
+                      {st.label}
+                    </Badge>
+                  </span>
+                  <span className="font-bold text-stone-700">
+                    {formatCurrency(o.total, currency)}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed text-stone-600">
+                  {(o.items || []).map((it) => `${it.quantity}× ${it.name_snapshot}`).join(' · ')}
+                </p>
               </div>
-              <p className="text-sm leading-relaxed text-stone-600">
-                {(o.items || []).map((it) => `${it.quantity}× ${it.name_snapshot}`).join(' · ')}
-              </p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
