@@ -13,6 +13,7 @@ import Overview from './pages/dashboard/Overview'
 import Menu from './pages/dashboard/Menu'
 import Tables from './pages/dashboard/Tables'
 import Orders from './pages/dashboard/Orders'
+import Checkout from './pages/dashboard/Checkout'
 import Settings from './pages/dashboard/Settings'
 import Kitchen from './pages/dashboard/Kitchen'
 
@@ -55,6 +56,7 @@ export default function App() {
         <Route path="menu" element={<Menu />} />
         <Route path="tables" element={<Tables />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="checkout" element={<Checkout />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 

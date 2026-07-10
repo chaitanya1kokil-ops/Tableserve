@@ -5,6 +5,7 @@ import {
   UtensilsCrossed,
   QrCode,
   Settings as SettingsIcon,
+  Wallet,
   LogOut,
   Store,
   AlertTriangle,
@@ -21,6 +22,7 @@ import { useNewOrderCount } from '../../hooks/useNewOrderCount'
 const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
+  { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode },

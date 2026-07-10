@@ -207,15 +207,22 @@ function CombinedOrderCard({ orders, accent, currency }) {
   const tax = active.reduce((s, o) => s + Number(o.tax || 0), 0)
   const total = active.reduce((s, o) => s + Number(o.total || 0), 0)
   const billRequested = active.some((o) => o.bill_requested)
+  const allPaid = active.length > 0 && active.every((o) => o.paid_at)
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-gray-900">Your order</h2>
-        {billRequested && (
-          <Badge className="bg-orange-100 text-orange-700">
-            <Receipt className="h-3 w-3" /> Bill requested
+        {allPaid ? (
+          <Badge className="bg-emerald-100 text-emerald-700">
+            <Check className="h-3 w-3" /> Paid
           </Badge>
+        ) : (
+          billRequested && (
+            <Badge className="bg-orange-100 text-orange-700">
+              <Receipt className="h-3 w-3" /> Bill requested
+            </Badge>
+          )
         )}
       </div>
 
