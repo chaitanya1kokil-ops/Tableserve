@@ -32,10 +32,10 @@ export const ORDER_STATUSES = {
   },
   completed: {
     label: 'Completed',
-    color: 'bg-gray-100 text-gray-600',
-    dot: 'bg-gray-400',
-    bar: 'bg-gray-200',
-    btn: 'bg-gray-500 hover:bg-gray-600',
+    color: 'bg-teal-50 text-teal-700',
+    dot: 'bg-teal-500',
+    bar: 'bg-teal-400',
+    btn: 'bg-teal-600 hover:bg-teal-700',
   },
   cancelled: {
     label: 'Cancelled',

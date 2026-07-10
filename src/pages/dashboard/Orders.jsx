@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Receipt, Clock, ChevronRight, Ban, Inbox, Plus } from 'lucide-react'
+import { Receipt, Clock, ChevronRight, ChevronDown, Ban, Inbox, Plus } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
@@ -162,6 +162,18 @@ export default function Orders() {
               : 'Orders will show up once customers start ordering.'
           }
         />
+      ) : filter === 'completed' ? (
+        /* Completed: one accumulated card per table, expandable — no card-per-round scroll. */
+        <div className="grid gap-3 lg:grid-cols-2">
+          {groupKeys.map((tableLabel) => (
+            <CompletedTableCard
+              key={tableLabel}
+              label={tableLabel}
+              orders={groups[tableLabel]}
+              currency={restaurant.currency}
+            />
+          ))}
+        </div>
       ) : (
         <div className="space-y-6">
           {groupKeys.map((tableLabel) => (
@@ -280,5 +292,69 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
         </div>
       </div>
     </Card>
+  )
+}
+
+// One card per table in the Completed tab: rounds accumulate here instead of
+// stacking as individual cards. Tap to expand the round-by-round detail.
+function CompletedTableCard({ label, orders, currency }) {
+  const [open, setOpen] = useState(false)
+  const status = ORDER_STATUSES.completed
+  const total = orders.reduce((s, o) => s + Number(o.total || 0), 0)
+  const itemCount = orders.reduce(
+    (n, o) => n + (o.items || []).reduce((a, it) => a + (it.quantity || 0), 0),
+    0,
+  )
+  const latest = orders[0] // list arrives newest-first
+
+  return (
+    <div className="self-start overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-100">
+      <div className={`h-1.5 w-full ${status.bar}`} />
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-stone-50"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-bold text-stone-900">{label}</p>
+            <Badge className={status.color}>
+              <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+              {status.label}
+            </Badge>
+          </div>
+          <p className="mt-0.5 text-xs text-stone-400">
+            {orders.length} {orders.length === 1 ? 'order' : 'orders'} · {itemCount}{' '}
+            {itemCount === 1 ? 'item' : 'items'} · {timeAgo(latest.created_at)}
+          </p>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2.5">
+          <span className="font-bold text-stone-900">{formatCurrency(total, currency)}</span>
+          <ChevronDown
+            className={`h-5 w-5 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
+
+      {open && (
+        <div className="divide-y divide-gray-100 border-t border-gray-100">
+          {orders.map((o) => (
+            <div key={o.id} className="px-4 py-3">
+              <div className="mb-1 flex items-center justify-between text-xs text-stone-400">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {timeAgo(o.created_at)}
+                </span>
+                <span className="font-bold text-stone-700">
+                  {formatCurrency(o.total, currency)}
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed text-stone-600">
+                {(o.items || []).map((it) => `${it.quantity}× ${it.name_snapshot}`).join(' · ')}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

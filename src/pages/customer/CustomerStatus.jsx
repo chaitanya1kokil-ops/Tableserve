@@ -45,6 +45,10 @@ export default function CustomerStatus() {
         .select('*, items:order_items(*)')
         .eq('restaurant_id', restaurantId)
         .eq('table_id', tableId)
+        // Paid/closed orders are history: once the bill is settled at checkout,
+        // the guest's view resets so the table starts a fresh session.
+        .is('paid_at', null)
+        .neq('status', 'completed')
         .order('created_at', { ascending: false }),
     ])
     setRestaurant(rest || null)
