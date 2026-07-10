@@ -592,8 +592,12 @@ export default function Landing() {
             <Link to="/signup" className="font-semibold text-brand">Sign up</Link>
           </div>
         </div>
-        <div className="border-t border-stone-100 py-4 text-center text-xs text-stone-400">
-          © {new Date().getFullYear()} TableServe. All rights reserved.
+        <div className="flex flex-col items-center justify-center gap-2 border-t border-stone-100 py-4 text-center text-xs text-stone-400 sm:flex-row sm:gap-4">
+          <span>© {new Date().getFullYear()} TableServe. All rights reserved.</span>
+          <span className="flex items-center gap-4">
+            <Link to="/terms" className="hover:text-stone-600">Terms of Use</Link>
+            <Link to="/privacy" className="hover:text-stone-600">Privacy Policy</Link>
+          </span>
         </div>
       </footer>
     </div>

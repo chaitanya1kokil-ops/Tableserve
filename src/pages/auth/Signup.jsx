@@ -101,6 +101,17 @@ export default function Signup() {
         <Button type="submit" className="w-full" size="lg" loading={loading}>
           Create account
         </Button>
+        <p className="text-center text-xs text-gray-400">
+          By creating an account, you agree to our{' '}
+          <Link to="/terms" className="font-medium text-gray-500 hover:underline">
+            Terms of Use
+          </Link>{' '}
+          and{' '}
+          <Link to="/privacy" className="font-medium text-gray-500 hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </form>
     </AuthShell>
   )

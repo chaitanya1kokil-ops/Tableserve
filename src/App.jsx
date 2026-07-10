@@ -4,6 +4,8 @@ import { RequireOwner, RequireOnboarding, RequireAdmin } from './components/guar
 import SetupNotice from './pages/SetupNotice'
 
 import Landing from './pages/Landing'
+import Terms from './pages/legal/Terms'
+import Privacy from './pages/legal/Privacy'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import Onboarding from './pages/Onboarding'
@@ -30,6 +32,8 @@ export default function App() {
     <Routes>
       {/* Public marketing + auth */}
       <Route path="/" element={<Landing />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
 
