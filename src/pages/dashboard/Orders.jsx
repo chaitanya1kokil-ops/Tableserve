@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Receipt, Clock, ChevronRight, Ban, Inbox, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Receipt, Clock, ChevronRight, Ban, Inbox, Plus, Wallet } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
@@ -14,11 +15,13 @@ const FILTERS = [
   { key: 'all', label: 'All', statuses: null },
 ]
 
+// Staff can advance orders up to "served" here. Completing an order happens
+// only through Checkout, when the bill is actually paid — so nobody can
+// accidentally close a table without charging it.
 const ADVANCE_LABEL = {
   new: 'Start preparing',
   preparing: 'Mark ready',
   ready: 'Mark served',
-  served: 'Complete',
 }
 
 export default function Orders() {
@@ -274,6 +277,14 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
               {advanceLabel}
               <ChevronRight className="h-4 w-4" />
             </button>
+          )}
+          {order.status === 'served' && (
+            <Link
+              to="/dashboard/checkout"
+              className="flex items-center gap-1.5 rounded-xl bg-stone-800 px-3.5 py-2 text-sm font-bold text-white transition hover:bg-stone-900 active:scale-[0.98]"
+            >
+              <Wallet className="h-4 w-4" /> Take payment
+            </Link>
           )}
         </div>
       </div>
