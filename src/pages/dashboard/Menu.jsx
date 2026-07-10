@@ -13,7 +13,6 @@ import { supabase, uploadImage, imageUrl } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/format'
 import {
   Button,
-  Card,
   Field,
   Input,
   Textarea,
@@ -111,8 +110,8 @@ export default function Menu() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Menu</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="font-display text-3xl font-semibold text-stone-900">Menu</h1>
+          <p className="mt-1 text-sm text-stone-500">
             {categories.length} categories · {totalItems} items
           </p>
         </div>
@@ -223,9 +222,14 @@ function CategorySection({
   onToggle,
 }) {
   return (
-    <section>
+    <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-100 sm:p-5">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900">{category.name}</h2>
+        <div className="flex items-baseline gap-2.5">
+          <h2 className="font-display text-xl font-semibold text-stone-900">{category.name}</h2>
+          <span className="text-xs font-medium text-stone-400">
+            {items.length} {items.length === 1 ? 'item' : 'items'}
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           {onEditCategory && (
             <button onClick={onEditCategory} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
@@ -244,8 +248,8 @@ function CategorySection({
       </div>
 
       {items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
-          No items yet.
+        <p className="rounded-xl border border-dashed border-stone-200 px-4 py-6 text-center text-sm text-stone-400">
+          No items yet — add the first one.
         </p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -268,33 +272,41 @@ function CategorySection({
 
 function ItemCard({ item, optionCount, currency, onEdit, onDelete, onToggle }) {
   return (
-    <Card className={`flex gap-3 p-3 ${!item.is_available ? 'opacity-60' : ''}`}>
-      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
+    <div
+      className={`flex gap-3 rounded-2xl p-3 ring-1 transition hover:shadow-md ${
+        item.is_available ? 'bg-white ring-stone-100' : 'bg-stone-50 opacity-75 ring-stone-200/70'
+      }`}
+    >
+      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-stone-100">
         {item.image_url ? (
           <img src={imageUrl(item.image_url)} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="grid h-full w-full place-items-center text-gray-300">
+          <div className="grid h-full w-full place-items-center text-stone-300">
             <UtensilsCrossed className="h-6 w-6" />
           </div>
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-2">
-          <p className="truncate font-semibold text-gray-900">{item.name}</p>
-          <span className="whitespace-nowrap font-bold text-gray-900">
+          <p className="truncate font-semibold text-stone-900">{item.name}</p>
+          <span className="whitespace-nowrap font-bold text-brand">
             {formatCurrency(item.price, currency)}
           </span>
         </div>
         {item.description && (
-          <p className="line-clamp-2 text-xs text-gray-500">{item.description}</p>
+          <p className="line-clamp-2 text-xs text-stone-500">{item.description}</p>
         )}
         <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
             <Toggle checked={item.is_available} onChange={onToggle} label="Available" />
-            <span className="text-xs text-gray-500">
+            <span className={`text-xs font-medium ${item.is_available ? 'text-emerald-600' : 'text-stone-400'}`}>
               {item.is_available ? 'Available' : 'Hidden'}
             </span>
-            {optionCount > 0 && <Badge className="bg-gray-100 text-gray-600">{optionCount} opt</Badge>}
+            {optionCount > 0 && (
+              <Badge className="bg-stone-100 text-stone-600">
+                {optionCount} {optionCount === 1 ? 'option' : 'options'}
+              </Badge>
+            )}
           </div>
           <div className="flex gap-1">
             <button onClick={onEdit} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
@@ -306,7 +318,7 @@ function ItemCard({ item, optionCount, currency, onEdit, onDelete, onToggle }) {
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   )
 }
 

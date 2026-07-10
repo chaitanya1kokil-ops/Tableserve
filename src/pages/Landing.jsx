@@ -1,9 +1,9 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   QrCode,
   UtensilsCrossed,
   LayoutDashboard,
-  Zap,
   ArrowRight,
   Store,
   Receipt,
@@ -199,14 +199,26 @@ export default function Landing() {
               'radial-gradient(70% 55% at 50% -10%, rgba(180,83,9,.10), transparent 65%)',
           }}
         />
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(120,85,60,.13) 1px, transparent 1px)',
+            backgroundSize: '22px 22px',
+            maskImage: 'radial-gradient(75% 65% at 50% 15%, black, transparent)',
+            WebkitMaskImage: 'radial-gradient(75% 65% at 50% 15%, black, transparent)',
+          }}
+        />
         <div className="relative mx-auto max-w-6xl px-5 pb-10 pt-14 sm:pt-20">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-brand">
-              <Zap className="h-3.5 w-3.5" /> QR ordering, live orders and billing in one platform
-            </span>
+            <p className="flex items-center justify-center gap-3 text-[11px] font-bold uppercase tracking-[0.3em] text-brand">
+              <span className="h-px w-8 bg-brand/40" />
+              QR ordering · Live orders · Billing
+              <span className="h-px w-8 bg-brand/40" />
+            </p>
             <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-6xl">
               Run a more efficient restaurant,
-              <br className="hidden sm:block" /> one <span className="text-brand">QR code</span> at a time
+              <br className="hidden sm:block" /> one <span className="italic text-brand">QR code</span> at a time
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-stone-600">
               TableServe turns every table into a self-serve ordering point. Guests scan, browse
@@ -232,7 +244,7 @@ export default function Landing() {
           </div>
 
           {/* mockups */}
-          <div className="mt-14 grid items-center gap-8 lg:grid-cols-[1fr,auto]">
+          <Reveal className="mt-14 grid items-center gap-8 lg:grid-cols-[1fr,auto]">
             {/* dashboard mockup */}
             <div className="hidden overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl lg:block">
               {/* browser chrome */}
@@ -390,7 +402,7 @@ export default function Landing() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -398,17 +410,23 @@ export default function Landing() {
       <section id="efficiency" className="border-t border-stone-100 bg-[#faf6ef]">
         <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
           <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.3em] text-brand">
+              Why TableServe
+            </p>
             <h2 className="font-display text-3xl font-semibold sm:text-4xl">
-              Built to make service <span className="text-brand">faster</span>
+              Built to make service <span className="italic text-brand">faster</span>
             </h2>
             <p className="mt-3 text-stone-600">
               Every part of TableServe removes a bottleneck between your guests, your kitchen and
               your floor staff.
             </p>
           </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          <Reveal className="mt-10 grid gap-5 sm:grid-cols-2">
             {efficiencyPoints.map((f) => (
-              <div key={f.title} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100">
+              <div
+                key={f.title}
+                className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100 transition duration-300 hover:-translate-y-1 hover:shadow-md"
+              >
                 <div className="mb-3 inline-flex rounded-xl bg-amber-50 p-2.5 text-brand">
                   <f.icon className="h-5 w-5" />
                 </div>
@@ -416,38 +434,54 @@ export default function Landing() {
                 <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{f.desc}</p>
               </div>
             ))}
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ how -- */}
       <section id="how" className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.3em] text-brand">
+            How it works
+          </p>
           <h2 className="font-display text-3xl font-semibold sm:text-4xl">Live in three steps</h2>
           <p className="mt-3 text-stone-600">From signup to serving your first QR order in an afternoon.</p>
         </div>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <Reveal className="mt-10 grid gap-5 md:grid-cols-3">
           {steps.map((s) => (
-            <div key={s.n} className="relative rounded-2xl border border-stone-100 p-6">
-              <span className="font-display text-5xl font-semibold text-amber-100">{s.n}</span>
-              <h3 className="mt-3 font-bold">{s.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{s.desc}</p>
+            <div
+              key={s.n}
+              className="relative rounded-3xl bg-white p-7 shadow-sm ring-1 ring-stone-100 transition duration-300 hover:-translate-y-1 hover:shadow-md"
+            >
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-brand font-display text-lg font-semibold text-white">
+                  {s.n}
+                </span>
+                <h3 className="font-bold">{s.title}</h3>
+              </div>
+              <p className="mt-3.5 text-sm leading-relaxed text-stone-600">{s.desc}</p>
             </div>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       {/* ------------------------------------------------------- features -- */}
       <section id="features" className="border-t border-stone-100 bg-[#faf6ef]">
         <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
           <div className="mx-auto max-w-2xl text-center">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.3em] text-brand">
+              Features
+            </p>
             <h2 className="font-display text-3xl font-semibold sm:text-4xl">
               Everything a busy floor needs
             </h2>
           </div>
-          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+          <Reveal className="mt-10 grid gap-5 lg:grid-cols-2">
             {featureBlocks.map((b) => (
-              <div key={b.title} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100 sm:p-7">
+              <div
+                key={b.title}
+                className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-100 transition duration-300 hover:-translate-y-1 hover:shadow-md sm:p-7"
+              >
                 <div className="mb-4 flex items-center gap-3">
                   <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-50 text-brand">
                     <b.icon className="h-5 w-5" />
@@ -464,7 +498,7 @@ export default function Landing() {
                 </ul>
               </div>
             ))}
-          </div>
+          </Reveal>
 
           {/* included strip */}
           <div className="mt-12 rounded-2xl bg-stone-900 p-7 text-white sm:p-9">
@@ -489,6 +523,9 @@ export default function Landing() {
       {/* -------------------------------------------------------- pricing -- */}
       <section id="pricing" className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl text-center">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.3em] text-brand">
+            Pricing
+          </p>
           <h2 className="font-display text-3xl font-semibold sm:text-4xl">
             Start free. Scale as you grow.
           </h2>
@@ -497,7 +534,7 @@ export default function Landing() {
             No credit card required.
           </p>
         </div>
-        <div className="mt-12 grid items-stretch gap-5 lg:grid-cols-3">
+        <Reveal className="mt-12 grid items-stretch gap-5 lg:grid-cols-3">
           {plans.map((p) => (
             <div
               key={p.tier}
@@ -538,16 +575,19 @@ export default function Landing() {
               </Link>
             </div>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       {/* ------------------------------------------------------------ cta -- */}
       <section className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <div className="relative overflow-hidden rounded-3xl bg-brand px-6 py-12 text-center text-white sm:px-12">
+        <div className="relative overflow-hidden rounded-3xl bg-stone-900 px-6 py-14 text-center text-white sm:px-12">
           <div
             className="pointer-events-none absolute inset-0"
             aria-hidden="true"
-            style={{ background: 'radial-gradient(80% 120% at 50% -20%, rgba(255,255,255,.18), transparent 60%)' }}
+            style={{
+              background:
+                'radial-gradient(90% 120% at 50% -20%, rgba(180,83,9,.5), transparent 60%), radial-gradient(60% 80% at 100% 100%, rgba(180,83,9,.25), transparent 60%)',
+            }}
           />
           <div className="relative">
             <h2 className="font-display text-3xl font-semibold sm:text-4xl">
@@ -600,6 +640,34 @@ export default function Landing() {
           </span>
         </div>
       </footer>
+    </div>
+  )
+}
+
+/* Fades content up into view the first time it scrolls into the viewport. */
+function Reveal({ children, className = '' }) {
+  const ref = useRef(null)
+  const [shown, setShown] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShown(true)
+          io.disconnect()
+        }
+      },
+      { threshold: 0.15 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} className={`reveal ${shown ? 'reveal-in' : ''} ${className}`}>
+      {children}
     </div>
   )
 }

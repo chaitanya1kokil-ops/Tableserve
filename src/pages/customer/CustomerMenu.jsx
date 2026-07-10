@@ -427,7 +427,7 @@ function CategoryNav({ groups }) {
 
 function MenuItemRow({ item, hasOptions, currency, onOpen, onQuickAdd }) {
   return (
-    <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-100">
+    <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-100 transition duration-200 hover:shadow-md active:scale-[.995]">
       <button onClick={onOpen} className="min-w-0 flex-1 text-left">
         <p className="font-bold text-stone-900">{item.name}</p>
         {item.description && (
