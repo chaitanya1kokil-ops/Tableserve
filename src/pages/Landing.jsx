@@ -312,9 +312,9 @@ export default function Landing() {
                     total: '$22.60',
                   },
                 ].map((o) => (
-                  <div key={o.t} className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-100">
+                  <div key={o.t} className="flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-100">
                     <div className={`h-1 w-full ${o.bar}`} />
-                    <div className="p-3">
+                    <div className="flex flex-1 flex-col p-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-stone-900">{o.t}</span>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${o.chip}`}>
@@ -331,7 +331,7 @@ export default function Landing() {
                           </div>
                         ))}
                       </div>
-                      <div className="mt-2 flex items-center justify-between border-t border-stone-100 pt-2 text-[11px]">
+                      <div className="mt-auto flex items-center justify-between border-t border-stone-100 pt-2 text-[11px]">
                         <span className="text-stone-400">Total incl. tax</span>
                         <span className="font-bold text-stone-900">{o.total}</span>
                       </div>
