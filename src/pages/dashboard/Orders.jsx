@@ -201,11 +201,22 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
   const canCancel = ['new', 'preparing'].includes(order.status)
 
   return (
-    <Card className={`overflow-hidden ${isNew ? 'ring-2 ring-blue-200' : ''}`}>
+    <Card
+      className={`overflow-hidden transition ${
+        isNew ? 'bg-blue-50/40 ring-2 ring-blue-300' : ''
+      }`}
+    >
+      {/* Status strip: instant color read across the board */}
+      <div className={`h-1.5 w-full ${status.bar}`} />
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Badge className={status.color}>
-            <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+            <span className="relative flex h-1.5 w-1.5">
+              {isNew && (
+                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${status.dot} opacity-75`} />
+              )}
+              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${status.dot}`} />
+            </span>
             {status.label}
           </Badge>
           {order.bill_requested && (
@@ -256,10 +267,13 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
             </Button>
           )}
           {advanceLabel && (
-            <Button size="sm" onClick={onAdvance}>
+            <button
+              onClick={onAdvance}
+              className={`flex items-center gap-1 rounded-xl px-3.5 py-2 text-sm font-bold text-white transition active:scale-[0.98] ${status.btn}`}
+            >
               {advanceLabel}
               <ChevronRight className="h-4 w-4" />
-            </Button>
+            </button>
           )}
         </div>
       </div>

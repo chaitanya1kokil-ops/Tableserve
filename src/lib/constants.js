@@ -1,11 +1,49 @@
 // Order status flow: New -> Preparing -> Ready -> Served -> Completed
+// Each status carries the full color treatment used across the app:
+// `color` chip, `dot`, `bar` (card top strip) and `btn` (advance-action button).
 export const ORDER_STATUSES = {
-  new: { label: 'New', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-  preparing: { label: 'Preparing', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
-  ready: { label: 'Ready', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' },
-  served: { label: 'Served', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-  completed: { label: 'Completed', color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' },
-  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+  new: {
+    label: 'New',
+    color: 'bg-blue-100 text-blue-700',
+    dot: 'bg-blue-500',
+    bar: 'bg-blue-500',
+    btn: 'bg-blue-600 hover:bg-blue-700',
+  },
+  preparing: {
+    label: 'Preparing',
+    color: 'bg-amber-100 text-amber-700',
+    dot: 'bg-amber-500',
+    bar: 'bg-amber-400',
+    btn: 'bg-amber-500 hover:bg-amber-600',
+  },
+  ready: {
+    label: 'Ready',
+    color: 'bg-emerald-100 text-emerald-700',
+    dot: 'bg-emerald-500',
+    bar: 'bg-emerald-500',
+    btn: 'bg-emerald-600 hover:bg-emerald-700',
+  },
+  served: {
+    label: 'Served',
+    color: 'bg-stone-200 text-stone-600',
+    dot: 'bg-stone-400',
+    bar: 'bg-stone-300',
+    btn: 'bg-stone-700 hover:bg-stone-800',
+  },
+  completed: {
+    label: 'Completed',
+    color: 'bg-gray-100 text-gray-600',
+    dot: 'bg-gray-400',
+    bar: 'bg-gray-200',
+    btn: 'bg-gray-500 hover:bg-gray-600',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    color: 'bg-red-100 text-red-700',
+    dot: 'bg-red-500',
+    bar: 'bg-red-400',
+    btn: 'bg-red-600 hover:bg-red-700',
+  },
 }
 
 // Ordered list used for the staff "advance status" button.
