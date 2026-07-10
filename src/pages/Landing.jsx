@@ -307,7 +307,7 @@ export default function Landing() {
                   {
                     t: 'Table 9', time: '12:18', s: 'Served',
                     chip: 'bg-stone-200 text-stone-600', bar: 'bg-stone-300',
-                    btn: 'bg-white text-stone-600 ring-1 ring-stone-200', action: 'Complete',
+                    btn: 'bg-stone-700 text-white', action: 'Complete',
                     items: [['2×', 'Tiramisu', '$16'], ['1×', 'Espresso', '$4']],
                     total: '$22.60',
                   },
