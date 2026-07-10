@@ -101,7 +101,7 @@ export default function Checkout() {
       <div className="mb-5">
         <h1 className="font-display text-3xl font-semibold text-stone-900">Checkout</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Open tabs by table. Settle to record payment and close the orders.
+          Open tabs by table. Take payment to close the orders.
         </p>
       </div>
 
@@ -203,7 +203,7 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
     })
     setSettling(false)
     if (error) return toast.error(error.message || 'Could not settle the tab.')
-    toast.success(`${tab.label} settled 🎉`)
+    toast.success(`${tab.label} paid 🎉`)
     onSettled()
   }
 
@@ -213,7 +213,7 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-white animate-slide-up sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h3 className="font-display text-xl font-semibold text-stone-900">
-            Settle {tab.label}
+            Pay {tab.label}
           </h3>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">
             <X className="h-5 w-5" />
@@ -371,7 +371,7 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
         <div className="border-t border-gray-100 px-5 py-4 safe-bottom">
           <Button className="w-full" size="lg" loading={settling} disabled={!balanced} onClick={settle}>
             <Wallet className="h-4 w-4" />
-            Settle {formatCurrency(tab.total, currency)}
+            Pay {formatCurrency(tab.total, currency)}
           </Button>
         </div>
       </div>
