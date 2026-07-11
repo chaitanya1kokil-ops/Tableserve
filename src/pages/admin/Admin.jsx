@@ -20,30 +20,47 @@ import { Button, Card, Badge, Input, FullPageSpinner, EmptyState } from '../../c
 
 const STATUS_FILTERS = ['all', 'pending', 'active', 'suspended']
 
+// Subscription tiers — must match the check constraint on restaurants.plan.
+export const PLANS = {
+  trial: { label: 'Trial', price: 0, color: 'bg-blue-100 text-blue-700' },
+  starter: { label: 'Starter', price: 59, color: 'bg-stone-200 text-stone-700' },
+  growth: { label: 'Growth', price: 149, color: 'bg-amber-100 text-amber-700' },
+  pro: { label: 'Pro', price: 299, color: 'bg-violet-100 text-violet-700' },
+}
+
 export default function Admin() {
   const { profile, signOut } = useAuth()
   const toast = useToast()
 
   const [loading, setLoading] = useState(true)
   const [restaurants, setRestaurants] = useState([])
-  const [stats, setStats] = useState({ orders: 0, revenue: 0 })
+  const [stats, setStats] = useState({ orders: 0, revenue: 0, perRest: {} })
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
-    const [{ data: rests }, { count }, { data: totals }] = await Promise.all([
+    const [{ data: rests }, { data: totals }] = await Promise.all([
       supabase
         .from('restaurants')
         .select('*, owner:profiles!restaurants_owner_id_fkey(email, full_name)')
         .order('created_at', { ascending: false }),
-      supabase.from('orders').select('id', { count: 'exact', head: true }),
-      supabase.from('orders').select('total, status'),
+      supabase.from('orders').select('restaurant_id, total, status'),
     ])
     setRestaurants(rests || [])
-    const revenue = (totals || [])
-      .filter((o) => o.status !== 'cancelled')
-      .reduce((s, o) => s + Number(o.total || 0), 0)
-    setStats({ orders: count || 0, revenue })
+
+    // Per-client order volume, plus platform totals.
+    const perRest = {}
+    let orders = 0
+    let revenue = 0
+    for (const o of totals || []) {
+      if (o.status === 'cancelled') continue
+      const t = (perRest[o.restaurant_id] ||= { orders: 0, revenue: 0 })
+      t.orders += 1
+      t.revenue += Number(o.total || 0)
+      orders += 1
+      revenue += Number(o.total || 0)
+    }
+    setStats({ orders, revenue, perRest })
     setLoading(false)
   }, [])
 
@@ -62,6 +79,17 @@ export default function Admin() {
     }
   }
 
+  const setPlan = async (restaurant, plan) => {
+    setRestaurants((list) => list.map((r) => (r.id === restaurant.id ? { ...r, plan } : r)))
+    const { error } = await supabase.from('restaurants').update({ plan }).eq('id', restaurant.id)
+    if (error) {
+      toast.error(error.message)
+      load()
+    } else {
+      toast.success(`${restaurant.name} moved to ${PLANS[plan].label}.`)
+    }
+  }
+
   if (loading) return <FullPageSpinner label="Loading platform…" />
 
   const counts = {
@@ -75,11 +103,16 @@ export default function Admin() {
     .filter((r) => filter === 'all' || r.status === filter)
     .filter((r) => r.name.toLowerCase().includes(query.toLowerCase()))
 
+  // Monthly recurring revenue from the plans of active (non-trial) clients.
+  const mrr = restaurants
+    .filter((r) => r.status === 'active')
+    .reduce((s, r) => s + (PLANS[r.plan]?.price || 0), 0)
+
   const statCards = [
-    { label: 'Restaurants', value: restaurants.length, icon: Building2, tint: 'bg-blue-50 text-blue-600' },
-    { label: 'Active', value: counts.active, icon: CheckCircle2, tint: 'bg-emerald-50 text-emerald-600' },
-    { label: 'Total orders', value: stats.orders, icon: ShoppingBag, tint: 'bg-violet-50 text-violet-600' },
-    { label: 'Platform revenue', value: formatCurrency(stats.revenue), icon: TrendingUp, tint: 'bg-amber-50 text-amber-600' },
+    { label: 'Clients', value: restaurants.length, icon: Building2, tint: 'bg-blue-50 text-blue-600' },
+    { label: 'MRR', value: formatCurrency(mrr), icon: TrendingUp, tint: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Orders processed', value: stats.orders, icon: ShoppingBag, tint: 'bg-violet-50 text-violet-600' },
+    { label: 'Client order volume', value: formatCurrency(stats.revenue), icon: CheckCircle2, tint: 'bg-amber-50 text-amber-600' },
   ]
 
   return (
@@ -150,7 +183,13 @@ export default function Admin() {
           ) : (
             <div className="space-y-3">
               {filtered.map((r) => (
-                <RestaurantRow key={r.id} restaurant={r} onSetStatus={setStatus} />
+                <RestaurantRow
+                  key={r.id}
+                  restaurant={r}
+                  usage={stats.perRest[r.id]}
+                  onSetStatus={setStatus}
+                  onSetPlan={setPlan}
+                />
               ))}
             </div>
           )}
@@ -160,11 +199,15 @@ export default function Admin() {
   )
 }
 
-function RestaurantRow({ restaurant: r, onSetStatus }) {
+function RestaurantRow({ restaurant: r, usage, onSetStatus, onSetPlan }) {
   const status = RESTAURANT_STATUS[r.status] || RESTAURANT_STATUS.active
+  const plan = PLANS[r.plan] || PLANS.trial
+  const trialEnds =
+    r.plan === 'trial' && r.trial_ends_at ? new Date(r.trial_ends_at) : null
+  const trialExpired = trialEnds && trialEnds < new Date()
 
   return (
-    <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+    <Card className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {r.logo_url ? (
           <img src={imageUrl(r.logo_url)} alt="" className="h-12 w-12 flex-shrink-0 rounded-xl object-cover" />
@@ -177,17 +220,49 @@ function RestaurantRow({ restaurant: r, onSetStatus }) {
           </span>
         )}
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="truncate font-bold text-gray-900">{r.name}</p>
             <Badge className={status.color}>{status.label}</Badge>
+            <Badge className={plan.color}>
+              {plan.label}
+              {plan.price > 0 && <> · ${plan.price}/mo</>}
+            </Badge>
+            {trialEnds && (
+              <span className={`text-[11px] font-semibold ${trialExpired ? 'text-red-500' : 'text-gray-400'}`}>
+                {trialExpired ? 'trial expired' : `trial ends ${formatDate(r.trial_ends_at)}`}
+              </span>
+            )}
           </div>
           <p className="truncate text-xs text-gray-500">
-            {r.cuisine} · {r.owner?.email || 'unknown owner'} · joined {formatDate(r.created_at)}
+            {r.cuisine} · {r.owner?.email || 'unknown owner'} · joined {formatDate(r.created_at)} ·{' '}
+            {usage ? (
+              <>
+                {usage.orders} orders · {formatCurrency(usage.revenue)} volume
+              </>
+            ) : (
+              'no orders yet'
+            )}
+          </p>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-gray-400" title="Owner user ID">
+            {r.owner_id}
           </p>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={r.plan || 'trial'}
+          onChange={(e) => onSetPlan(r, e.target.value)}
+          className="rounded-xl border border-gray-200 bg-white px-2.5 py-2 text-sm font-semibold text-gray-700 focus:border-brand focus:outline-none"
+          title="Payment plan"
+        >
+          {Object.entries(PLANS).map(([key, p]) => (
+            <option key={key} value={key}>
+              {p.label}
+              {p.price > 0 ? ` · $${p.price}/mo` : ''}
+            </option>
+          ))}
+        </select>
         <a href={`/r/${r.id}`} target="_blank" rel="noreferrer">
           <Button variant="outline" size="sm">
             View
