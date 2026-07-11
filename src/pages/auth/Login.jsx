@@ -60,6 +60,14 @@ export default function Login() {
             placeholder="••••••••"
           />
         </Field>
+        <div className="text-right">
+          <Link
+            to="/forgot-password"
+            className="text-sm font-medium text-gray-500 hover:text-brand hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <Button type="submit" className="w-full" size="lg" loading={loading}>
           Log in
         </Button>

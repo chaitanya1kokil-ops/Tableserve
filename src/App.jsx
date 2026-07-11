@@ -8,6 +8,8 @@ import Terms from './pages/legal/Terms'
 import Privacy from './pages/legal/Privacy'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
 import Onboarding from './pages/Onboarding'
 
 import DashboardLayout from './pages/dashboard/DashboardLayout'
@@ -36,6 +38,8 @@ export default function App() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Restaurant onboarding */}
       <Route
