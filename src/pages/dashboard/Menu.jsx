@@ -35,8 +35,9 @@ export default function Menu() {
   const [items, setItems] = useState([])
   const [optionsByItem, setOptionsByItem] = useState({})
 
-  const [catModal, setCatModal] = useState(null) // {id?, name}
+  const [catModal, setCatModal] = useState(null) // {id?, name, brand}
   const [itemModal, setItemModal] = useState(null) // item being edited or {} for new
+  const [brandTab, setBrandTab] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -97,14 +98,30 @@ export default function Menu() {
 
   if (loading) return <FullPageSpinner label="Loading your menu…" />
 
+  // Brand tabs: when categories are grouped under 2+ brands, manage them
+  // separately (mirrors the customer menu's brand picker).
+  const brands = [...new Set(categories.map((c) => c.brand).filter(Boolean))]
+  const multiBrand = brands.length > 1
+  const hasUnbranded = multiBrand && categories.some((c) => !c.brand)
+  const tabs = multiBrand ? [...brands, ...(hasUnbranded ? ['No brand'] : [])] : []
+  const activeTab = tabs.includes(brandTab) ? brandTab : tabs[0]
+
+  const visibleCategories = multiBrand
+    ? categories.filter((c) => (c.brand || 'No brand') === activeTab)
+    : categories
+
   // Group items by category, plus an uncategorized bucket.
-  const grouped = categories.map((c) => ({
+  const grouped = visibleCategories.map((c) => ({
     category: c,
     items: items.filter((i) => i.category_id === c.id),
   }))
   const uncategorized = items.filter((i) => !i.category_id)
 
   const totalItems = items.length
+  const newCategoryDefaults = {
+    name: '',
+    brand: multiBrand && activeTab !== 'No brand' ? activeTab : '',
+  }
 
   return (
     <div>
@@ -116,7 +133,7 @@ export default function Menu() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCatModal({ name: '' })}>
+          <Button variant="outline" size="sm" onClick={() => setCatModal(newCategoryDefaults)}>
             <FolderPlus className="h-4 w-4" /> Category
           </Button>
           <Button
@@ -138,13 +155,31 @@ export default function Menu() {
           title="Your menu is empty"
           description="Start by creating a category like Starters or Mains, then add items to it."
           action={
-            <Button onClick={() => setCatModal({ name: '' })}>
+            <Button onClick={() => setCatModal(newCategoryDefaults)}>
               <FolderPlus className="h-4 w-4" /> Create first category
             </Button>
           }
         />
       ) : (
         <div className="space-y-7">
+          {multiBrand && (
+            <div className="flex gap-1 rounded-xl bg-white p-1 ring-1 ring-stone-200">
+              {tabs.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setBrandTab(t)}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition ${
+                    activeTab === t ? 'bg-stone-900 text-white' : 'text-stone-500 hover:text-stone-800'
+                  }`}
+                >
+                  <span className="truncate">{t}</span>
+                  <span className={activeTab === t ? 'text-white/60' : 'text-stone-300'}>
+                    {categories.filter((c) => (c.brand || 'No brand') === t).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           {grouped.map(({ category, items: catItems }) => (
             <CategorySection
               key={category.id}
@@ -180,6 +215,8 @@ export default function Menu() {
         <CategoryModal
           rid={rid}
           existing={catModal.id ? catModal : null}
+          defaultBrand={catModal.brand || ''}
+          knownBrands={brands}
           nextSort={categories.length}
           onClose={() => setCatModal(null)}
           onSaved={() => {
@@ -194,7 +231,7 @@ export default function Menu() {
           rid={rid}
           categories={categories}
           item={itemModal.id ? itemModal : null}
-          defaultCategoryId={itemModal.category_id || categories[0]?.id || null}
+          defaultCategoryId={itemModal.category_id || visibleCategories[0]?.id || categories[0]?.id || null}
           existingOptions={itemModal.id ? optionsByItem[itemModal.id] || [] : []}
           nextSort={items.length}
           onClose={() => setItemModal(null)}
@@ -322,15 +359,16 @@ function ItemCard({ item, optionCount, currency, onEdit, onDelete, onToggle }) {
   )
 }
 
-function CategoryModal({ rid, existing, nextSort, onClose, onSaved }) {
+function CategoryModal({ rid, existing, defaultBrand, knownBrands = [], nextSort, onClose, onSaved }) {
   const toast = useToast()
   const [name, setName] = useState(existing?.name || '')
+  const [brand, setBrand] = useState(existing?.brand ?? defaultBrand ?? '')
   const [saving, setSaving] = useState(false)
 
   const save = async () => {
     if (!name.trim()) return toast.error('Enter a category name.')
     setSaving(true)
-    const payload = { name: name.trim() }
+    const payload = { name: name.trim(), brand: brand.trim() || null }
     const { error } = existing
       ? await supabase.from('menu_categories').update(payload).eq('id', existing.id)
       : await supabase
@@ -359,15 +397,33 @@ function CategoryModal({ rid, existing, nextSort, onClose, onSaved }) {
         </div>
       }
     >
-      <Field label="Category name" required>
-        <Input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Starters"
-          onKeyDown={(e) => e.key === 'Enter' && save()}
-        />
-      </Field>
+      <div className="space-y-4">
+        <Field label="Category name" required>
+          <Input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Starters"
+            onKeyDown={(e) => e.key === 'Enter' && save()}
+          />
+        </Field>
+        <Field
+          label="Brand (optional)"
+          hint="Run two menus from one QR by grouping categories under brand names. Guests pick a brand first when 2+ exist."
+        >
+          <Input
+            list="menu-brand-suggestions"
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            placeholder="e.g. Royal Paan"
+          />
+          <datalist id="menu-brand-suggestions">
+            {knownBrands.map((b) => (
+              <option key={b} value={b} />
+            ))}
+          </datalist>
+        </Field>
+      </div>
     </Modal>
   )
 }
