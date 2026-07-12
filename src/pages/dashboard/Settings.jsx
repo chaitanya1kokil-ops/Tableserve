@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Check, ExternalLink, Store, Volume2, VolumeX } from 'lucide-react'
+import { Check, ExternalLink, Store, Volume2, VolumeX, Bell } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase, uploadImage } from '../../lib/supabase'
@@ -66,6 +66,41 @@ export default function Settings() {
   }
 
   const publicUrl = `${window.location.origin}/r/${restaurant.id}`
+
+  // On-demand sound check. Runs inside the click (a user gesture), so it can
+  // always play — proving the device itself is audible regardless of the
+  // realtime alert plumbing.
+  const testBell = () => {
+    const Ctx = window.AudioContext || window.webkitAudioContext
+    if (!Ctx) return toast.error('This browser does not support audio.')
+    const ctx = new Ctx()
+    const strike = (start, base, loudness = 1) => {
+      ;[
+        { ratio: 1.0, gain: 1.0, decay: 1.5 },
+        { ratio: 2.0, gain: 0.5, decay: 1.0 },
+        { ratio: 2.96, gain: 0.3, decay: 0.7 },
+        { ratio: 4.2, gain: 0.15, decay: 0.45 },
+      ].forEach((p) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.value = base * p.ratio
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(Math.min(0.9, 0.9 * p.gain * loudness), start + 0.008)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + p.decay)
+        osc.connect(gain).connect(ctx.destination)
+        osc.start(start)
+        osc.stop(start + p.decay + 0.05)
+      })
+    }
+    const now = ctx.currentTime
+    // New-order ding-dong, then the ready double-tap.
+    strike(now, 659, 0.8)
+    strike(now + 0.28, 988, 0.9)
+    strike(now + 1.3, 1175, 1)
+    strike(now + 1.62, 1175, 0.8)
+    toast.success('If you heard two sounds, this device is good to go.')
+  }
 
   return (
     <div className="pb-8">
@@ -185,6 +220,9 @@ export default function Settings() {
             Sounds on this device: a ring when a new order arrives, a chime when a customer
             taps “Call server”, and a loud bell when the kitchen marks an order ready.
           </p>
+          <Button variant="outline" size="sm" className="mb-3" onClick={testBell}>
+            <Bell className="h-4 w-4" /> Test sounds on this device
+          </Button>
           <button
             type="button"
             onClick={toggleMute}

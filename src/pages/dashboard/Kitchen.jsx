@@ -88,6 +88,18 @@ export default function Kitchen() {
     strike(ctx, now + 0.28, 988, 1) // B5
   }, [ensureAudio, strike])
 
+  // Unlock audio on the first tap anywhere (browser autoplay policy) — the
+  // kitchen screen may sit untouched between tickets.
+  useEffect(() => {
+    const unlock = () => ensureAudio()
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [ensureAudio])
+
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from('orders')

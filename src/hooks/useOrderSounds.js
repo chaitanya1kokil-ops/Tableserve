@@ -63,22 +63,22 @@ export function useOrderSounds(restaurantId, muted) {
 
   // NEW ORDER: friendly rising ding-dong.
   const ringNewOrder = useCallback(() => {
-    const ctx = audioRef.current
+    const ctx = ensureAudio()
     if (!ctx || ctx.state !== 'running') return
     const now = ctx.currentTime
     strike(ctx, now, 659, 0.8) // E5
     strike(ctx, now + 0.28, 988, 0.9) // B5
-  }, [strike])
+  }, [ensureAudio, strike])
 
   // ORDER READY: two crisp desk-bell taps — loud enough to cut through,
   // over in about a second.
   const ringReady = useCallback(() => {
-    const ctx = audioRef.current
+    const ctx = ensureAudio()
     if (!ctx || ctx.state !== 'running') return
     const now = ctx.currentTime
     strike(ctx, now, 1175, 1) // D6
     strike(ctx, now + 0.32, 1175, 0.8)
-  }, [strike])
+  }, [ensureAudio, strike])
 
   const tableLabel = useCallback(async (tableId) => {
     if (!tableId) return 'A table'
