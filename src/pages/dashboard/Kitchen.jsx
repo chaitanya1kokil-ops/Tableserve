@@ -11,7 +11,6 @@ import {
   Check,
   Play,
   StickyNote,
-  PackageCheck,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -28,8 +27,10 @@ const ITEM_STYLE = {
 
 const ITEM_ACTION = { new: { label: 'Start', icon: Play }, preparing: { label: 'Ready', icon: Check } }
 
-// Orders leave the board once served/completed/cancelled.
-const ACTIVE_STATUSES = ['new', 'preparing', 'ready']
+// The kitchen's job ends at "ready": once every item is ready the DB trigger
+// flips the order to ready and the ticket leaves this board automatically.
+// Serving and checkout happen on the floor side.
+const ACTIVE_STATUSES = ['new', 'preparing']
 
 export default function Kitchen() {
   const { restaurant } = useAuth()
@@ -56,24 +57,36 @@ export default function Kitchen() {
     return audioRef.current
   }, [])
 
-  const chime = useCallback(() => {
-    const ctx = ensureAudio()
-    if (!ctx) return
-    const now = ctx.currentTime
-    ;[880, 1320].forEach((freq, i) => {
-      const t = now + i * 0.16
+  // One bell strike: layered sine partials with natural decay (same voice as
+  // the dashboard alerts, so the whole product rings consistently).
+  const strike = useCallback((ctx, start, base, loudness = 1) => {
+    ;[
+      { ratio: 1.0, gain: 1.0, decay: 1.5 },
+      { ratio: 2.0, gain: 0.5, decay: 1.0 },
+      { ratio: 2.96, gain: 0.3, decay: 0.7 },
+      { ratio: 4.2, gain: 0.15, decay: 0.45 },
+    ].forEach((p) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.type = 'sine'
-      osc.frequency.value = freq
-      gain.gain.setValueAtTime(0.0001, t)
-      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15)
+      osc.frequency.value = base * p.ratio
+      gain.gain.setValueAtTime(0.0001, start)
+      gain.gain.exponentialRampToValueAtTime(Math.min(0.9, 0.9 * p.gain * loudness), start + 0.008)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + p.decay)
       osc.connect(gain).connect(ctx.destination)
-      osc.start(t)
-      osc.stop(t + 0.16)
+      osc.start(start)
+      osc.stop(start + p.decay + 0.05)
     })
-  }, [ensureAudio])
+  }, [])
+
+  // New ticket: rising two-tone bell, loud enough for a kitchen.
+  const chime = useCallback(() => {
+    const ctx = ensureAudio()
+    if (!ctx || ctx.state !== 'running') return
+    const now = ctx.currentTime
+    strike(ctx, now, 659, 0.9) // E5
+    strike(ctx, now + 0.28, 988, 1) // B5
+  }, [ensureAudio, strike])
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -139,11 +152,14 @@ export default function Kitchen() {
     const ns = ITEM_NEXT[cur]
     if (!ns) return
     setOrders((list) =>
-      list.map((o) =>
-        o.id === order.id
-          ? { ...o, items: o.items.map((it) => (it.id === item.id ? { ...it, status: ns } : it)) }
-          : o,
-      ),
+      list
+        .map((o) =>
+          o.id === order.id
+            ? { ...o, items: o.items.map((it) => (it.id === item.id ? { ...it, status: ns } : it)) }
+            : o,
+        )
+        // All items ready -> the kitchen is done; the ticket leaves the board.
+        .filter((o) => !(o.items || []).length || o.items.some((it) => (it.status || 'new') !== 'ready')),
     )
     const { error } = await supabase.from('order_items').update({ status: ns }).eq('id', item.id)
     if (error) {
@@ -168,16 +184,6 @@ export default function Kitchen() {
       .eq('status', 'new')
     if (error) {
       toast.error('Could not update items.')
-      load()
-    }
-  }
-
-  // Whole order handed off to the waiter -> leaves the board.
-  const pickup = async (order) => {
-    setOrders((list) => list.filter((o) => o.id !== order.id))
-    const { error } = await supabase.from('orders').update({ status: 'served' }).eq('id', order.id)
-    if (error) {
-      toast.error('Could not update order.')
       load()
     }
   }
@@ -255,7 +261,6 @@ export default function Kitchen() {
               order={order}
               onAdvanceItem={(it) => advanceItem(order, it)}
               onStartAll={() => startAll(order)}
-              onPickup={() => pickup(order)}
             />
           ))}
         </div>
@@ -278,19 +283,14 @@ function elapsed(iso) {
   return { label: mins < 1 ? 'just now' : `${mins} min`, tone, pulse }
 }
 
-function Ticket({ order, onAdvanceItem, onStartAll, onPickup }) {
+function Ticket({ order, onAdvanceItem, onStartAll }) {
   const t = elapsed(order.created_at)
   const items = order.items || []
   const readyCount = items.filter((it) => (it.status || 'new') === 'ready').length
   const hasNew = items.some((it) => (it.status || 'new') === 'new')
-  const allReady = items.length > 0 && readyCount === items.length
 
   return (
-    <div
-      className={`rounded-2xl border bg-slate-900 shadow-lg ${
-        allReady ? 'border-emerald-500/50' : 'border-white/10'
-      }`}
-    >
+    <div className="rounded-2xl border border-white/10 bg-slate-900 shadow-lg">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2 text-lg font-extrabold">
           <Utensils className="h-5 w-5 text-slate-400" />
@@ -360,24 +360,14 @@ function Ticket({ order, onAdvanceItem, onStartAll, onPickup }) {
       )}
 
       <div className="border-t border-white/10 p-3">
-        {allReady ? (
-          <button
-            onClick={onPickup}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-base font-bold text-white transition hover:brightness-110 active:scale-[0.99]"
-          >
-            <PackageCheck className="h-5 w-5" />
-            Order ready · hand off
-          </button>
-        ) : (
-          <button
-            onClick={onStartAll}
-            disabled={!hasNew}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-base font-bold text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Play className="h-5 w-5" />
-            Start all items
-          </button>
-        )}
+        <button
+          onClick={onStartAll}
+          disabled={!hasNew}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-base font-bold text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Play className="h-5 w-5" />
+          Start all items
+        </button>
       </div>
     </div>
   )

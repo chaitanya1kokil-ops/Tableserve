@@ -91,6 +91,9 @@ export default function Checkout() {
         billRequested: t.orders.some((o) => o.bill_requested),
         openedAt: t.orders[0]?.created_at,
       }))
+      // A tab is ready for payment only once every round has been served —
+      // until then the table still belongs to the kitchen/floor workflow.
+      .filter((t) => t.orders.every((o) => o.status === 'served'))
       .sort((a, b) => Number(b.billRequested) - Number(a.billRequested))
   }, [orders])
 
@@ -101,7 +104,7 @@ export default function Checkout() {
       <div className="mb-5">
         <h1 className="font-display text-3xl font-semibold text-stone-900">Checkout</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Open tabs by table. Take payment to close the orders.
+          Tables appear here once all their orders are marked served. Take payment to close them.
         </p>
       </div>
 
@@ -110,8 +113,8 @@ export default function Checkout() {
       ) : tabs.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title="No open tabs"
-          description="When tables have unpaid orders, they show up here ready to settle."
+          title="No tabs ready for payment"
+          description="A table shows up here once every one of its orders has been marked served on the Orders board."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
