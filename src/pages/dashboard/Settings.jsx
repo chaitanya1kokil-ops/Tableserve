@@ -182,7 +182,8 @@ export default function Settings() {
         <Card className="p-5">
           <h2 className="mb-1 font-bold text-gray-900">Notifications</h2>
           <p className="mb-3 text-sm text-gray-500">
-            Play a chime on this device when a customer taps “Call server”.
+            Sounds on this device: a chime when a customer taps “Call server”, and a loud
+            kitchen bell when an order is marked ready.
           </p>
           <button
             type="button"
@@ -196,7 +197,7 @@ export default function Settings() {
                 <Volume2 className="h-5 w-5 text-emerald-600" />
               )}
               <span>
-                <span className="block text-sm font-semibold text-gray-800">Call server sound</span>
+                <span className="block text-sm font-semibold text-gray-800">Notification sounds</span>
                 <span className="block text-xs text-gray-500">
                   {muted ? 'Muted' : 'On — tap to preview'}
                 </span>
