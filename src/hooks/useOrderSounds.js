@@ -39,8 +39,9 @@ export function useOrderSounds(restaurantId, muted) {
   }, [ensureAudio])
 
   // One bell strike: layered sine partials with natural exponential decay,
-  // modeled on a front-desk bell (inharmonic overtones, fast attack).
-  const strike = useCallback((ctx, start, base, loudness = 1) => {
+  // modeled on a front-desk bell. `soft` halves the overtones for a warmer,
+  // marimba-like tone instead of a sharp clang.
+  const strike = useCallback((ctx, start, base, loudness = 1, soft = false) => {
     const partials = [
       { ratio: 1.0, gain: 1.0, decay: 1.5 },
       { ratio: 2.0, gain: 0.5, decay: 1.0 },
@@ -52,8 +53,12 @@ export function useOrderSounds(restaurantId, muted) {
       const gain = ctx.createGain()
       osc.type = 'sine'
       osc.frequency.value = base * p.ratio
+      const level = p.ratio > 1 && soft ? p.gain * 0.45 : p.gain
       gain.gain.setValueAtTime(0.0001, start)
-      gain.gain.exponentialRampToValueAtTime(Math.min(0.9, 0.9 * p.gain * loudness), start + 0.008)
+      gain.gain.exponentialRampToValueAtTime(
+        Math.min(0.9, 0.9 * level * loudness),
+        start + (soft ? 0.015 : 0.008),
+      )
       gain.gain.exponentialRampToValueAtTime(0.0001, start + p.decay)
       osc.connect(gain).connect(ctx.destination)
       osc.start(start)
@@ -70,14 +75,15 @@ export function useOrderSounds(restaurantId, muted) {
     strike(ctx, now + 0.28, 988, 0.9) // B5
   }, [ensureAudio, strike])
 
-  // ORDER READY: two crisp desk-bell taps — loud enough to cut through,
-  // over in about a second.
+  // ORDER READY: warm rising three-note arpeggio (C-E-G) — unmistakably
+  // "good news", audible across a room without being shrill.
   const ringReady = useCallback(() => {
     const ctx = ensureAudio()
     if (!ctx || ctx.state !== 'running') return
     const now = ctx.currentTime
-    strike(ctx, now, 1175, 1) // D6
-    strike(ctx, now + 0.32, 1175, 0.8)
+    strike(ctx, now, 523, 0.9, true) // C5
+    strike(ctx, now + 0.18, 659, 0.9, true) // E5
+    strike(ctx, now + 0.36, 784, 1, true) // G5
   }, [ensureAudio, strike])
 
   const tableLabel = useCallback(async (tableId) => {

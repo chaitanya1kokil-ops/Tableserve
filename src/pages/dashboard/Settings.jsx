@@ -94,11 +94,12 @@ export default function Settings() {
       })
     }
     const now = ctx.currentTime
-    // New-order ding-dong, then the ready double-tap.
+    // New-order ding-dong, then the ready arpeggio.
     strike(now, 659, 0.8)
     strike(now + 0.28, 988, 0.9)
-    strike(now + 1.3, 1175, 1)
-    strike(now + 1.62, 1175, 0.8)
+    strike(now + 1.4, 523, 0.9)
+    strike(now + 1.58, 659, 0.9)
+    strike(now + 1.76, 784, 1)
     toast.success('If you heard two sounds, this device is good to go.')
   }
 
