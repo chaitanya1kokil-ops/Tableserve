@@ -70,12 +70,14 @@ export function useOrderSounds(restaurantId, muted) {
     strike(ctx, now + 0.28, 988, 0.9) // B5
   }, [strike])
 
-  // ORDER READY: three loud desk-bell strikes.
+  // ORDER READY: two crisp desk-bell taps — loud enough to cut through,
+  // over in about a second.
   const ringReady = useCallback(() => {
     const ctx = audioRef.current
     if (!ctx || ctx.state !== 'running') return
     const now = ctx.currentTime
-    ;[0, 0.55, 1.1].forEach((t) => strike(ctx, now + t, 1175, 1)) // D6
+    strike(ctx, now, 1175, 1) // D6
+    strike(ctx, now + 0.32, 1175, 0.8)
   }, [strike])
 
   const tableLabel = useCallback(async (tableId) => {
