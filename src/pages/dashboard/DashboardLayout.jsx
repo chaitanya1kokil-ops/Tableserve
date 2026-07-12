@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext'
 import { imageUrl } from '../../lib/supabase'
 import { RESTAURANT_STATUS } from '../../lib/constants'
 import { useServerCalls } from '../../hooks/useServerCalls'
-import { useReadyAlert } from '../../hooks/useReadyAlert'
+import { useOrderSounds } from '../../hooks/useOrderSounds'
 import { useNewOrderCount } from '../../hooks/useNewOrderCount'
 
 const NAV = [
@@ -34,7 +34,7 @@ export default function DashboardLayout() {
   const { restaurant, signOut } = useAuth()
   const status = RESTAURANT_STATUS[restaurant?.status] || RESTAURANT_STATUS.active
   const { calls, resolve, muted, toggleMute } = useServerCalls(restaurant?.id)
-  useReadyAlert(restaurant?.id, muted)
+  useOrderSounds(restaurant?.id, muted)
   const newOrders = useNewOrderCount(restaurant?.id)
 
   return (

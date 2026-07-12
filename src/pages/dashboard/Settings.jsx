@@ -182,8 +182,8 @@ export default function Settings() {
         <Card className="p-5">
           <h2 className="mb-1 font-bold text-gray-900">Notifications</h2>
           <p className="mb-3 text-sm text-gray-500">
-            Sounds on this device: a chime when a customer taps “Call server”, and a loud
-            kitchen bell when an order is marked ready.
+            Sounds on this device: a ring when a new order arrives, a chime when a customer
+            taps “Call server”, and a loud bell when the kitchen marks an order ready.
           </p>
           <button
             type="button"
