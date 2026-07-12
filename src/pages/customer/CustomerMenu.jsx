@@ -37,6 +37,7 @@ export default function CustomerMenu() {
   const [activeItem, setActiveItem] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [calling, setCalling] = useState(false)
+  const [brandChoice, setBrandChoice] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -141,6 +142,20 @@ export default function CustomerMenu() {
   const uncategorized = items.filter((i) => !i.category_id)
   if (uncategorized.length) grouped.push({ category: { id: 'uncat', name: 'More' }, items: uncategorized })
 
+  // Multi-brand menus: when categories carry 2+ brand names, guests pick a
+  // brand first and can switch any time. Uncategorized items show everywhere.
+  const brands = [...new Set(categories.map((c) => c.brand).filter(Boolean))]
+  const multiBrand = brands.length > 1
+  const visibleGrouped =
+    multiBrand && brandChoice
+      ? grouped.filter((g) => !g.category.brand || g.category.brand === brandChoice)
+      : grouped
+
+  const pickBrand = (b) => {
+    setBrandChoice(b)
+    window.scrollTo({ top: 0 })
+  }
+
   return (
     <div className="min-h-[100dvh] bg-[#faf6ef] pb-28" style={{ '--brand': accent }}>
       <BrandHeader
@@ -168,11 +183,24 @@ export default function CustomerMenu() {
         <div className="mx-auto max-w-2xl px-4 py-16">
           <CenteredCard icon={UtensilsCrossed} title="Menu coming soon" text="This restaurant hasn’t added items yet." inline />
         </div>
+      ) : multiBrand && !brandChoice ? (
+        <BrandPicker
+          brands={brands}
+          categories={categories}
+          items={items}
+          accent={accent}
+          onPick={pickBrand}
+        />
       ) : (
         <>
-          <CategoryNav groups={grouped} />
+          <CategoryNav
+            groups={visibleGrouped}
+            brands={multiBrand ? brands : []}
+            activeBrand={brandChoice}
+            onBrandChange={pickBrand}
+          />
           <div className="mx-auto max-w-2xl space-y-8 px-4 py-5">
-            {grouped.map(({ category, items: catItems }) => (
+            {visibleGrouped.map(({ category, items: catItems }) => (
               <section key={category.id} id={`cat-${category.id}`} className="scroll-mt-28">
                 <h2 className="mb-3 font-display text-2xl font-semibold text-stone-900">
                   {category.name}
@@ -378,7 +406,7 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onVi
   )
 }
 
-function CategoryNav({ groups }) {
+function CategoryNav({ groups, brands = [], activeBrand, onBrandChange }) {
   const [active, setActive] = useState(groups[0]?.category.id)
   const navRef = useRef(null)
 
@@ -406,6 +434,23 @@ function CategoryNav({ groups }) {
 
   return (
     <div className="sticky top-0 z-30 border-b border-stone-200/70 bg-[#faf6ef]/95 backdrop-blur">
+      {brands.length > 1 && (
+        <div className="mx-auto flex max-w-2xl gap-1.5 px-4 pt-2.5">
+          {brands.map((b) => (
+            <button
+              key={b}
+              onClick={() => onBrandChange(b)}
+              className={`flex-1 truncate rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                b === activeBrand
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-white text-stone-500 ring-1 ring-stone-200'
+              }`}
+            >
+              {b}
+            </button>
+          ))}
+        </div>
+      )}
       <div ref={navRef} className="no-scrollbar mx-auto flex max-w-2xl gap-2 overflow-x-auto px-4 py-3">
         {groups.map(({ category }) => (
           <button
@@ -803,4 +848,49 @@ function CenteredCard({ icon: Icon, title, text, inline }) {
   )
   if (inline) return body
   return <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-5">{body}</div>
+}
+
+/* ----------------------------------------------------------- brand picker -- */
+// Shown when a restaurant runs 2+ brands from one QR: guests choose a menu
+// first, then can flip between brands from the tabs above the category nav.
+function BrandPicker({ brands, categories, items, accent, onPick }) {
+  const countFor = (brand) => {
+    const ids = new Set(categories.filter((c) => c.brand === brand).map((c) => c.id))
+    return items.filter((i) => ids.has(i.category_id)).length
+  }
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <h2 className="text-center font-display text-2xl font-semibold text-stone-900">
+        Choose a menu
+      </h2>
+      <p className="mt-1 text-center text-sm text-stone-500">
+        Two kitchens, one table — you can switch any time.
+      </p>
+      <div className="mt-6 space-y-4">
+        {brands.map((b) => (
+          <button
+            key={b}
+            onClick={() => onPick(b)}
+            className="relative w-full overflow-hidden rounded-3xl bg-stone-900 p-6 text-left text-white shadow-lg transition duration-200 hover:-translate-y-0.5 active:scale-[.99]"
+          >
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: `radial-gradient(120% 90% at 85% -10%, ${accent}59, transparent 60%)`,
+              }}
+            />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-display text-2xl font-semibold">{b}</p>
+                <p className="mt-1 text-sm text-white/60">{countFor(b)} items</p>
+              </div>
+              <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/20">
+                <ArrowRight className="h-5 w-5" />
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
 }
