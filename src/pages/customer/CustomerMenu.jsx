@@ -11,6 +11,7 @@ import {
   Bell,
   Receipt,
   ShoppingBag,
+  Star,
 } from 'lucide-react'
 import { supabase, imageUrl } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/format'
@@ -40,6 +41,44 @@ export default function CustomerMenu() {
   const [cartOpen, setCartOpen] = useState(false)
   const [calling, setCalling] = useState(false)
   const [brandChoice, setBrandChoice] = useState(null)
+  const [loyaltyMember, setLoyaltyMember] = useState(null) // {id,name,email,visits}
+  const [loyaltyOpen, setLoyaltyOpen] = useState(false)
+
+  const loyaltyKey = `tableserve:loyalty:${restaurantId}`
+  const saveMember = useCallback(
+    (m) => {
+      setLoyaltyMember(m)
+      try {
+        if (m) localStorage.setItem(loyaltyKey, JSON.stringify(m))
+      } catch {
+        /* ignore */
+      }
+    },
+    [loyaltyKey],
+  )
+
+  // Remember the member on this device, then refresh their visit count.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(loyaltyKey)
+      if (raw) setLoyaltyMember(JSON.parse(raw))
+    } catch {
+      /* ignore */
+    }
+  }, [loyaltyKey])
+
+  useEffect(() => {
+    if (!ready || !loyaltyMember?.id) return
+    supabase
+      .from('loyalty_members')
+      .select('id, name, email, visits')
+      .eq('id', loyaltyMember.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) saveMember(data)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, loyaltyMember?.id])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -98,6 +137,15 @@ export default function CustomerMenu() {
     if (ready) load()
   }, [ready, load])
 
+  // Single-brand restaurants with loyalty enabled prompt right after the menu
+  // loads (multi-brand ones prompt when the loyalty brand is picked).
+  useEffect(() => {
+    if (loading || !restaurant?.loyalty_brand || loyaltyMember) return
+    const hasBrands = new Set(categories.map((c) => c.brand).filter(Boolean)).size > 1
+    if (!hasBrands) maybePromptLoyalty(restaurant.loyalty_brand)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, restaurant?.loyalty_brand])
+
   const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
   const canOrder = Boolean(tableId) && restaurant?.status === 'active'
@@ -153,9 +201,51 @@ export default function CustomerMenu() {
       ? grouped.filter((g) => !g.category.brand || g.category.brand === brandChoice)
       : grouped
 
+  const maybePromptLoyalty = (brand) => {
+    if (!restaurant?.loyalty_brand) return
+    if (brand !== restaurant.loyalty_brand) return
+    if (loyaltyMember) return
+    try {
+      if (sessionStorage.getItem(`ts-loyalty-dismissed-${restaurantId}`)) return
+    } catch {
+      /* ignore */
+    }
+    setLoyaltyOpen(true)
+  }
+
   const pickBrand = (b) => {
     setBrandChoice(b)
     window.scrollTo({ top: 0 })
+    maybePromptLoyalty(b)
+  }
+
+  const dismissLoyalty = () => {
+    setLoyaltyOpen(false)
+    try {
+      sessionStorage.setItem(`ts-loyalty-dismissed-${restaurantId}`, '1')
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Post-order: refresh the visit count and celebrate every 10th visit.
+  const afterOrderLoyalty = async () => {
+    if (!loyaltyMember?.id) return
+    const prev = loyaltyMember.visits || 0
+    const { data } = await supabase
+      .from('loyalty_members')
+      .select('id, name, email, visits')
+      .eq('id', loyaltyMember.id)
+      .maybeSingle()
+    if (!data) return
+    saveMember(data)
+    if (data.visits > prev) {
+      if (data.visits % 10 === 0) {
+        toast.success(`🎉 Visit #${data.visits} — you've earned a FREE item! Show your server.`)
+      } else {
+        toast.success(`⭐ Visit #${data.visits} recorded — ${10 - (data.visits % 10)} to your free item.`)
+      }
+    }
   }
 
   return (
@@ -195,6 +285,30 @@ export default function CustomerMenu() {
         />
       ) : (
         <>
+          {loyaltyMember && (!multiBrand || brandChoice === restaurant.loyalty_brand) && (
+            <div className="mx-auto max-w-2xl px-4 pt-3">
+              <div className="relative overflow-hidden rounded-2xl bg-stone-900 px-4 py-2.5 text-white">
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{ background: `radial-gradient(120% 100% at 100% 0%, ${accent}59, transparent 60%)` }}
+                />
+                <div className="relative flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                    <Star className="h-4 w-4 flex-shrink-0 text-amber-300" />
+                    <span className="truncate">
+                      {loyaltyMember.name?.split(' ')[0] || 'Member'} · {loyaltyMember.visits}{' '}
+                      {loyaltyMember.visits === 1 ? 'visit' : 'visits'}
+                    </span>
+                  </span>
+                  <span className="flex-shrink-0 text-xs font-semibold text-amber-200/90">
+                    {loyaltyMember.visits > 0 && loyaltyMember.visits % 10 === 0
+                      ? 'Free item earned! 🎉'
+                      : `${10 - ((loyaltyMember.visits || 0) % 10)} to a free item`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
           <CategoryNav
             groups={visibleGrouped}
             brands={multiBrand ? brands : []}
@@ -279,14 +393,25 @@ export default function CustomerMenu() {
           currency={currency}
           accent={accent}
           taxRate={Number(restaurant.tax_rate) || 0}
+          loyaltyMemberId={loyaltyMember?.id || null}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
           onPlaced={() => {
             setCart([])
             setCartOpen(false)
+            afterOrderLoyalty()
             navigate(`/r/${restaurantId}/t/${tableId}/status`)
           }}
+        />
+      )}
+
+      {loyaltyOpen && (
+        <LoyaltyModal
+          restaurant={restaurant}
+          accent={accent}
+          onClose={dismissLoyalty}
+          onJoined={(m) => saveMember(m)}
         />
       )}
     </div>
@@ -669,7 +794,7 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 }
 
 /* ----------------------------------------------------------- cart sheet --- */
-function CartSheet({ cart, setCart, currency, accent, taxRate, restaurantId, tableId, onClose, onPlaced }) {
+function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
   const [notes, setNotes] = useState('')
   const [orderType, setOrderType] = useState('dine_in')
@@ -712,6 +837,7 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, restaurantId, tab
       p_items: payload,
       p_notes: notes.trim() || null,
       p_order_type: orderType,
+      p_loyalty_member_id: loyaltyMemberId,
     })
     setPlacing(false)
     if (error) {
@@ -925,6 +1051,175 @@ function BrandPicker({ brands, categories, items, accent, onPick }) {
             </div>
           </button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/* --------------------------------------------------------- loyalty modal -- */
+// Join / sign-in sheet for the rewards program. Membership is remembered on
+// the device; visits only count when an order is actually placed.
+function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
+  const toast = useToast()
+  const [mode, setMode] = useState('join') // 'join' | 'signin'
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [member, setMember] = useState(null) // success state
+
+  const lookup = (em) =>
+    supabase
+      .from('loyalty_members')
+      .select('id, name, email, visits')
+      .eq('restaurant_id', restaurant.id)
+      .eq('email', em)
+      .maybeSingle()
+
+  const submit = async () => {
+    const em = email.trim().toLowerCase()
+    if (!/.+@.+\..+/.test(em)) return toast.error('Enter a valid email address.')
+    setBusy(true)
+    try {
+      if (mode === 'join') {
+        if (!name.trim()) return toast.error('Enter your name.')
+        const { data, error } = await supabase
+          .from('loyalty_members')
+          .insert({ restaurant_id: restaurant.id, email: em, name: name.trim() })
+          .select('id, name, email, visits')
+          .single()
+        if (error) {
+          // Most likely already a member — fall back to sign-in.
+          const { data: existing } = await lookup(em)
+          if (existing) {
+            setMember(existing)
+            onJoined(existing)
+            return
+          }
+          return toast.error(error.message)
+        }
+        setMember(data)
+        onJoined(data)
+      } else {
+        const { data } = await lookup(em)
+        if (!data) return toast.error('No membership found for that email — join instead!')
+        setMember(data)
+        onJoined(data)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remaining = member ? 10 - ((member.visits || 0) % 10) : 10
+  const rewardNow = member && member.visits > 0 && member.visits % 10 === 0
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ '--brand': accent }}>
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md rounded-t-3xl bg-white animate-slide-up sm:rounded-3xl">
+        {/* header */}
+        <div className="relative overflow-hidden rounded-t-3xl bg-stone-900 px-6 pb-5 pt-6 text-white">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: `radial-gradient(120% 90% at 85% -10%, ${accent}59, transparent 60%)` }}
+          />
+          <div className="relative">
+            <span className="inline-grid h-10 w-10 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/20">
+              <Star className="h-5 w-5 text-amber-300" />
+            </span>
+            <h3 className="mt-3 font-display text-2xl font-semibold">
+              {restaurant.loyalty_brand} Rewards
+            </h3>
+            <p className="mt-1 text-sm text-white/70">
+              Every 10th visit earns you a free item. Visits count when you order.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 rounded-lg p-1 text-white/60 hover:bg-white/10"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {member ? (
+          <div className="px-6 py-6 text-center">
+            <p className="font-display text-xl font-semibold text-stone-900">
+              Welcome{member.name ? `, ${member.name.split(' ')[0]}` : ''}! ⭐
+            </p>
+            <p className="mt-1.5 text-sm text-stone-500">
+              {member.visits === 0
+                ? 'You’re in. Your first order today counts as visit #1.'
+                : rewardNow
+                  ? `Visit #${member.visits} — you’ve earned a FREE item! Show this to your server.`
+                  : `You’ve completed ${member.visits} ${member.visits === 1 ? 'visit' : 'visits'} — ${remaining} more to your free item.`}
+            </p>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${rewardNow ? 100 : ((member.visits % 10) / 10) * 100}%`,
+                  backgroundColor: accent,
+                }}
+              />
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-6 w-full rounded-xl py-3 font-bold text-white"
+              style={{ backgroundColor: accent }}
+            >
+              Start ordering
+            </button>
+          </div>
+        ) : (
+          <div className="px-6 py-5">
+            {mode === 'join' && (
+              <div className="mb-3">
+                <label className="mb-1 block text-sm font-semibold text-stone-700">Your name</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Priya Sharma"
+                  className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900"
+                />
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-semibold text-stone-700">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900"
+              />
+              {mode === 'join' && (
+                <p className="mt-1.5 text-xs text-stone-400">
+                  {restaurant.name} may send you promotions and offers.
+                </p>
+              )}
+            </div>
+            <button
+              onClick={submit}
+              disabled={busy}
+              className="w-full rounded-xl py-3 font-bold text-white disabled:opacity-60"
+              style={{ backgroundColor: accent }}
+            >
+              {busy ? 'One moment…' : mode === 'join' ? 'Join the program' : 'Find my visits'}
+            </button>
+            <div className="mt-3 flex items-center justify-between text-sm">
+              <button
+                onClick={() => setMode(mode === 'join' ? 'signin' : 'join')}
+                className="font-semibold text-stone-700 hover:underline"
+              >
+                {mode === 'join' ? 'Already a member? Sign in' : 'New here? Join the program'}
+              </button>
+              <button onClick={onClose} className="text-stone-400 hover:underline">
+                Maybe later
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
