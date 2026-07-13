@@ -6,6 +6,7 @@ import {
   QrCode,
   Settings as SettingsIcon,
   Wallet,
+  Star,
   LogOut,
   Store,
   AlertTriangle,
@@ -26,6 +27,7 @@ const NAV = [
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
+  { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode },
   { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
 ]
@@ -136,7 +138,7 @@ export default function DashboardLayout() {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom lg:hidden">
-        {NAV.map((item) => (
+        {NAV.filter((item) => !item.desktopOnly).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

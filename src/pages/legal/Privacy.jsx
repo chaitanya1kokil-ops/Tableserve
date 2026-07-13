@@ -20,12 +20,20 @@ export default function Privacy() {
           (method, amount, tip) created while running your restaurant.
         </p>
         <p>
-          <strong className="text-stone-800">From diners:</strong> we do not ask for your name,
-          email, phone number, or any account. Scanning a table QR code creates a temporary
-          anonymous session identifier so your orders stay linked to your table. We store the
-          contents of your orders, any notes you add (for example allergy information), and the
-          table you ordered from. Your cart is kept in your own browser's local storage until you
-          place the order.
+          <strong className="text-stone-800">From diners:</strong> ordering does not require an
+          account. Scanning a table QR code creates a temporary anonymous session identifier so
+          your orders stay linked to your table. We store the contents of your orders, any notes
+          you add (for example allergy information), and the table you ordered from. Your cart is
+          kept in your own browser's local storage until you place the order.
+        </p>
+        <p>
+          <strong className="text-stone-800">Loyalty programs (optional):</strong> some
+          restaurants offer a rewards program through TableServe. Joining is entirely optional
+          and collects your name and email address, with your explicit consent, on behalf of that
+          restaurant. The restaurant uses this to track your visits toward rewards and, where you
+          have agreed, to send you promotional offers. Your membership is remembered on your
+          device so returning visits are recognised. You can decline or ignore the program and
+          order normally.
         </p>
         <p>
           <strong className="text-stone-800">Automatically:</strong> standard technical logs such
@@ -102,7 +110,10 @@ export default function Privacy() {
           Subject to Canadian privacy law (PIPEDA), you may request access to, correction of, or
           deletion of your personal information, and you may withdraw consent where consent is the
           basis for processing. Restaurant account holders can edit most information directly in
-          Settings. For anything else, contact us using the address below and we will respond
+          Settings. Loyalty members can unsubscribe from promotional emails or have their
+          membership and data deleted at any time by asking the restaurant or contacting us —
+          restaurants can remove a member (and their visit history) instantly from their
+          dashboard. For anything else, contact us using the address below and we will respond
           within a reasonable time.
         </p>
       </Section>

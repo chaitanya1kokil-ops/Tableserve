@@ -69,14 +69,9 @@ export default function CustomerMenu() {
 
   useEffect(() => {
     if (!ready || !loyaltyMember?.id) return
-    supabase
-      .from('loyalty_members')
-      .select('id, name, email, visits')
-      .eq('id', loyaltyMember.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) saveMember(data)
-      })
+    supabase.rpc('loyalty_status', { p_member: loyaltyMember.id }).then(({ data }) => {
+      if (data) saveMember(data)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, loyaltyMember?.id])
 
@@ -206,7 +201,7 @@ export default function CustomerMenu() {
     if (brand !== restaurant.loyalty_brand) return
     if (loyaltyMember) return
     try {
-      if (sessionStorage.getItem(`ts-loyalty-dismissed-${restaurantId}`)) return
+      if (localStorage.getItem(`ts-loyalty-dismissed-${restaurantId}`)) return
     } catch {
       /* ignore */
     }
@@ -221,31 +216,20 @@ export default function CustomerMenu() {
 
   const dismissLoyalty = () => {
     setLoyaltyOpen(false)
+    // Persistent: decliners are not re-asked; the ⭐ Rewards pill stays
+    // available if they change their mind.
     try {
-      sessionStorage.setItem(`ts-loyalty-dismissed-${restaurantId}`, '1')
+      localStorage.setItem(`ts-loyalty-dismissed-${restaurantId}`, '1')
     } catch {
       /* ignore */
     }
   }
 
-  // Post-order: refresh the visit count and celebrate every 10th visit.
-  const afterOrderLoyalty = async () => {
+  // Post-order: the order is linked now, but the visit itself counts when the
+  // bill is settled at the counter — tell the guest that honestly.
+  const afterOrderLoyalty = () => {
     if (!loyaltyMember?.id) return
-    const prev = loyaltyMember.visits || 0
-    const { data } = await supabase
-      .from('loyalty_members')
-      .select('id, name, email, visits')
-      .eq('id', loyaltyMember.id)
-      .maybeSingle()
-    if (!data) return
-    saveMember(data)
-    if (data.visits > prev) {
-      if (data.visits % 10 === 0) {
-        toast.success(`🎉 Visit #${data.visits} — you've earned a FREE item! Show your server.`)
-      } else {
-        toast.success(`⭐ Visit #${data.visits} recorded — ${10 - (data.visits % 10)} to your free item.`)
-      }
-    }
+    toast.success('⭐ Order linked to your rewards — the visit counts when your bill is paid.')
   }
 
   return (
@@ -285,28 +269,38 @@ export default function CustomerMenu() {
         />
       ) : (
         <>
-          {loyaltyMember && (!multiBrand || brandChoice === restaurant.loyalty_brand) && (
+          {restaurant.loyalty_brand && (!multiBrand || brandChoice === restaurant.loyalty_brand) && (
             <div className="mx-auto max-w-2xl px-4 pt-3">
-              <div className="relative overflow-hidden rounded-2xl bg-stone-900 px-4 py-2.5 text-white">
-                <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{ background: `radial-gradient(120% 100% at 100% 0%, ${accent}59, transparent 60%)` }}
-                />
-                <div className="relative flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-                    <Star className="h-4 w-4 flex-shrink-0 text-amber-300" />
-                    <span className="truncate">
-                      {loyaltyMember.name?.split(' ')[0] || 'Member'} · {loyaltyMember.visits}{' '}
-                      {loyaltyMember.visits === 1 ? 'visit' : 'visits'}
+              {loyaltyMember ? (
+                <div className="relative overflow-hidden rounded-2xl bg-stone-900 px-4 py-2.5 text-white">
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{ background: `radial-gradient(120% 100% at 100% 0%, ${accent}59, transparent 60%)` }}
+                  />
+                  <div className="relative flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      <Star className="h-4 w-4 flex-shrink-0 text-amber-300" />
+                      <span className="truncate">
+                        {loyaltyMember.name || 'Member'} · {loyaltyMember.visits}{' '}
+                        {loyaltyMember.visits === 1 ? 'visit' : 'visits'}
+                      </span>
                     </span>
-                  </span>
-                  <span className="flex-shrink-0 text-xs font-semibold text-amber-200/90">
-                    {loyaltyMember.visits > 0 && loyaltyMember.visits % 10 === 0
-                      ? 'Free item earned! 🎉'
-                      : `${10 - ((loyaltyMember.visits || 0) % 10)} to a free item`}
-                  </span>
+                    <span className="flex-shrink-0 text-xs font-semibold text-amber-200/90">
+                      {loyaltyMember.rewards_available > 0
+                        ? `${loyaltyMember.rewards_available} free ${loyaltyMember.rewards_available === 1 ? 'item' : 'items'} available 🎉`
+                        : `${10 - ((loyaltyMember.visits || 0) % 10)} to a free item`}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <button
+                  onClick={() => setLoyaltyOpen(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 ring-1 ring-stone-200 transition active:scale-[.99]"
+                >
+                  <Star className="h-4 w-4 text-amber-500" />
+                  {restaurant.loyalty_brand} Rewards — every 10th visit gets a free item
+                </button>
+              )}
             </div>
           )}
           <CategoryNav
@@ -394,6 +388,8 @@ export default function CustomerMenu() {
           accent={accent}
           taxRate={Number(restaurant.tax_rate) || 0}
           loyaltyMemberId={loyaltyMember?.id || null}
+          loyaltyEnabled={Boolean(restaurant.loyalty_brand)}
+          onJoinLoyalty={() => setLoyaltyOpen(true)}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
@@ -794,7 +790,7 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 }
 
 /* ----------------------------------------------------------- cart sheet --- */
-function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, restaurantId, tableId, onClose, onPlaced }) {
+function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, onJoinLoyalty, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
   const [notes, setNotes] = useState('')
   const [orderType, setOrderType] = useState('dine_in')
@@ -888,6 +884,15 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
                 <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
                   Packed to go — pick it up at the counter when it’s ready.
                 </p>
+              )}
+              {loyaltyEnabled && !loyaltyMemberId && (
+                <button
+                  onClick={onJoinLoyalty}
+                  className="flex w-full items-center gap-2 rounded-xl bg-stone-100 px-3 py-2.5 text-left text-xs font-semibold text-stone-700 transition active:scale-[.99]"
+                >
+                  <Star className="h-4 w-4 flex-shrink-0 text-amber-500" />
+                  Join rewards before ordering — this could be your visit #1
+                </button>
               )}
               {cart.map((l) => (
                 <div key={l.lineId} className="flex items-start gap-3">
@@ -1064,16 +1069,9 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
   const [mode, setMode] = useState('join') // 'join' | 'signin'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [member, setMember] = useState(null) // success state
-
-  const lookup = (em) =>
-    supabase
-      .from('loyalty_members')
-      .select('id, name, email, visits')
-      .eq('restaurant_id', restaurant.id)
-      .eq('email', em)
-      .maybeSingle()
 
   const submit = async () => {
     const em = email.trim().toLowerCase()
@@ -1082,25 +1080,22 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
     try {
       if (mode === 'join') {
         if (!name.trim()) return toast.error('Enter your name.')
-        const { data, error } = await supabase
-          .from('loyalty_members')
-          .insert({ restaurant_id: restaurant.id, email: em, name: name.trim() })
-          .select('id, name, email, visits')
-          .single()
-        if (error) {
-          // Most likely already a member — fall back to sign-in.
-          const { data: existing } = await lookup(em)
-          if (existing) {
-            setMember(existing)
-            onJoined(existing)
-            return
-          }
-          return toast.error(error.message)
-        }
+        if (!consent) return toast.error('Please agree to receive offers to join the program.')
+        const { data, error } = await supabase.rpc('loyalty_join', {
+          p_restaurant: restaurant.id,
+          p_name: name.trim(),
+          p_email: em,
+          p_consent: consent,
+        })
+        if (error) return toast.error(error.message)
         setMember(data)
         onJoined(data)
       } else {
-        const { data } = await lookup(em)
+        const { data, error } = await supabase.rpc('loyalty_lookup', {
+          p_restaurant: restaurant.id,
+          p_email: em,
+        })
+        if (error) return toast.error(error.message)
         if (!data) return toast.error('No membership found for that email — join instead!')
         setMember(data)
         onJoined(data)
@@ -1111,7 +1106,7 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
   }
 
   const remaining = member ? 10 - ((member.visits || 0) % 10) : 10
-  const rewardNow = member && member.visits > 0 && member.visits % 10 === 0
+  const rewardNow = member && member.rewards_available > 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" style={{ '--brand': accent }}>
@@ -1148,10 +1143,10 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
               Welcome{member.name ? `, ${member.name.split(' ')[0]}` : ''}! ⭐
             </p>
             <p className="mt-1.5 text-sm text-stone-500">
-              {member.visits === 0
-                ? 'You’re in. Your first order today counts as visit #1.'
-                : rewardNow
-                  ? `Visit #${member.visits} — you’ve earned a FREE item! Show this to your server.`
+              {rewardNow
+                ? `You have ${member.rewards_available} free ${member.rewards_available === 1 ? 'item' : 'items'} waiting — show this to your server!`
+                : member.visits === 0
+                  ? 'You’re in. Your visit counts once your first bill is paid.'
                   : `You’ve completed ${member.visits} ${member.visits === 1 ? 'visit' : 'visits'} — ${remaining} more to your free item.`}
             </p>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100">
@@ -1193,12 +1188,21 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
                 placeholder="you@example.com"
                 className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900"
               />
-              {mode === 'join' && (
-                <p className="mt-1.5 text-xs text-stone-400">
-                  {restaurant.name} may send you promotions and offers.
-                </p>
-              )}
             </div>
+            {mode === 'join' && (
+              <label className="mb-4 flex items-start gap-2.5 text-xs text-stone-500">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-stone-300"
+                />
+                <span>
+                  I agree to receive promotional emails and offers from {restaurant.name}. I can
+                  unsubscribe anytime by contacting the restaurant.
+                </span>
+              </label>
+            )}
             <button
               onClick={submit}
               disabled={busy}
@@ -1218,6 +1222,11 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
                 Maybe later
               </button>
             </div>
+            <p className="mt-4 border-t border-stone-100 pt-3 text-[11px] leading-relaxed text-stone-400">
+              How it works: a visit counts when your bill is paid (one visit per sitting). Every
+              10th visit earns one free item, chosen with the restaurant and redeemed in store.
+              Visits are credited to the member who places the order.
+            </p>
           </div>
         )}
       </div>
