@@ -255,6 +255,11 @@ function CombinedOrderCard({ orders, accent, currency }) {
                   <Clock className="h-3.5 w-3.5" />
                   {rounds.length > 1 && <>Round {i + 1} · </>}
                   {formatTime(o.created_at)}
+                  {o.order_type === 'takeout' && (
+                    <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-700">
+                      Takeout
+                    </span>
+                  )}
                 </span>
                 <Badge className={st.color}>{st.label}</Badge>
               </div>

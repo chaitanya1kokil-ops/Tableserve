@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Flame,
   Utensils,
+  ShoppingBag,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -251,6 +252,11 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
             </span>
             {status.label}
           </Badge>
+          {order.order_type === 'takeout' && (
+            <Badge className="bg-violet-100 text-violet-700">
+              <ShoppingBag className="h-3 w-3" /> Takeout
+            </Badge>
+          )}
           {order.bill_requested && (
             <Badge className="bg-orange-100 text-orange-700">
               <Receipt className="h-3 w-3" /> Bill

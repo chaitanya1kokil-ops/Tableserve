@@ -307,6 +307,11 @@ function Ticket({ order, onAdvanceItem, onStartAll }) {
         <div className="flex items-center gap-2 text-lg font-extrabold">
           <Utensils className="h-5 w-5 text-slate-400" />
           {order.table?.label || 'No table'}
+          {order.order_type === 'takeout' && (
+            <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-xs font-bold tracking-wide text-violet-300">
+              TAKEOUT
+            </span>
+          )}
           <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-slate-300">
             {readyCount}/{items.length} ready
           </span>

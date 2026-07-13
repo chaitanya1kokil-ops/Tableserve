@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Bell,
   Receipt,
+  ShoppingBag,
 } from 'lucide-react'
 import { supabase, imageUrl } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/format'
@@ -17,6 +18,7 @@ import { useCustomerSession } from '../../hooks/useCustomerSession'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { Button, FullPageSpinner } from '../../components/ui'
+import DietMark from '../../components/DietMark'
 
 export default function CustomerMenu() {
   const { restaurantId, tableId } = useParams()
@@ -474,7 +476,10 @@ function MenuItemRow({ item, hasOptions, currency, onOpen, onQuickAdd }) {
   return (
     <div className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-100 transition duration-200 hover:shadow-md active:scale-[.995]">
       <button onClick={onOpen} className="min-w-0 flex-1 text-left">
-        <p className="font-bold text-stone-900">{item.name}</p>
+        <p className="flex items-center gap-1.5 font-bold text-stone-900">
+          <DietMark diet={item.diet} />
+          <span className="truncate">{item.name}</span>
+        </p>
         {item.description && (
           <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{item.description}</p>
         )}
@@ -574,7 +579,10 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <h3 className="font-display text-2xl font-semibold text-stone-900">{item.name}</h3>
+          <h3 className="flex items-center gap-2 font-display text-2xl font-semibold text-stone-900">
+            <DietMark diet={item.diet} />
+            <span className="min-w-0">{item.name}</span>
+          </h3>
           {item.description && <p className="mt-1 text-sm text-gray-500">{item.description}</p>}
           <p className="mt-2 text-lg font-bold text-gray-900">{formatCurrency(item.price, currency)}</p>
 
@@ -664,6 +672,7 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 function CartSheet({ cart, setCart, currency, accent, taxRate, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
   const [notes, setNotes] = useState('')
+  const [orderType, setOrderType] = useState('dine_in')
   const [placing, setPlacing] = useState(false)
 
   const subtotal = cart.reduce((s, l) => s + l.lineTotal, 0)
@@ -702,6 +711,7 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, restaurantId, tab
       p_table_id: tableId || null,
       p_items: payload,
       p_notes: notes.trim() || null,
+      p_order_type: orderType,
     })
     setPlacing(false)
     if (error) {
@@ -728,6 +738,31 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, restaurantId, tab
             <p className="py-10 text-center text-sm text-gray-400">Your cart is empty.</p>
           ) : (
             <div className="space-y-3">
+              {/* Dine-in / takeout choice */}
+              <div className="grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1">
+                {[
+                  ['dine_in', 'Dine-in', UtensilsCrossed],
+                  ['takeout', 'Takeout', ShoppingBag],
+                ].map(([key, label, Icon]) => (
+                  <button
+                    key={key}
+                    onClick={() => setOrderType(key)}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition ${
+                      orderType === key
+                        ? 'bg-white text-stone-900 shadow-sm'
+                        : 'text-stone-500'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" style={orderType === key ? { color: accent } : undefined} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {orderType === 'takeout' && (
+                <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Packed to go — pick it up at the counter when it’s ready.
+                </p>
+              )}
               {cart.map((l) => (
                 <div key={l.lineId} className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">

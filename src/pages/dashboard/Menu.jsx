@@ -24,6 +24,7 @@ import {
   Badge,
 } from '../../components/ui'
 import ImageUpload from '../../components/ImageUpload'
+import DietMark from '../../components/DietMark'
 
 export default function Menu() {
   const { restaurant } = useAuth()
@@ -325,7 +326,10 @@ function ItemCard({ item, optionCount, currency, onEdit, onDelete, onToggle }) {
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-2">
-          <p className="truncate font-semibold text-stone-900">{item.name}</p>
+          <p className="flex min-w-0 items-center gap-1.5 font-semibold text-stone-900">
+            <DietMark diet={item.diet} />
+            <span className="truncate">{item.name}</span>
+          </p>
           <span className="whitespace-nowrap font-bold text-brand">
             {formatCurrency(item.price, currency)}
           </span>
@@ -446,6 +450,7 @@ function ItemModal({
     price: item?.price ?? '',
     category_id: item?.category_id || defaultCategoryId || '',
     is_available: item?.is_available ?? true,
+    diet: item?.diet || '',
   })
   const [photoFile, setPhotoFile] = useState(undefined) // undefined=unchanged, null=remove, File=new
   const [groups, setGroups] = useState(() =>
@@ -473,6 +478,7 @@ function ItemModal({
         price,
         category_id: form.category_id || null,
         is_available: form.is_available,
+        diet: form.diet || null,
       }
 
       let itemId = item?.id
@@ -605,6 +611,34 @@ function ItemModal({
             onChange={(v) => setForm({ ...form, is_available: v })}
           />
         </label>
+
+        <div>
+          <p className="mb-2 text-sm font-semibold text-gray-700">Dietary label</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              ['', 'Not set'],
+              ['veg', 'Veg'],
+              ['non_veg', 'Non-veg'],
+            ].map(([value, label]) => (
+              <button
+                type="button"
+                key={value || 'none'}
+                onClick={() => setForm({ ...form, diet: value })}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                  form.diet === value
+                    ? 'border-stone-900 bg-stone-900 text-white'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {value && <DietMark diet={value} />}
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-gray-400">
+            Guests see the green/red mark next to the item name.
+          </p>
+        </div>
 
         <ModifiersEditor groups={groups} setGroups={setGroups} />
       </div>
