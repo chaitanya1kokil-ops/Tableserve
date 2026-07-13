@@ -35,19 +35,11 @@ export default function Loyalty() {
 
   const redeem = async (m) => {
     if (!confirm(`Redeem one free item for ${m.name || m.email}?`)) return
-    setMembers((list) =>
-      list.map((x) => (x.id === m.id ? { ...x, rewards_redeemed: x.rewards_redeemed + 1 } : x)),
-    )
-    const { error } = await supabase
-      .from('loyalty_members')
-      .update({ rewards_redeemed: m.rewards_redeemed + 1 })
-      .eq('id', m.id)
-    if (error) {
-      toast.error(error.message)
-      load()
-    } else {
-      toast.success('Reward redeemed 🎁')
-    }
+    // Atomic on the server: two staff can't redeem the same reward twice.
+    const { error } = await supabase.rpc('redeem_reward', { p_member: m.id })
+    if (error) toast.error(error.message)
+    else toast.success('Reward redeemed 🎁')
+    load()
   }
 
   const remove = async (m) => {
@@ -73,9 +65,12 @@ export default function Loyalty() {
   }
 
   const exportCsv = () => {
+    // CASL: only members who gave marketing consent are exported.
+    const consented = members.filter((m) => m.consented_at)
+    if (consented.length === 0) return toast.error('No consented members to export yet.')
     const rows = [
       ['name', 'email', 'visits', 'rewards_available', 'rewards_redeemed', 'consented_at', 'joined'],
-      ...members.map((m) => [
+      ...consented.map((m) => [
         m.name || '',
         m.email,
         m.visits,
@@ -128,9 +123,12 @@ export default function Loyalty() {
             )}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={exportCsv} disabled={members.length === 0}>
-          <Download className="h-4 w-4" /> Export CSV
-        </Button>
+        <div className="text-right">
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={members.length === 0}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <p className="mt-1 text-[11px] text-stone-400">Consented members only</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">

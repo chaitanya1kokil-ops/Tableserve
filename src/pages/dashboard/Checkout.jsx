@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins } from 'lucide-react'
+import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins, Gift } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatTime } from '../../lib/format'
@@ -171,9 +171,32 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
   ])
   const [tendered, setTendered] = useState('')
   const [settling, setSettling] = useState(false)
+  const [rewardMembers, setRewardMembers] = useState([]) // members on this tab with rewards
+  const [reward, setReward] = useState(null) // { memberId, itemId } | null
+
+  // Any loyalty members linked to this tab who have a banked reward?
+  useEffect(() => {
+    const ids = [...new Set(tab.orders.map((o) => o.loyalty_member_id).filter(Boolean))]
+    if (ids.length === 0) return
+    supabase
+      .from('loyalty_members')
+      .select('id, name, email, visits, rewards_redeemed')
+      .in('id', ids)
+      .then(({ data }) => {
+        const withRewards = (data || []).filter(
+          (m) => Math.floor((m.visits || 0) / 10) - (m.rewards_redeemed || 0) > 0,
+        )
+        setRewardMembers(withRewards)
+      })
+  }, [tab])
+
+  const allItems = tab.orders.flatMap((o) => o.items || [])
+  const rewardItem = reward ? allItems.find((it) => it.id === reward.itemId) : null
+  const compAmount = rewardItem ? round2(Number(rewardItem.line_total) || 0) : 0
+  const due = round2(tab.total - compAmount)
 
   const paidSum = round2(payments.reduce((s, p) => s + (Number(p.amount) || 0), 0))
-  const balanced = paidSum === round2(tab.total)
+  const balanced = paidSum === due
   const singleCash = payments.length === 1 && payments[0].method === 'cash'
   const change =
     singleCash && tendered !== '' ? round2(Number(tendered) - (Number(payments[0].amount) || 0)) : null
@@ -182,14 +205,22 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
     setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)))
 
   const addSplit = () => {
-    const amounts = evenSplit(tab.total, payments.length + 1)
+    const amounts = evenSplit(due, payments.length + 1)
     setPayments((ps) => [...ps, { method: 'card', amount: '', tip: '' }].map((p, i) => ({ ...p, amount: amounts[i] })))
   }
 
   const removePayment = (i) => {
     const next = payments.filter((_, idx) => idx !== i)
-    const amounts = evenSplit(tab.total, next.length)
+    const amounts = evenSplit(due, next.length)
     setPayments(next.map((p, idx) => ({ ...p, amount: amounts[idx] })))
+  }
+
+  const applyReward = (memberId, itemId) => {
+    setReward(memberId ? { memberId, itemId } : null)
+    // Reset payment amounts to the new amount due.
+    const item = itemId ? allItems.find((it) => it.id === itemId) : null
+    const comp = item ? round2(Number(item.line_total) || 0) : 0
+    setPayments([{ method: 'cash', amount: round2(tab.total - comp).toFixed(2), tip: '' }])
   }
 
   const settle = async () => {
@@ -203,10 +234,11 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
         amount: round2(Number(p.amount) || 0),
         tip: round2(Number(p.tip) || 0),
       })),
+      p_reward: reward ? { member_id: reward.memberId, order_item_id: reward.itemId } : null,
     })
     setSettling(false)
     if (error) return toast.error(error.message || 'Could not settle the tab.')
-    toast.success(`${tab.label} paid 🎉`)
+    toast.success(reward ? `${tab.label} paid — reward redeemed 🎁` : `${tab.label} paid 🎉`)
     onSettled()
   }
 
@@ -261,13 +293,66 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
                 </div>
               </>
             )}
+            {compAmount > 0 && (
+              <div className="flex justify-between text-amber-700">
+                <span className="flex items-center gap-1.5">
+                  <Gift className="h-4 w-4" /> Reward: {rewardItem?.name_snapshot}
+                </span>
+                <span>−{formatCurrency(compAmount, currency)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-base">
               <span className="font-semibold text-stone-700">Amount due</span>
               <span className="font-display text-lg font-semibold text-stone-900">
-                {formatCurrency(tab.total, currency)}
+                {formatCurrency(due, currency)}
               </span>
             </div>
           </div>
+
+          {/* Loyalty reward on this tab */}
+          {rewardMembers.length > 0 && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              {rewardMembers.map((m) => {
+                const avail = Math.floor((m.visits || 0) / 10) - (m.rewards_redeemed || 0)
+                const active = reward?.memberId === m.id
+                return (
+                  <div key={m.id}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-amber-800">
+                        <Gift className="h-4 w-4" />
+                        {m.name || m.email} has {avail} free {avail === 1 ? 'item' : 'items'}
+                      </span>
+                      <button
+                        onClick={() =>
+                          active ? applyReward(null, null) : applyReward(m.id, allItems[0]?.id)
+                        }
+                        className={`rounded-lg px-2.5 py-1 text-xs font-bold transition ${
+                          active
+                            ? 'bg-white text-amber-700 ring-1 ring-amber-300'
+                            : 'bg-amber-600 text-white'
+                        }`}
+                      >
+                        {active ? 'Remove' : 'Apply free item'}
+                      </button>
+                    </div>
+                    {active && (
+                      <select
+                        value={reward.itemId || ''}
+                        onChange={(e) => applyReward(m.id, e.target.value)}
+                        className="mt-2 w-full rounded-lg border border-amber-200 bg-white px-2.5 py-2 text-sm font-medium text-stone-700 focus:outline-none"
+                      >
+                        {allItems.map((it) => (
+                          <option key={it.id} value={it.id}>
+                            {it.name_snapshot} · {formatCurrency(it.line_total, currency)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           {/* Payments */}
           <div className="mt-5">
@@ -347,7 +432,7 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
                     step="0.01"
                     value={tendered}
                     onChange={(e) => setTendered(e.target.value)}
-                    placeholder={tab.total.toFixed(2)}
+                    placeholder={due.toFixed(2)}
                     className="mt-1 w-full rounded-lg border border-stone-300 px-2.5 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-brand"
                   />
                 </label>
@@ -365,7 +450,7 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
             {!balanced && (
               <p className="mt-2 text-xs font-medium text-red-500">
                 Payments total {formatCurrency(paidSum, currency)} but{' '}
-                {formatCurrency(tab.total, currency)} is due.
+                {formatCurrency(due, currency)} is due.
               </p>
             )}
           </div>
@@ -374,7 +459,7 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
         <div className="border-t border-gray-100 px-5 py-4 safe-bottom">
           <Button className="w-full" size="lg" loading={settling} disabled={!balanced} onClick={settle}>
             <Wallet className="h-4 w-4" />
-            Pay {formatCurrency(tab.total, currency)}
+            Pay {formatCurrency(due, currency)}
           </Button>
         </div>
       </div>

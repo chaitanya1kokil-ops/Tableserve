@@ -36,6 +36,32 @@ export default function CustomerStatus() {
   const [orders, setOrders] = useState([])
   const [requesting, setRequesting] = useState(false)
   const reloadTimer = useRef(null)
+  const linkedOrderIds = useRef(new Set())
+
+  // When a loyalty-linked order disappears from the open list, the bill was
+  // just paid — check whether the visit counted and celebrate in the moment.
+  const checkLoyaltyCelebration = useCallback(async () => {
+    try {
+      const raw = localStorage.getItem(`tableserve:loyalty:${restaurantId}`)
+      if (!raw) return
+      const stored = JSON.parse(raw)
+      if (!stored?.id) return
+      const { data } = await supabase.rpc('loyalty_status', { p_member: stored.id })
+      if (!data) return
+      if ((data.visits || 0) > (stored.visits || 0)) {
+        if ((data.rewards_available || 0) > (stored.rewards_available || 0)) {
+          toast.success(`🎉 Visit #${data.visits} — you've earned a FREE item for next time!`)
+        } else {
+          toast.success(
+            `⭐ Visit #${data.visits} counted — ${10 - (data.visits % 10)} more to your free item.`,
+          )
+        }
+      }
+      localStorage.setItem(`tableserve:loyalty:${restaurantId}`, JSON.stringify(data))
+    } catch {
+      /* ignore */
+    }
+  }, [restaurantId, toast])
 
   const load = useCallback(async () => {
     const [{ data: rest }, { data: ords }] = await Promise.all([
@@ -54,7 +80,13 @@ export default function CustomerStatus() {
     setRestaurant(rest || null)
     setOrders(ords || [])
     setLoading(false)
-  }, [restaurantId, tableId])
+
+    // Detect "my linked order just got paid" transitions.
+    const current = new Set((ords || []).filter((o) => o.loyalty_member_id).map((o) => o.id))
+    const paidAway = [...linkedOrderIds.current].some((id) => !current.has(id))
+    linkedOrderIds.current = current
+    if (paidAway) checkLoyaltyCelebration()
+  }, [restaurantId, tableId, checkLoyaltyCelebration])
 
   const scheduleReload = useCallback(() => {
     clearTimeout(reloadTimer.current)
