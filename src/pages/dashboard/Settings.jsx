@@ -311,36 +311,62 @@ function OwnerPinCard({ hasPin, onSaved, toast }) {
   }
 
   return (
-    <Card className="p-5">
-      <h2 className="mb-1 flex items-center gap-2 font-bold text-gray-900">
-        <ShieldCheck className="h-4 w-4 text-brand" /> Owner PIN
-      </h2>
-      <p className="mb-3 text-sm text-gray-500">
-        {hasPin
-          ? 'A PIN is set. Staff use the tablet without it; you enter it to switch to owner view (revenue & analytics). Enter a new PIN to change it.'
-          : 'Set a 4–6 digit PIN to keep revenue and analytics behind owner mode on shared devices.'}
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          inputMode="numeric"
-          type="password"
-          maxLength={6}
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-          placeholder="1234"
-          className="w-32 rounded-xl border border-gray-300 px-3.5 py-2.5 text-center text-lg tracking-[0.3em] outline-none focus:border-brand"
+    <Card className="overflow-hidden p-0">
+      <div className="relative overflow-hidden bg-stone-900 px-5 py-4 text-white">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(120% 100% at 100% 0%, rgba(180,83,9,.5), transparent 60%)' }}
         />
-        <Button loading={saving} onClick={() => apply(pin)}>
-          {hasPin ? 'Update PIN' : 'Set PIN'}
-        </Button>
-        {hasPin && (
-          <Button
-            variant="outline"
-            onClick={() => confirm('Remove the owner PIN? Revenue & analytics will be visible to anyone on the device.') && apply('')}
-          >
-            Remove
+        <div className="relative flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-amber-300 ring-1 ring-white/15">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="font-display text-lg font-semibold leading-tight">Owner PIN</h2>
+              <p className="text-xs text-white/60">Only editable in owner mode</p>
+            </div>
+          </div>
+          {hasPin && (
+            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+              <Check className="h-3 w-3" /> Active
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="p-5">
+        <p className="mb-3 text-sm text-gray-500">
+          {hasPin
+            ? 'Staff run the tablet without it. You enter this PIN to switch to owner view — revenue, analytics and reporting. Enter a new PIN below to change it.'
+            : 'Set a 4–6 digit PIN to keep revenue and analytics hidden from staff on shared devices. Only someone in owner mode can change it afterwards.'}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            inputMode="numeric"
+            type="password"
+            maxLength={6}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            placeholder={hasPin ? 'New PIN' : '1234'}
+            className="w-36 rounded-xl border border-gray-300 px-3.5 py-2.5 text-center text-lg tracking-[0.3em] outline-none focus:border-brand"
+          />
+          <Button loading={saving} disabled={!pin} onClick={() => apply(pin)}>
+            {hasPin ? 'Update PIN' : 'Set PIN'}
           </Button>
-        )}
+          {hasPin && (
+            <Button
+              variant="outline"
+              onClick={() =>
+                confirm(
+                  'Remove the owner PIN? Revenue & analytics will then be visible to anyone on the device.',
+                ) && apply('')
+              }
+            >
+              Remove
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   )
