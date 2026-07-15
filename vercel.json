@@ -3,8 +3,8 @@
   "framework": "vite",
   "buildCommand": "vite build",
   "outputDirectory": "dist",
-  "cleanUrls": true,
   "rewrites": [
+    { "source": "/deck", "destination": "/deck.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
