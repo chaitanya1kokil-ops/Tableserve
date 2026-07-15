@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TableServe — Client Onboarding & Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0E0E11; --panel:#17171B; --panel2:#1E1E24; --line:rgba(255,255,255,.09);
+    --ink:#F5F1EA; --muted:#9A9AA4; --coral:#FF5A43; --gold:#E0A44A; --green:#34D399;
+  }
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;overflow:hidden}
+  .display{font-family:'Fraunces',Georgia,serif}
+  #deck{position:relative;width:100vw;height:100vh}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:5vh 7vw;opacity:0;pointer-events:none;transform:translateY(24px);
+    transition:opacity .5s ease,transform .5s ease;overflow:auto}
+  .slide.active{opacity:1;pointer-events:auto;transform:none}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;color:var(--coral);margin-bottom:18px}
+  h1{font-size:clamp(40px,6.5vw,84px);font-weight:600;line-height:1.03;letter-spacing:-.01em}
+  h2{font-size:clamp(30px,4.4vw,54px);font-weight:600;line-height:1.08}
+  .lead{font-size:clamp(16px,2vw,22px);color:var(--muted);line-height:1.6;max-width:720px;margin-top:18px}
+  .grid{display:grid;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px}
+  .card h3{font-size:18px;font-weight:700;margin-bottom:6px}
+  .card p{font-size:14px;color:var(--muted);line-height:1.55}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--line);
+    border-radius:100px;font-size:13px;font-weight:600;color:var(--muted);background:rgba(255,255,255,.03)}
+  .pill.hot{border-color:rgba(255,90,67,.4);color:#ffb3a5}
+  .coral{color:var(--coral)} .gold{color:var(--gold)} .green{color:var(--green)}
+  .row{display:flex;flex-wrap:wrap;gap:12px}
+  .muted{color:var(--muted)}
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  /* logo */
+  .logo{display:inline-grid;grid-template-columns:repeat(3,1fr);gap:5px;width:44px;height:44px}
+  .logo span{border-radius:50%;background:#2E2E33}
+  .logo .on{background:var(--ink)} .logo .c{background:var(--coral)}
+  .brandbar{position:fixed;top:26px;left:34px;display:flex;align-items:center;gap:12px;z-index:50;font-weight:800;letter-spacing:-.01em}
+  /* phone */
+  .phone{width:260px;flex:none;background:#000;border-radius:38px;border:9px solid #111;box-shadow:0 40px 90px rgba(0,0,0,.6);position:relative}
+  .phone .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:78px;height:20px;background:#000;border-radius:100px;z-index:3}
+  .screen{border-radius:28px;overflow:hidden;height:520px;position:relative;background:#faf6ef}
+  .scr{position:absolute;inset:0;opacity:0;transition:opacity .5s}
+  .scr.show{opacity:1}
+  .scrhead{background:#18181B;color:#fff;padding:26px 16px 14px}
+  .scrhead .sub{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#E0A44A}
+  .scrhead .nm{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin-top:2px}
+  .mi{display:flex;gap:10px;align-items:center;background:#fff;margin:10px;padding:9px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .mi .img{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#f4b183,#e06666);flex:none}
+  .mi .t{font-size:12px;font-weight:600;color:#222;flex:1}
+  .mi .p{font-size:12px;font-weight:700;color:#b45309}
+  .cta{margin:10px;background:#b45309;color:#fff;text-align:center;padding:12px;border-radius:12px;font-weight:700;font-size:13px}
+  .board{background:#faf6ef;padding:12px;height:100%}
+  .tk{background:#fff;border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .tk .bar{height:4px;border-radius:4px;margin:-10px -10px 8px;border-radius:12px 12px 0 0}
+  .tk .nm{font-weight:800;font-size:13px;color:#18181B}
+  .tk .it{font-size:11px;color:#555;margin-top:3px}
+  .celebrate{padding:60px 20px;text-align:center;color:#18181B}
+  /* video slot */
+  .videoslot{flex:1;min-width:320px;border:2px dashed var(--line);border-radius:20px;background:var(--panel);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;min-height:420px}
+  .playbtn{width:74px;height:74px;border-radius:50%;background:var(--coral);display:grid;place-items:center;box-shadow:0 12px 40px rgba(255,90,67,.4)}
+  .playbtn::after{content:"";border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent #fff;margin-left:5px}
+  .videoslot video{width:100%;border-radius:16px;background:#000}
+  /* pricing */
+  .price{flex:1;min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px;display:flex;flex-direction:column}
+  .price.feat{border-color:rgba(224,164,74,.5);background:linear-gradient(160deg,rgba(224,164,74,.1),rgba(255,90,67,.05))}
+  .price .amt{font-family:'Fraunces',serif;font-size:46px;font-weight:600;margin-top:6px}
+  .price .amt sup{font-size:22px;vertical-align:top;color:var(--gold)}
+  .price .amt .mo{font-size:14px;color:var(--muted);font-weight:400;font-family:'Inter'}
+  .price ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px}
+  .price li{font-size:13px;color:#d7d4cd;display:flex;gap:8px}
+  .price li::before{content:"✓";color:var(--green);font-weight:800}
+  .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--gold),var(--coral));color:#111;font-size:11px;font-weight:800;padding:5px 14px;border-radius:100px;white-space:nowrap}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px}
+  .compare .box{border-radius:18px;padding:22px}
+  .steps{counter-reset:s;display:grid;gap:14px;max-width:820px}
+  .steps .st{display:flex;gap:16px;align-items:flex-start}
+  .steps .st .n{counter-increment:s;flex:none;width:38px;height:38px;border-radius:10px;background:rgba(224,164,74,.15);
+    border:1px solid rgba(224,164,74,.3);color:var(--gold);font-weight:800;display:grid;place-items:center}
+  .steps .st .n::before{content:counter(s)}
+  /* nav */
+  #nav{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:80;
+    background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:100px;padding:9px 15px;backdrop-filter:blur(14px)}
+  .dot{width:7px;height:7px;border-radius:5px;background:rgba(255,255,255,.22);cursor:pointer;transition:all .3s}
+  .dot.active{width:22px;background:var(--coral)}
+  .arrow{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);
+    cursor:pointer;font-size:15px;display:grid;place-items:center}
+  .arrow:hover{background:rgba(255,255,255,.08)}
+  #count{font-size:12px;color:var(--muted);min-width:38px;text-align:center}
+  .hint{position:fixed;bottom:28px;right:30px;font-size:11px;color:var(--muted);z-index:80}
+  @media (max-width:820px){.slide{padding:6vh 7vw}.phone{display:none}}
+</style>
+</head>
+<body>
+<div class="brandbar">
+  <span class="logo" aria-label="TableServe">
+    <span class="on"></span><span class="on"></span><span class="on"></span>
+    <span></span><span class="on"></span><span></span>
+    <span></span><span class="c"></span><span></span>
+  </span>
+  TableServe
+</div>
+
+<div id="deck">
+
+  <!-- 1 HERO -->
+  <section class="slide active">
+    <div class="eyebrow">QR ordering · POS · Loyalty</div>
+    <h1>The modern way<br>restaurants take orders.</h1>
+    <p class="lead">Guests scan, order and pay from their phone. Your kitchen and floor run off one live screen. You keep <span class="gold">0% commission</span> — no per-order cut, ever.</p>
+    <div class="row" style="margin-top:34px">
+      <span class="pill hot">📱 Scan-to-order</span>
+      <span class="pill">🍳 Live kitchen board</span>
+      <span class="pill">⭐ Loyalty built in</span>
+      <span class="pill">🚚 Restaurants & food trucks</span>
+    </div>
+    <p class="muted" style="margin-top:40px;font-size:14px">See it live → <span class="gold">tableserve.ca</span></p>
+  </section>
+
+  <!-- 2 PROBLEM -->
+  <section class="slide">
+    <div class="eyebrow" style="color:#ff6b6b">The problem</div>
+    <h2>Ordering is slow, error-prone,<br>and eating your margin.</h2>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:36px;max-width:1000px">
+      <div class="card"><h3>😤 Guests wait to order</h3><p>At peak, 10–20 minutes just to flag someone down. Some walk out.</p></div>
+      <div class="card"><h3>📝 Orders get wrong</h3><p>Misheard items and handwriting mean remakes, refunds and bad reviews.</p></div>
+      <div class="card"><h3>💸 Platforms take a cut</h3><p>Delivery apps and stacked POS add-ons quietly bleed 15–30% + fees.</p></div>
+    </div>
+    <div class="row" style="margin-top:30px">
+      <span class="pill">68% of diners prefer to self-order</span>
+      <span class="pill">23% higher order value with a digital menu</span>
+    </div>
+  </section>
+
+  <!-- 3 WHAT IT IS -->
+  <section class="slide">
+    <div class="eyebrow">The solution</div>
+    <h2>One flat platform.<br>Zero commission.</h2>
+    <p class="lead">TableServe replaces the digital menu, online ordering, kitchen display and loyalty tools you'd otherwise buy separately — for one price, with no cut of your sales.</p>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-top:36px;max-width:1050px">
+      <div class="card"><h3 class="coral">Order</h3><p>Guests scan a table QR, browse your branded menu, and order in under a minute.</p></div>
+      <div class="card"><h3 class="coral">Kitchen</h3><p>Orders hit the live board and kitchen display the instant they're placed.</p></div>
+      <div class="card"><h3 class="coral">Pay</h3><p>Checkout with tips and split bills — on your own terminal, your money.</p></div>
+      <div class="card"><h3 class="coral">Return</h3><p>Loyalty brings guests back: every 10th visit earns a free item.</p></div>
+    </div>
+  </section>
+
+  <!-- 4 HOW IT WORKS -->
+  <section class="slide">
+    <div class="eyebrow">How it works</div>
+    <h2>Live in an afternoon.</h2>
+    <div class="steps" style="margin-top:36px">
+      <div class="st"><div class="n"></div><div><h3 style="font-size:18px">Build your menu</h3><p class="muted" style="margin-top:4px">Categories, photos, modifiers, veg/non-veg labels. Update prices live, 86 a dish in one tap.</p></div></div>
+      <div class="st"><div class="n"></div><div><h3 style="font-size:18px">Print your QR codes</h3><p class="muted" style="margin-top:4px">A unique code per table, generated automatically. Food trucks get one QR for the whole truck.</p></div></div>
+      <div class="st"><div class="n"></div><div><h3 style="font-size:18px">Serve in real time</h3><p class="muted" style="margin-top:4px">Orders stream in by table or by name. Move them New → Preparing → Ready with one tap.</p></div></div>
+    </div>
+  </section>
+
+  <!-- 5 LIVE DEMO + VIDEO -->
+  <section class="slide">
+    <div class="eyebrow">See it in action</div>
+    <h2 style="margin-bottom:8px">The guest experience</h2>
+    <div class="row" style="align-items:stretch;gap:34px;margin-top:24px">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="scr show" id="s1">
+            <div class="scrhead"><div class="sub">Indian</div><div class="nm">Royal Paan</div></div>
+            <div class="mi"><div class="img"></div><div class="t">Butter Chicken</div><div class="p">$19</div></div>
+            <div class="mi"><div class="img"></div><div class="t">Garlic Naan</div><div class="p">$5</div></div>
+            <div class="mi"><div class="img"></div><div class="t">Mango Lassi</div><div class="p">$7</div></div>
+            <div class="cta">Place order · $31</div>
+          </div>
+          <div class="scr" id="s2">
+            <div class="board" style="background:#faf6ef">
+              <div class="tk"><div class="bar" style="background:#3b82f6"></div><div class="nm">Table 4 · New</div><div class="it">2× Butter Chicken · Garlic Naan</div></div>
+              <div class="tk"><div class="bar" style="background:#f59e0b"></div><div class="nm">Table 7 · Preparing</div><div class="it">Chilli Paneer · Jeera Rice</div></div>
+              <div class="tk"><div class="bar" style="background:#10b981"></div><div class="nm">Table 1 · Ready 🔔</div><div class="it">Veg Biryani</div></div>
+            </div>
+          </div>
+          <div class="scr" id="s3">
+            <div class="celebrate">
+              <div style="font-size:44px">🎉</div>
+              <div class="display" style="font-size:20px;font-weight:600;margin-top:10px">Visit #10 — free item!</div>
+              <p style="font-size:13px;color:#666;margin-top:8px">Rewards bring guests back automatically.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="videoslot">
+        <div class="playbtn"></div>
+        <div style="font-weight:700">Drop your screen recording here</div>
+        <p class="muted" style="font-size:13px;max-width:340px">Record a 20–30s walkthrough of tableserve.ca (order → kitchen → pay) and save it as <b>demo.mp4</b> beside this file. It will play right here.</p>
+        <!-- When you add demo.mp4, uncomment: -->
+        <!-- <video controls poster="assets/hero_restaurant_qr.png"><source src="demo.mp4" type="video/mp4"></video> -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 FEATURES -->
+  <section class="slide">
+    <div class="eyebrow">Everything included</div>
+    <h2>One system runs the whole floor.</h2>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:32px;max-width:1100px">
+      <div class="card"><h3>📋 Menu management</h3><p>Photos, modifiers, dietary labels, instant availability. Even two brands on one QR.</p></div>
+      <div class="card"><h3>⚡ Live orders board</h3><p>Grouped by table, real-time, colour-coded by status, with a full-screen kitchen display.</p></div>
+      <div class="card"><h3>💳 Checkout</h3><p>Cash/card, tips, split bills, automatic tax — recorded on your own terminal.</p></div>
+      <div class="card"><h3>🔔 Loud alerts</h3><p>New-order and order-ready bells so staff never miss a ticket across a busy room.</p></div>
+      <div class="card"><h3>📊 Owner analytics</h3><p>Revenue, best-sellers, busiest hours, returning-guest mix — behind a private owner PIN.</p></div>
+      <div class="card"><h3>🎨 Your brand</h3><p>Your logo, colours and menu on every screen. No app for guests to download.</p></div>
+    </div>
+  </section>
+
+  <!-- 7 LOYALTY -->
+  <section class="slide">
+    <div class="eyebrow">Loyalty & rewards</div>
+    <h2>Turn first-timers<br>into regulars.</h2>
+    <p class="lead">Guests join in one tap. Every 10th paid visit earns a free item, redeemed right at checkout. You build a consented email list you own — for promos and win-backs.</p>
+    <div class="row" style="margin-top:34px">
+      <span class="pill">⭐ Every 10th visit free</span>
+      <span class="pill">📧 Customer email list you own</span>
+      <span class="pill">✅ Redeemed at the till, tracked</span>
+      <span class="pill">🔒 Consent-based (CASL-ready)</span>
+    </div>
+  </section>
+
+  <!-- 8 FOOD TRUCKS -->
+  <section class="slide">
+    <div class="eyebrow">Not just restaurants</div>
+    <h2>Built for food trucks too.</h2>
+    <p class="lead">One QR on the truck. The guest orders by name, pays upfront, and the order only reaches your window once payment clears — no walk-off loss. You call their name when it's ready.</p>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:34px;max-width:960px">
+      <div class="card"><h3>Order by name</h3><p>No tables. Guests enter their name; you call it out at pickup.</p></div>
+      <div class="card"><h3>Pay before you cook</h3><p>Payment upfront means zero abandoned food, zero loss.</p></div>
+      <div class="card"><h3>One clean screen</h3><p>A single board: new → preparing → ready. Perfect for one operator.</p></div>
+    </div>
+  </section>
+
+  <!-- 9 PRICING -->
+  <section class="slide">
+    <div class="eyebrow">Simple pricing</div>
+    <h2>One flat fee. No commission.</h2>
+    <div class="row" style="align-items:stretch;gap:16px;margin-top:30px;max-width:1050px">
+      <div class="price">
+        <div class="kicker">Starter</div>
+        <div class="amt"><sup>$</sup>99<span class="mo">/mo</span></div>
+        <ul><li>Up to 10 tables</li><li>Menu, orders & kitchen display</li><li>Checkout, tips & split bills</li><li>Email support</li></ul>
+      </div>
+      <div class="price feat" style="position:relative">
+        <div class="badge">★ Most popular</div>
+        <div class="kicker gold">Pro</div>
+        <div class="amt"><sup>$</sup>179<span class="mo">/mo</span></div>
+        <ul><li>Up to 40 tables</li><li>Loyalty & rewards + email list</li><li>Full analytics & multi-brand menus</li><li>Custom branding · priority support</li></ul>
+      </div>
+      <div class="price">
+        <div class="kicker">Premium</div>
+        <div class="amt"><sup>$</sup>299<span class="mo">/mo</span></div>
+        <ul><li>Unlimited tables & locations</li><li>Cross-location analytics</li><li>Dedicated support & onboarding</li><li>White-label</li></ul>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:22px;font-size:14px">Food truck? <span class="gold">$79/mo flat</span>, rewards included · 14-day free trial · we never take a cut of your sales.</p>
+  </section>
+
+  <!-- 10 WHY US -->
+  <section class="slide">
+    <div class="eyebrow">Why TableServe</div>
+    <h2>The all-in cost tells the story.</h2>
+    <div class="compare" style="margin-top:32px">
+      <div class="box" style="background:rgba(255,90,67,.08);border:1px solid rgba(255,90,67,.25)">
+        <div class="kicker" style="color:#ff8a7a">Toast / Square, all-in</div>
+        <div class="display" style="font-size:40px;margin:10px 0">$300–500<span style="font-size:16px;color:var(--muted)">/mo</span></div>
+        <p class="muted" style="font-size:13px">Base POS + online ordering + kitchen display + loyalty add-ons — <b>plus</b> a percentage of every sale.</p>
+      </div>
+      <div class="box" style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25)">
+        <div class="kicker green">TableServe Pro</div>
+        <div class="display" style="font-size:40px;margin:10px 0">$179<span style="font-size:16px;color:var(--muted)">/mo</span></div>
+        <p class="muted" style="font-size:13px">Everything above, in one price — and <b class="green">0% commission</b>. No lock-in, no hardware to buy.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 SETUP -->
+  <section class="slide">
+    <div class="eyebrow">Getting started</div>
+    <h2>We set you up. You start today.</h2>
+    <div class="steps" style="margin-top:34px">
+      <div class="st"><div class="n"></div><div><h3 style="font-size:17px">Kickoff (15 min)</h3><p class="muted" style="margin-top:3px">We create your account and load your menu together.</p></div></div>
+      <div class="st"><div class="n"></div><div><h3 style="font-size:17px">Print & place QR codes</h3><p class="muted" style="margin-top:3px">One per table, or one for your truck. Ready to scan immediately.</p></div></div>
+      <div class="st"><div class="n"></div><div><h3 style="font-size:17px">Train your team (10 min)</h3><p class="muted" style="margin-top:3px">Tap to advance orders, take payment, redeem rewards. That's it.</p></div></div>
+      <div class="st"><div class="n"></div><div><h3 style="font-size:17px">Go live — free for 14 days</h3><p class="muted" style="margin-top:3px">No credit card, no commitment. Cancel anytime.</p></div></div>
+    </div>
+  </section>
+
+  <!-- 12 CTA -->
+  <section class="slide" style="text-align:center;align-items:center">
+    <div class="eyebrow">Let's get started</div>
+    <h1 style="max-width:14ch">Serve smarter,<br>starting <span class="coral">today.</span></h1>
+    <p class="lead" style="margin-left:auto;margin-right:auto">Your first 14 days are free. We'll have you taking QR orders this afternoon.</p>
+    <div class="row" style="justify-content:center;margin-top:34px">
+      <span class="pill hot" style="font-size:15px;padding:12px 22px">tableserve.ca</span>
+    </div>
+    <p class="muted" style="margin-top:34px;font-size:13px">Chaitanya Kokil · chaitanya1kokil@gmail.com</p>
+  </section>
+
+</div>
+
+<div id="nav">
+  <button class="arrow" onclick="prev()">‹</button>
+  <div id="dots" style="display:flex;gap:7px;align-items:center"></div>
+  <span id="count">1 / 12</span>
+  <button class="arrow" onclick="next()">›</button>
+</div>
+<div class="hint">← → to navigate · F for full screen</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const TOTAL=slides.length; let cur=0;
+  const dots=document.getElementById('dots');
+  slides.forEach((_,i)=>{const d=document.createElement('div');d.className='dot'+(i===0?' active':'');d.onclick=()=>go(i);dots.appendChild(d);});
+  function go(n){slides[cur].classList.remove('active');cur=(n+TOTAL)%TOTAL;slides[cur].classList.add('active');
+    [...dots.children].forEach((d,i)=>d.classList.toggle('active',i===cur));
+    document.getElementById('count').textContent=(cur+1)+' / '+TOTAL;}
+  function next(){go(cur+1)} function prev(){go(cur-1)}
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' '].includes(e.key)){e.preventDefault();next();}
+    if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();prev();}
+    if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+  });
+  let tx=0;addEventListener('touchstart',e=>tx=e.touches[0].clientX);
+  addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)dx<0?next():prev();});
+  // auto-cycle the phone demo on the demo slide
+  let ph=0;setInterval(()=>{ph=(ph+1)%3;['s1','s2','s3'].forEach((id,i)=>document.getElementById(id).classList.toggle('show',i===ph));},2600);
+</script>
+</body>
+</html>
