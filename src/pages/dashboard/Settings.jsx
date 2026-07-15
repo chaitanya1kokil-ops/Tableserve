@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Check, ExternalLink, Store, Volume2, VolumeX, Bell } from 'lucide-react'
+import { Check, ExternalLink, Store, Volume2, VolumeX, Bell, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase, uploadImage } from '../../lib/supabase'
@@ -9,7 +9,7 @@ import { Button, Card, Field, Input, Textarea, Select } from '../../components/u
 import ImageUpload from '../../components/ImageUpload'
 
 export default function Settings() {
-  const { restaurant, refreshRestaurant } = useAuth()
+  const { restaurant, refreshRestaurant, isOwner, ownerPinSet } = useAuth()
   const { muted, toggleMute } = useOutletContext()
   const toast = useToast()
 
@@ -256,6 +256,15 @@ export default function Settings() {
           </button>
         </Card>
 
+        {/* Owner PIN — only editable in owner mode */}
+        {isOwner && (
+          <OwnerPinCard
+            hasPin={ownerPinSet}
+            onSaved={refreshRestaurant}
+            toast={toast}
+          />
+        )}
+
         {/* Public link */}
         <Card className="p-5">
           <h2 className="mb-1 font-bold text-gray-900">Your public menu</h2>
@@ -282,5 +291,57 @@ export default function Settings() {
         </Button>
       </div>
     </div>
+  )
+}
+
+/* ---------------------------------------------------------- owner PIN --- */
+function OwnerPinCard({ hasPin, onSaved, toast }) {
+  const [pin, setPin] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const apply = async (value) => {
+    if (value && !/^\d{4,6}$/.test(value)) return toast.error('PIN must be 4 to 6 digits.')
+    setSaving(true)
+    const { error } = await supabase.rpc('set_owner_pin', { p_pin: value })
+    setSaving(false)
+    if (error) return toast.error(error.message)
+    toast.success(value ? 'Owner PIN saved.' : 'Owner PIN removed.')
+    setPin('')
+    await onSaved?.()
+  }
+
+  return (
+    <Card className="p-5">
+      <h2 className="mb-1 flex items-center gap-2 font-bold text-gray-900">
+        <ShieldCheck className="h-4 w-4 text-brand" /> Owner PIN
+      </h2>
+      <p className="mb-3 text-sm text-gray-500">
+        {hasPin
+          ? 'A PIN is set. Staff use the tablet without it; you enter it to switch to owner view (revenue & analytics). Enter a new PIN to change it.'
+          : 'Set a 4–6 digit PIN to keep revenue and analytics behind owner mode on shared devices.'}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          inputMode="numeric"
+          type="password"
+          maxLength={6}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+          placeholder="1234"
+          className="w-32 rounded-xl border border-gray-300 px-3.5 py-2.5 text-center text-lg tracking-[0.3em] outline-none focus:border-brand"
+        />
+        <Button loading={saving} onClick={() => apply(pin)}>
+          {hasPin ? 'Update PIN' : 'Set PIN'}
+        </Button>
+        {hasPin && (
+          <Button
+            variant="outline"
+            onClick={() => confirm('Remove the owner PIN? Revenue & analytics will be visible to anyone on the device.') && apply('')}
+          >
+            Remove
+          </Button>
+        )}
+      </div>
+    </Card>
   )
 }

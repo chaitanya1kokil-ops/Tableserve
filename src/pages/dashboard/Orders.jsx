@@ -40,7 +40,7 @@ const ADVANCE_LABEL = {
 }
 
 export default function Orders() {
-  const { restaurant } = useAuth()
+  const { restaurant, isOwner } = useAuth()
   const toast = useToast()
   const rid = restaurant.id
 
@@ -147,7 +147,7 @@ export default function Orders() {
 
       {/* Filter tabs */}
       <div className="mb-5 flex gap-1 rounded-xl bg-gray-100 p-1">
-        {FILTERS.map((f) => (
+        {FILTERS.filter((f) => f.key !== 'analytics' || isOwner).map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
@@ -169,7 +169,7 @@ export default function Orders() {
         ))}
       </div>
 
-      {filter === 'analytics' ? (
+      {filter === 'analytics' && isOwner ? (
         <OrdersAnalytics rid={rid} orders={orders} currency={restaurant.currency} />
       ) : visible.length === 0 ? (
         <EmptyState

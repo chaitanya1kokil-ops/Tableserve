@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Store, Check, Truck, UtensilsCrossed } from 'lucide-react'
+import { Store, Check, Truck, UtensilsCrossed, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import { supabase, uploadImage } from '../lib/supabase'
@@ -22,6 +22,7 @@ export default function Onboarding() {
     address: '',
     accent_color: ACCENT_PRESETS[0],
     business_type: 'restaurant',
+    owner_pin: '',
   })
   const isTruck = form.business_type === 'food_truck'
   const [logoFile, setLogoFile] = useState(null)
@@ -33,6 +34,10 @@ export default function Onboarding() {
     e.preventDefault()
     if (!form.name.trim()) {
       toast.error('Please enter a restaurant name.')
+      return
+    }
+    if (form.owner_pin && !/^\d{4,6}$/.test(form.owner_pin)) {
+      toast.error('Owner PIN must be 4 to 6 digits.')
       return
     }
     setSaving(true)
@@ -65,6 +70,11 @@ export default function Onboarding() {
         restaurant_id: restaurant.id,
       })
       if (profErr) throw profErr
+
+      // Set the owner PIN (gates revenue/analytics on the shared device).
+      if (form.owner_pin) {
+        await supabase.rpc('set_owner_pin', { p_pin: form.owner_pin })
+      }
 
       // 3. Upload the logo now that the profile is linked (storage RLS passes).
       if (logoFile) {
@@ -214,6 +224,26 @@ export default function Onboarding() {
                 <span className="pointer-events-none absolute">+</span>
               </label>
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <ShieldCheck className="h-4 w-4 text-brand" /> Owner PIN (optional)
+            </p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              A 4–6 digit code only you know. Staff run the tablet day-to-day; enter this PIN to
+              switch to owner view and see revenue, analytics and reporting. You can set it later
+              in Settings.
+            </p>
+            <input
+              inputMode="numeric"
+              type="password"
+              maxLength={6}
+              value={form.owner_pin}
+              onChange={(e) => setForm({ ...form, owner_pin: e.target.value.replace(/\D/g, '') })}
+              placeholder="e.g. 1234"
+              className="mt-3 w-40 rounded-xl border border-gray-300 px-3.5 py-2.5 text-center text-lg tracking-[0.3em] outline-none focus:border-brand"
+            />
           </div>
 
           <Button type="submit" size="lg" className="w-full" loading={saving}>

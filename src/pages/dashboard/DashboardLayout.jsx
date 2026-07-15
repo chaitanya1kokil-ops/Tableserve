@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, Link } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -13,8 +14,11 @@ import {
   ChefHat,
   Bell,
   X,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { OwnerPinModal } from '../../components/OwnerAccess'
 import { imageUrl } from '../../lib/supabase'
 import { RESTAURANT_STATUS } from '../../lib/constants'
 import { useServerCalls } from '../../hooks/useServerCalls'
@@ -23,14 +27,15 @@ import { useNewOrderCount } from '../../hooks/useNewOrderCount'
 
 // `restaurantOnly` items are hidden for food trucks (they pay online, have no
 // tables, and use a single combined orders board instead of a kitchen display).
+// `ownerOnly` items (revenue/analytics) are hidden in staff mode.
 const NAV = [
-  { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard },
+  { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat, restaurantOnly: true },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/dashboard/qr', label: 'QR code', icon: QrCode, truckOnly: true },
-  { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true },
+  { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true, ownerOnly: true },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode, restaurantOnly: true },
   { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
 ]
@@ -42,9 +47,15 @@ export default function DashboardLayout() {
   useOrderSounds(restaurant?.id, muted)
   const newOrders = useNewOrderCount(restaurant?.id)
 
+  const { isOwner, ownerPinSet, ownerMode, lockOwner } = useAuth()
+  const [pinOpen, setPinOpen] = useState(false)
+
   const isTruck = restaurant?.business_type === 'food_truck'
   const nav = NAV.filter(
-    (item) => !(isTruck && item.restaurantOnly) && !(!isTruck && item.truckOnly),
+    (item) =>
+      !(isTruck && item.restaurantOnly) &&
+      !(!isTruck && item.truckOnly) &&
+      !(!isOwner && item.ownerOnly),
   )
 
   return (
@@ -73,7 +84,25 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-100 p-3">
+        <div className="space-y-1 border-t border-gray-100 p-3">
+          {ownerPinSet &&
+            (ownerMode ? (
+              <button
+                onClick={lockOwner}
+                className="flex w-full items-center gap-2 rounded-xl bg-stone-900 px-3 py-2.5 text-sm font-semibold text-white"
+              >
+                <ShieldCheck className="h-4 w-4 text-amber-300" />
+                <span className="flex-1 text-left">Owner mode</span>
+                <span className="text-xs font-medium text-white/60">Exit</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setPinOpen(true)}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              >
+                <Lock className="h-4 w-4" /> Switch to owner
+              </button>
+            ))}
           <button
             onClick={signOut}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
@@ -97,9 +126,29 @@ export default function DashboardLayout() {
             )}
             <span className="line-clamp-1">{restaurant?.name}</span>
           </div>
-          <button onClick={signOut} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
-            <LogOut className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {ownerPinSet &&
+              (ownerMode ? (
+                <button
+                  onClick={lockOwner}
+                  className="rounded-lg bg-stone-900 p-2 text-amber-300"
+                  title="Owner mode — tap to exit"
+                >
+                  <ShieldCheck className="h-5 w-5" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setPinOpen(true)}
+                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+                  title="Switch to owner"
+                >
+                  <Lock className="h-5 w-5" />
+                </button>
+              ))}
+            <button onClick={signOut} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+              <LogOut className="h-5 w-5" />
+            </button>
+          </div>
         </header>
 
         {calls.length > 0 && (
@@ -169,6 +218,8 @@ export default function DashboardLayout() {
           </NavLink>
         ))}
       </nav>
+
+      {pinOpen && <OwnerPinModal onClose={() => setPinOpen(false)} />}
     </div>
   )
 }

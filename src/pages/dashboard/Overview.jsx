@@ -5,6 +5,8 @@ import {
   Utensils,
   Flame,
   CircleDollarSign,
+  Clock,
+  Users,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -120,6 +122,29 @@ export default function Overview() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
   const maxQty = popular[0]?.[1] || 1
+
+  // Busiest hours (by revenue) in range.
+  const hourMap = {}
+  for (const o of paid) {
+    const h = new Date(o.created_at).getHours()
+    ;(hourMap[h] ||= { rev: 0, count: 0 })
+    hourMap[h].rev += Number(o.total || 0)
+    hourMap[h].count += 1
+  }
+  const busyHours = Object.entries(hourMap)
+    .map(([h, v]) => ({ hour: Number(h), ...v }))
+    .sort((a, b) => b.rev - a.rev)
+    .slice(0, 6)
+  const maxHourRev = busyHours[0]?.rev || 1
+  const fmtHour = (h) => {
+    const ap = h < 12 ? 'am' : 'pm'
+    const hr = h % 12 === 0 ? 12 : h % 12
+    return `${hr}${ap}`
+  }
+
+  // Returning-guest mix: orders tied to a loyalty member vs walk-ins.
+  const memberOrders = paid.filter((o) => o.loyalty_member_id).length
+  const memberShare = paid.length ? Math.round((memberOrders / paid.length) * 100) : 0
 
   // Sorted order list.
   const sortedOrders = [...orders].sort((a, b) => {
@@ -285,6 +310,74 @@ export default function Overview() {
                 </div>
               )}
             </Card>
+          </div>
+
+          {/* More analytics: busiest hours + returning-guest mix */}
+          <div className="mt-6 grid gap-5 lg:grid-cols-2">
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100">
+              <div className="mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-stone-400" />
+                <h2 className="font-display text-lg font-semibold text-stone-900">Busiest hours</h2>
+              </div>
+              {busyHours.length === 0 ? (
+                <p className="py-6 text-center text-sm text-stone-400">No sales in this period.</p>
+              ) : (
+                <div className="space-y-3">
+                  {busyHours.map((h) => (
+                    <div key={h.hour} className="flex items-center gap-3">
+                      <span className="w-10 text-xs font-semibold text-stone-500">
+                        {fmtHour(h.hour)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-stone-500">
+                            {h.count} {h.count === 1 ? 'order' : 'orders'}
+                          </span>
+                          <span className="font-semibold text-stone-800">
+                            {formatCurrency(h.rev, currency)}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                          <div
+                            className="h-full rounded-full bg-brand"
+                            style={{ width: `${(h.rev / maxHourRev) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100">
+              <div className="mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-stone-400" />
+                <h2 className="font-display text-lg font-semibold text-stone-900">Guest mix</h2>
+              </div>
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="font-display text-4xl font-semibold text-stone-900">{memberShare}%</p>
+                  <p className="text-sm text-stone-500">of orders from rewards members</p>
+                </div>
+                <div className="text-right text-sm text-stone-500">
+                  <p>
+                    <span className="font-bold text-stone-900">{memberOrders}</span> members
+                  </p>
+                  <p>
+                    <span className="font-bold text-stone-900">{paid.length - memberOrders}</span>{' '}
+                    walk-ins
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-stone-100">
+                <div className="h-full bg-brand" style={{ width: `${memberShare}%` }} />
+              </div>
+              <p className="mt-3 text-xs text-stone-400">
+                Returning members are your most valuable guests — a higher share means loyalty is
+                working.
+              </p>
+            </div>
           </div>
         </>
       )}

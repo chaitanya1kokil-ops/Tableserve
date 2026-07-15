@@ -3,6 +3,14 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+// Keep the raw owner-PIN hash out of client state; expose only whether one is
+// set. (The PIN is verified server-side via verify_owner_pin.)
+function stripPin(rest) {
+  if (!rest) return null
+  const { owner_pin, ...safe } = rest
+  return { ...safe, owner_pin_set: Boolean(owner_pin) }
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -10,6 +18,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true) // initial session check
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileChecked, setProfileChecked] = useState(false) // first load done?
+  // Owner mode: unlocked with the PIN, remembered for the browser session only.
+  const [ownerMode, setOwnerMode] = useState(() => {
+    try {
+      return sessionStorage.getItem('ts-owner-mode') === '1'
+    } catch {
+      return false
+    }
+  })
 
   // 1. Track the auth session.
   useEffect(() => {
@@ -60,7 +76,7 @@ export function AuthProvider({ children }) {
           .select('*')
           .eq('id', prof.restaurant_id)
           .maybeSingle()
-        setRestaurant(rest || null)
+        setRestaurant(stripPin(rest))
       } else {
         setRestaurant(null)
       }
@@ -83,7 +99,7 @@ export function AuthProvider({ children }) {
       return
     }
     const { data } = await supabase.from('restaurants').select('*').eq('id', id).maybeSingle()
-    setRestaurant(data || null)
+    setRestaurant(stripPin(data))
   }, [restaurant?.id, profile?.restaurant_id, loadProfile])
 
   const signUp = useCallback(async ({ email, password, fullName }) => {
@@ -102,6 +118,34 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
     setProfile(null)
     setRestaurant(null)
+    setOwnerMode(false)
+    try {
+      sessionStorage.removeItem('ts-owner-mode')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  // Verify the owner PIN server-side; on success unlock owner mode for the session.
+  const unlockOwner = useCallback(async (pin) => {
+    const { data, error } = await supabase.rpc('verify_owner_pin', { p_pin: pin })
+    if (error || !data) return false
+    setOwnerMode(true)
+    try {
+      sessionStorage.setItem('ts-owner-mode', '1')
+    } catch {
+      /* ignore */
+    }
+    return true
+  }, [])
+
+  const lockOwner = useCallback(() => {
+    setOwnerMode(false)
+    try {
+      sessionStorage.removeItem('ts-owner-mode')
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   const value = {
@@ -114,6 +158,13 @@ export function AuthProvider({ children }) {
     profileLoading,
     profileChecked,
     isAdmin: profile?.role === 'platform_admin',
+    // Owner/staff mode. When no PIN is set, the account behaves as owner (no
+    // split) so nothing changes for accounts that never configure it.
+    ownerPinSet: Boolean(restaurant?.owner_pin_set),
+    ownerMode,
+    isOwner: !restaurant?.owner_pin_set || ownerMode,
+    unlockOwner,
+    lockOwner,
     refreshProfile: loadProfile,
     refreshRestaurant,
     signUp,

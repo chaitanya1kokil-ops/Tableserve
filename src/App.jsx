@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { hasSupabaseConfig } from './lib/supabase'
 import { useAuth } from './context/AuthContext'
 import { RequireOwner, RequireOnboarding, RequireAdmin } from './components/guards'
+import { OwnerOnly } from './components/OwnerAccess'
 import SetupNotice from './pages/SetupNotice'
 
 import Landing from './pages/Landing'
@@ -35,6 +36,12 @@ import CustomerStatus from './pages/customer/CustomerStatus'
 function OrdersRoute() {
   const { restaurant } = useAuth()
   return restaurant?.business_type === 'food_truck' ? <FoodTruckBoard /> : <Orders />
+}
+
+// The dashboard home shows revenue/analytics (owner only). Staff land on Orders.
+function DashboardHome() {
+  const { isOwner } = useAuth()
+  return isOwner ? <Overview /> : <Navigate to="/dashboard/orders" replace />
 }
 
 export default function App() {
@@ -71,13 +78,13 @@ export default function App() {
           </RequireOwner>
         }
       >
-        <Route index element={<Overview />} />
+        <Route index element={<DashboardHome />} />
         <Route path="menu" element={<Menu />} />
         <Route path="tables" element={<Tables />} />
         <Route path="qr" element={<TruckQR />} />
         <Route path="orders" element={<OrdersRoute />} />
         <Route path="checkout" element={<Checkout />} />
-        <Route path="loyalty" element={<Loyalty />} />
+        <Route path="loyalty" element={<OwnerOnly><Loyalty /></OwnerOnly>} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
