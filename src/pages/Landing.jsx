@@ -121,7 +121,7 @@ const included = [
 const plans = [
   {
     tier: 'Starter',
-    price: 59,
+    price: 99,
     desc: 'Everything one venue needs to take orders.',
     features: [
       'Up to 10 tables (or 1 food truck)',
@@ -135,7 +135,7 @@ const plans = [
   },
   {
     tier: 'Pro',
-    price: 79,
+    price: 179,
     desc: 'Everything in Starter, plus the growth engine.',
     features: [
       'Up to 40 tables',
@@ -149,7 +149,7 @@ const plans = [
   },
   {
     tier: 'Premium',
-    price: 99,
+    price: 299,
     desc: 'Everything in Pro, plus room to scale.',
     features: [
       'Unlimited tables & locations',
@@ -596,7 +596,7 @@ export default function Landing() {
 
         <div className="mx-auto mt-8 max-w-2xl space-y-1.5 text-center text-sm text-stone-500">
           <p>
-            <span className="font-semibold text-stone-700">Running a food truck?</span> Flat $59/mo
+            <span className="font-semibold text-stone-700">Running a food truck?</span> Flat $79/mo
             with the rewards program included.
           </p>
           <p className="text-xs text-stone-400">
