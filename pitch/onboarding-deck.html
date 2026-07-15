@@ -10,73 +10,96 @@
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
-    --bg:#0E0E11; --panel:#17171B; --panel2:#1E1E24; --line:rgba(255,255,255,.09);
+    --bg:#0E0E11; --panel:#191920; --line:rgba(255,255,255,.10);
     --ink:#F5F1EA; --muted:#9A9AA4; --coral:#FF5A43; --gold:#E0A44A; --green:#34D399;
   }
   html,body{height:100%}
-  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;overflow:hidden}
-  .display{font-family:'Fraunces',Georgia,serif}
-  #deck{position:relative;width:100vw;height:100vh}
+  body{
+    color:var(--ink);font-family:'Inter',system-ui,sans-serif;overflow:hidden;
+    background:
+      radial-gradient(1100px 700px at 12% 6%, rgba(255,90,67,.14), transparent 58%),
+      radial-gradient(1000px 700px at 92% 96%, rgba(224,164,74,.12), transparent 60%),
+      linear-gradient(160deg,#141419 0%, #0E0E11 55%, #0B0B0E 100%);
+  }
+  /* faint dot texture so the background is never flat/blank */
+  .bgtex{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.05) 1.4px, transparent 1.4px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(80% 70% at 50% 40%, #000, transparent 100%);
+    mask-image:radial-gradient(80% 70% at 50% 40%, #000, transparent 100%);}
+  #deck{position:relative;width:100vw;height:100vh;z-index:1}
   .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
-    padding:5vh 7vw;opacity:0;pointer-events:none;transform:translateY(24px);
-    transition:opacity .5s ease,transform .5s ease;overflow:auto}
-  .slide.active{opacity:1;pointer-events:auto;transform:none}
+    padding:6vh 7vw;opacity:0;pointer-events:none;transform:translateY(24px);
+    -webkit-transition:opacity .5s ease, -webkit-transform .5s ease;
+    transition:opacity .5s ease, transform .5s ease;overflow:auto}
+  .slide.active{opacity:1;pointer-events:auto;-webkit-transform:none;transform:none}
   .eyebrow{font-size:12px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;color:var(--coral);margin-bottom:18px}
-  h1{font-size:clamp(40px,6.5vw,84px);font-weight:600;line-height:1.03;letter-spacing:-.01em}
-  h2{font-size:clamp(30px,4.4vw,54px);font-weight:600;line-height:1.08}
+  h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(40px,6.5vw,84px);font-weight:600;line-height:1.03;letter-spacing:-.01em}
+  h2{font-family:'Fraunces',Georgia,serif;font-size:clamp(30px,4.4vw,54px);font-weight:600;line-height:1.08}
   .lead{font-size:clamp(16px,2vw,22px);color:var(--muted);line-height:1.6;max-width:720px;margin-top:18px}
   .grid{display:grid;gap:18px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;
+    box-shadow:0 20px 50px rgba(0,0,0,.3)}
   .card h3{font-size:18px;font-weight:700;margin-bottom:6px}
   .card p{font-size:14px;color:var(--muted);line-height:1.55}
   .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--line);
-    border-radius:100px;font-size:13px;font-weight:600;color:var(--muted);background:rgba(255,255,255,.03)}
-  .pill.hot{border-color:rgba(255,90,67,.4);color:#ffb3a5}
+    border-radius:100px;font-size:13px;font-weight:600;color:var(--muted);background:rgba(255,255,255,.04)}
+  .pill.hot{border-color:rgba(255,90,67,.4);color:#ffb3a5;background:rgba(255,90,67,.08)}
   .coral{color:var(--coral)} .gold{color:var(--gold)} .green{color:var(--green)}
   .row{display:flex;flex-wrap:wrap;gap:12px}
   .muted{color:var(--muted)}
   .kicker{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
-  /* logo */
-  .logo{display:inline-grid;grid-template-columns:repeat(3,1fr);gap:5px;width:44px;height:44px}
+  .logo{display:-ms-inline-grid;display:inline-grid;grid-template-columns:repeat(3,1fr);gap:5px;width:44px;height:44px}
   .logo span{border-radius:50%;background:#2E2E33}
   .logo .on{background:var(--ink)} .logo .c{background:var(--coral)}
   .brandbar{position:fixed;top:26px;left:34px;display:flex;align-items:center;gap:12px;z-index:50;font-weight:800;letter-spacing:-.01em}
   /* phone */
-  .phone{width:260px;flex:none;background:#000;border-radius:38px;border:9px solid #111;box-shadow:0 40px 90px rgba(0,0,0,.6);position:relative}
-  .phone .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:78px;height:20px;background:#000;border-radius:100px;z-index:3}
-  .screen{border-radius:28px;overflow:hidden;height:520px;position:relative;background:#faf6ef}
-  .scr{position:absolute;inset:0;opacity:0;transition:opacity .5s}
+  .phone{width:264px;flex:none;background:#000;border-radius:40px;border:9px solid #111;
+    box-shadow:0 44px 100px rgba(0,0,0,.65);position:relative}
+  .phone .notch{position:absolute;top:9px;left:50%;-webkit-transform:translateX(-50%);transform:translateX(-50%);
+    width:80px;height:20px;background:#000;border-radius:100px;z-index:3}
+  .screen{border-radius:30px;overflow:hidden;height:524px;position:relative;background:#faf6ef}
+  .scr{position:absolute;inset:0;opacity:0;-webkit-transition:opacity .45s;transition:opacity .45s}
   .scr.show{opacity:1}
-  .scrhead{background:#18181B;color:#fff;padding:26px 16px 14px}
+  .scrhead{background:#18181B;color:#fff;padding:28px 16px 14px;position:relative}
   .scrhead .sub{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#E0A44A}
   .scrhead .nm{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin-top:2px}
-  .mi{display:flex;gap:10px;align-items:center;background:#fff;margin:10px;padding:9px;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-  .mi .img{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#f4b183,#e06666);flex:none}
+  .cartbadge{position:absolute;right:16px;top:26px;background:#FF5A43;color:#fff;font-size:11px;font-weight:800;
+    padding:3px 9px;border-radius:100px}
+  .mi{display:flex;gap:10px;align-items:center;background:#fff;margin:10px;padding:9px;border-radius:12px;box-shadow:0 1px 5px rgba(0,0,0,.06)}
+  .mi.hl{outline:2px solid #b45309;outline-offset:1px}
+  .mi .img{width:42px;height:42px;border-radius:9px;flex:none;display:grid;place-items:center;font-size:22px;background:#fff1e2}
   .mi .t{font-size:12px;font-weight:600;color:#222;flex:1}
   .mi .p{font-size:12px;font-weight:700;color:#b45309}
-  .cta{margin:10px;background:#b45309;color:#fff;text-align:center;padding:12px;border-radius:12px;font-weight:700;font-size:13px}
+  .cta{margin:12px 10px;background:#b45309;color:#fff;text-align:center;padding:13px;border-radius:12px;font-weight:700;font-size:13px}
+  .cta.pulse{-webkit-animation:pulse 1s infinite;animation:pulse 1s infinite}
+  @-webkit-keyframes pulse{50%{-webkit-transform:scale(1.03);opacity:.92}}
+  @keyframes pulse{50%{transform:scale(1.03);opacity:.92}}
   .board{background:#faf6ef;padding:12px;height:100%}
-  .tk{background:#fff;border-radius:12px;padding:10px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-  .tk .bar{height:4px;border-radius:4px;margin:-10px -10px 8px;border-radius:12px 12px 0 0}
+  .board .bh{font-family:'Fraunces',serif;font-weight:600;color:#18181B;font-size:15px;margin:2px 2px 10px}
+  .tk{background:#fff;border-radius:12px;padding:10px;margin-bottom:9px;box-shadow:0 1px 5px rgba(0,0,0,.07);overflow:hidden}
+  .tk .bar{height:5px;margin:-10px -10px 8px}
   .tk .nm{font-weight:800;font-size:13px;color:#18181B}
   .tk .it{font-size:11px;color:#555;margin-top:3px}
-  .celebrate{padding:60px 20px;text-align:center;color:#18181B}
+  .celebrate{padding:64px 20px;text-align:center;color:#18181B}
+  .celebrate .big{font-size:52px}
   /* video slot */
   .videoslot{flex:1;min-width:320px;border:2px dashed var(--line);border-radius:20px;background:var(--panel);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;min-height:420px}
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;min-height:430px}
   .playbtn{width:74px;height:74px;border-radius:50%;background:var(--coral);display:grid;place-items:center;box-shadow:0 12px 40px rgba(255,90,67,.4)}
   .playbtn::after{content:"";border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent #fff;margin-left:5px}
   .videoslot video{width:100%;border-radius:16px;background:#000}
   /* pricing */
-  .price{flex:1;min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px;display:flex;flex-direction:column}
-  .price.feat{border-color:rgba(224,164,74,.5);background:linear-gradient(160deg,rgba(224,164,74,.1),rgba(255,90,67,.05))}
+  .price{flex:1;min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px;display:flex;flex-direction:column;position:relative}
+  .price.feat{border-color:rgba(224,164,74,.5);background:linear-gradient(160deg,rgba(224,164,74,.12),rgba(255,90,67,.06))}
   .price .amt{font-family:'Fraunces',serif;font-size:46px;font-weight:600;margin-top:6px}
   .price .amt sup{font-size:22px;vertical-align:top;color:var(--gold)}
   .price .amt .mo{font-size:14px;color:var(--muted);font-weight:400;font-family:'Inter'}
   .price ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px}
   .price li{font-size:13px;color:#d7d4cd;display:flex;gap:8px}
   .price li::before{content:"✓";color:var(--green);font-weight:800}
-  .badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--gold),var(--coral));color:#111;font-size:11px;font-weight:800;padding:5px 14px;border-radius:100px;white-space:nowrap}
+  .badge{position:absolute;top:-12px;left:50%;-webkit-transform:translateX(-50%);transform:translateX(-50%);
+    background:linear-gradient(135deg,var(--gold),var(--coral));color:#111;font-size:11px;font-weight:800;padding:5px 14px;border-radius:100px;white-space:nowrap}
   .compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px}
   .compare .box{border-radius:18px;padding:22px}
   .steps{counter-reset:s;display:grid;gap:14px;max-width:820px}
@@ -85,19 +108,22 @@
     border:1px solid rgba(224,164,74,.3);color:var(--gold);font-weight:800;display:grid;place-items:center}
   .steps .st .n::before{content:counter(s)}
   /* nav */
-  #nav{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:80;
-    background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:100px;padding:9px 15px;backdrop-filter:blur(14px)}
-  .dot{width:7px;height:7px;border-radius:5px;background:rgba(255,255,255,.22);cursor:pointer;transition:all .3s}
+  #nav{position:fixed;bottom:26px;left:50%;-webkit-transform:translateX(-50%);transform:translateX(-50%);
+    display:flex;align-items:center;gap:12px;z-index:80;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:100px;padding:9px 15px;
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .dot{width:7px;height:7px;border-radius:5px;background:rgba(255,255,255,.24);cursor:pointer;-webkit-transition:all .3s;transition:all .3s}
   .dot.active{width:22px;background:var(--coral)}
   .arrow{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);
     cursor:pointer;font-size:15px;display:grid;place-items:center}
   .arrow:hover{background:rgba(255,255,255,.08)}
   #count{font-size:12px;color:var(--muted);min-width:38px;text-align:center}
   .hint{position:fixed;bottom:28px;right:30px;font-size:11px;color:var(--muted);z-index:80}
-  @media (max-width:820px){.slide{padding:6vh 7vw}.phone{display:none}}
+  @media (max-width:860px){.slide{padding:6vh 7vw}.phone{display:none}}
 </style>
 </head>
 <body>
+<div class="bgtex"></div>
 <div class="brandbar">
   <span class="logo" aria-label="TableServe">
     <span class="on"></span><span class="on"></span><span class="on"></span>
@@ -164,31 +190,38 @@
 
   <!-- 5 LIVE DEMO + VIDEO -->
   <section class="slide">
-    <div class="eyebrow">See it in action</div>
-    <h2 style="margin-bottom:8px">The guest experience</h2>
+    <div class="eyebrow">See it in action · auto-playing</div>
+    <h2 style="margin-bottom:8px">The whole flow, start to finish</h2>
     <div class="row" style="align-items:stretch;gap:34px;margin-top:24px">
       <div class="phone">
         <div class="notch"></div>
         <div class="screen">
-          <div class="scr show" id="s1">
-            <div class="scrhead"><div class="sub">Indian</div><div class="nm">Royal Paan</div></div>
-            <div class="mi"><div class="img"></div><div class="t">Butter Chicken</div><div class="p">$19</div></div>
-            <div class="mi"><div class="img"></div><div class="t">Garlic Naan</div><div class="p">$5</div></div>
-            <div class="mi"><div class="img"></div><div class="t">Mango Lassi</div><div class="p">$7</div></div>
-            <div class="cta">Place order · $31</div>
+          <!-- menu -->
+          <div class="scr show" id="dMenu">
+            <div class="scrhead"><div class="sub">Indian</div><div class="nm">Royal Paan</div><span class="cartbadge" id="dCart" style="display:none">1</span></div>
+            <div class="mi" id="dItem"><div class="img">🍛</div><div class="t">Butter Chicken</div><div class="p">$19</div></div>
+            <div class="mi"><div class="img">🫓</div><div class="t">Garlic Naan</div><div class="p">$5</div></div>
+            <div class="mi"><div class="img">🥤</div><div class="t">Mango Lassi</div><div class="p">$7</div></div>
+            <div class="cta" id="dCta">Place order · $31</div>
           </div>
-          <div class="scr" id="s2">
-            <div class="board" style="background:#faf6ef">
-              <div class="tk"><div class="bar" style="background:#3b82f6"></div><div class="nm">Table 4 · New</div><div class="it">2× Butter Chicken · Garlic Naan</div></div>
+          <!-- kitchen -->
+          <div class="scr" id="dKitchen">
+            <div class="board">
+              <div class="bh">🍳 Live orders</div>
+              <div class="tk" id="dTicket"><div class="bar" style="background:#3b82f6"></div><div class="nm" id="dTnm">Table 4 · New</div><div class="it">2× Butter Chicken · Garlic Naan · Lassi</div></div>
               <div class="tk"><div class="bar" style="background:#f59e0b"></div><div class="nm">Table 7 · Preparing</div><div class="it">Chilli Paneer · Jeera Rice</div></div>
-              <div class="tk"><div class="bar" style="background:#10b981"></div><div class="nm">Table 1 · Ready 🔔</div><div class="it">Veg Biryani</div></div>
             </div>
           </div>
-          <div class="scr" id="s3">
+          <!-- reward -->
+          <div class="scr" id="dReward">
             <div class="celebrate">
-              <div style="font-size:44px">🎉</div>
-              <div class="display" style="font-size:20px;font-weight:600;margin-top:10px">Visit #10 — free item!</div>
-              <p style="font-size:13px;color:#666;margin-top:8px">Rewards bring guests back automatically.</p>
+              <div class="big">🎉</div>
+              <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-top:10px">Visit #10 — free item!</div>
+              <div style="margin-top:14px;background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:12px;display:inline-flex;gap:10px;align-items:center">
+                <span style="font-size:26px">🍨</span>
+                <span style="font-weight:700;color:#18181B;font-size:14px">Mango Kulfi&nbsp;·&nbsp;<span style="color:#16a34a">FREE</span></span>
+              </div>
+              <p style="font-size:12px;color:#666;margin-top:14px">Rewards bring guests back automatically.</p>
             </div>
           </div>
         </div>
@@ -196,10 +229,10 @@
 
       <div class="videoslot">
         <div class="playbtn"></div>
-        <div style="font-weight:700">Drop your screen recording here</div>
-        <p class="muted" style="font-size:13px;max-width:340px">Record a 20–30s walkthrough of tableserve.ca (order → kitchen → pay) and save it as <b>demo.mp4</b> beside this file. It will play right here.</p>
-        <!-- When you add demo.mp4, uncomment: -->
-        <!-- <video controls poster="assets/hero_restaurant_qr.png"><source src="demo.mp4" type="video/mp4"></video> -->
+        <div style="font-weight:700">Add your real screen recording</div>
+        <p class="muted" style="font-size:13px;max-width:340px">The phone on the left auto-plays the flow. To show a real capture of tableserve.ca, save a clip as <b>demo.mp4</b> next to this file and uncomment the &lt;video&gt; line inside.</p>
+        <!-- Add your recording, then uncomment:
+        <video controls playsinline poster="assets/hero_restaurant_qr.png"><source src="demo.mp4" type="video/mp4"></video> -->
       </div>
     </div>
   </section>
@@ -253,7 +286,7 @@
         <div class="amt"><sup>$</sup>99<span class="mo">/mo</span></div>
         <ul><li>Up to 10 tables</li><li>Menu, orders & kitchen display</li><li>Checkout, tips & split bills</li><li>Email support</li></ul>
       </div>
-      <div class="price feat" style="position:relative">
+      <div class="price feat">
         <div class="badge">★ Most popular</div>
         <div class="kicker gold">Pro</div>
         <div class="amt"><sup>$</sup>179<span class="mo">/mo</span></div>
@@ -273,14 +306,14 @@
     <div class="eyebrow">Why TableServe</div>
     <h2>The all-in cost tells the story.</h2>
     <div class="compare" style="margin-top:32px">
-      <div class="box" style="background:rgba(255,90,67,.08);border:1px solid rgba(255,90,67,.25)">
+      <div class="box" style="background:rgba(255,90,67,.09);border:1px solid rgba(255,90,67,.28)">
         <div class="kicker" style="color:#ff8a7a">Toast / Square, all-in</div>
-        <div class="display" style="font-size:40px;margin:10px 0">$300–500<span style="font-size:16px;color:var(--muted)">/mo</span></div>
+        <div style="font-family:'Fraunces',serif;font-size:40px;margin:10px 0">$300–500<span style="font-size:16px;color:var(--muted)">/mo</span></div>
         <p class="muted" style="font-size:13px">Base POS + online ordering + kitchen display + loyalty add-ons — <b>plus</b> a percentage of every sale.</p>
       </div>
-      <div class="box" style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25)">
+      <div class="box" style="background:rgba(52,211,153,.09);border:1px solid rgba(52,211,153,.28)">
         <div class="kicker green">TableServe Pro</div>
-        <div class="display" style="font-size:40px;margin:10px 0">$179<span style="font-size:16px;color:var(--muted)">/mo</span></div>
+        <div style="font-family:'Fraunces',serif;font-size:40px;margin:10px 0">$179<span style="font-size:16px;color:var(--muted)">/mo</span></div>
         <p class="muted" style="font-size:13px">Everything above, in one price — and <b class="green">0% commission</b>. No lock-in, no hardware to buy.</p>
       </div>
     </div>
@@ -320,23 +353,44 @@
 <div class="hint">← → to navigate · F for full screen</div>
 
 <script>
-  const slides=[...document.querySelectorAll('.slide')];
-  const TOTAL=slides.length; let cur=0;
-  const dots=document.getElementById('dots');
-  slides.forEach((_,i)=>{const d=document.createElement('div');d.className='dot'+(i===0?' active':'');d.onclick=()=>go(i);dots.appendChild(d);});
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var TOTAL=slides.length, cur=0;
+  var dots=document.getElementById('dots');
+  for(var i=0;i<TOTAL;i++){(function(i){var d=document.createElement('div');d.className='dot'+(i===0?' active':'');d.onclick=function(){go(i)};dots.appendChild(d);})(i);}
   function go(n){slides[cur].classList.remove('active');cur=(n+TOTAL)%TOTAL;slides[cur].classList.add('active');
-    [...dots.children].forEach((d,i)=>d.classList.toggle('active',i===cur));
+    var ds=dots.children;for(var i=0;i<ds.length;i++){ds[i].classList.toggle('active',i===cur);}
     document.getElementById('count').textContent=(cur+1)+' / '+TOTAL;}
   function next(){go(cur+1)} function prev(){go(cur-1)}
-  document.addEventListener('keydown',e=>{
-    if(['ArrowRight','ArrowDown',' '].includes(e.key)){e.preventDefault();next();}
-    if(['ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();prev();}
-    if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();prev();}
+    else if(e.key==='f'||e.key==='F'){
+      var el=document.documentElement;
+      var fs=document.fullscreenElement||document.webkitFullscreenElement;
+      if(fs){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
+      else{(el.requestFullscreen||el.webkitRequestFullscreen).call(el);}
+    }
   });
-  let tx=0;addEventListener('touchstart',e=>tx=e.touches[0].clientX);
-  addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)dx<0?next():prev();});
-  // auto-cycle the phone demo on the demo slide
-  let ph=0;setInterval(()=>{ph=(ph+1)%3;['s1','s2','s3'].forEach((id,i)=>document.getElementById(id).classList.toggle('show',i===ph));},2600);
+  var tx=0;
+  document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;});
+  document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx<0?next():prev();}});
+
+  // Auto-playing flow "video": menu -> add -> order -> kitchen new -> ready -> reward
+  var step=0;
+  var mMenu=document.getElementById('dMenu'), mKit=document.getElementById('dKitchen'), mRew=document.getElementById('dReward');
+  var mItem=document.getElementById('dItem'), mCart=document.getElementById('dCart'), mCta=document.getElementById('dCta');
+  var mTnm=document.getElementById('dTnm'), mBar=document.querySelector('#dTicket .bar');
+  function showScr(el){[mMenu,mKit,mRew].forEach(function(s){s.classList.remove('show');});el.classList.add('show');}
+  function flow(){
+    step=(step+1)%6;
+    if(step===0){showScr(mMenu);mItem.classList.remove('hl');mCart.style.display='none';mCta.classList.remove('pulse');mCta.textContent='Place order · $31';}
+    else if(step===1){mItem.classList.add('hl');mCart.style.display='inline-block';}       // add item
+    else if(step===2){mCta.classList.add('pulse');mCta.textContent='Paid ✓ · sending…';}    // order+pay
+    else if(step===3){showScr(mKit);mTnm.textContent='Table 4 · New';mBar.style.background='#3b82f6';} // kitchen new
+    else if(step===4){mTnm.textContent='Table 4 · Ready 🔔';mBar.style.background='#10b981';}          // ready
+    else if(step===5){showScr(mRew);}                                                       // reward
+  }
+  setInterval(flow,2100);
 </script>
 </body>
 </html>
