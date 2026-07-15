@@ -19,6 +19,7 @@ import Menu from './pages/dashboard/Menu'
 import Tables from './pages/dashboard/Tables'
 import Orders from './pages/dashboard/Orders'
 import FoodTruckBoard from './pages/dashboard/FoodTruckBoard'
+import TruckQR from './pages/dashboard/TruckQR'
 import Checkout from './pages/dashboard/Checkout'
 import Loyalty from './pages/dashboard/Loyalty'
 import Settings from './pages/dashboard/Settings'
@@ -73,6 +74,7 @@ export default function App() {
         <Route index element={<Overview />} />
         <Route path="menu" element={<Menu />} />
         <Route path="tables" element={<Tables />} />
+        <Route path="qr" element={<TruckQR />} />
         <Route path="orders" element={<OrdersRoute />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="loyalty" element={<Loyalty />} />

@@ -29,6 +29,7 @@ const NAV = [
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat, restaurantOnly: true },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
+  { to: '/dashboard/qr', label: 'QR code', icon: QrCode, truckOnly: true },
   { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode, restaurantOnly: true },
   { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
@@ -42,7 +43,9 @@ export default function DashboardLayout() {
   const newOrders = useNewOrderCount(restaurant?.id)
 
   const isTruck = restaurant?.business_type === 'food_truck'
-  const nav = NAV.filter((item) => !(isTruck && item.restaurantOnly))
+  const nav = NAV.filter(
+    (item) => !(isTruck && item.restaurantOnly) && !(!isTruck && item.truckOnly),
+  )
 
   return (
     <div
