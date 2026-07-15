@@ -5,7 +5,6 @@ import {
   UtensilsCrossed,
   LayoutDashboard,
   ArrowRight,
-  Store,
   Receipt,
   Timer,
   ClipboardCheck,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui'
+import Logo from '../components/Logo'
 
 const efficiencyPoints = [
   {
@@ -174,9 +174,7 @@ export default function Landing() {
       <header className="sticky top-0 z-40 border-b border-stone-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <a href="#top" className="flex items-center gap-2 font-extrabold">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
-              <Store className="h-5 w-5" />
-            </span>
+            <Logo className="h-8 w-8" />
             TableServe
           </a>
           <nav className="hidden items-center gap-6 text-sm font-medium text-stone-600 md:flex">
@@ -646,9 +644,7 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-5 py-10 sm:flex-row">
           <div>
             <div className="flex items-center gap-2 font-extrabold">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand text-white">
-                <Store className="h-4 w-4" />
-              </span>
+              <Logo className="h-7 w-7" />
               TableServe
             </div>
             <p className="mt-2 text-xs text-stone-400">
