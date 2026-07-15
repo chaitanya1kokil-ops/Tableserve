@@ -122,24 +122,43 @@ const plans = [
   {
     tier: 'Starter',
     price: 59,
-    desc: 'Perfect for cafes & food trucks',
-    features: ['Up to 10 tables', 'Unlimited menu items', 'Live orders board', 'QR code generator', 'Email support'],
-    cta: 'Get started',
-  },
-  {
-    tier: 'Growth',
-    price: 149,
-    desc: 'For busy restaurants that mean business',
-    features: ['Up to 30 tables', 'Custom branding & logo', 'Kitchen display mode', 'Sales analytics dashboard', 'Priority support'],
-    cta: 'Start 14-day free trial',
-    featured: true,
+    desc: 'Everything one venue needs to take orders.',
+    features: [
+      'Up to 10 tables (or 1 food truck)',
+      'Unlimited menu, photos & modifiers',
+      'Live orders board + kitchen display',
+      'Checkout: cash/card, tips & split bills',
+      'Dine-in, takeout & staff orders',
+      'Email support',
+    ],
+    cta: 'Start free trial',
   },
   {
     tier: 'Pro',
-    price: 299,
-    desc: 'Multi-location & high-volume venues',
-    features: ['Unlimited tables', 'Multiple locations', 'Advanced analytics', 'White-label QR codes', 'Dedicated support'],
-    cta: 'Contact us',
+    price: 79,
+    desc: 'Everything in Starter, plus the growth engine.',
+    features: [
+      'Up to 40 tables',
+      'Loyalty & rewards program + email list',
+      'Full analytics & best-sellers',
+      'Custom branding & multi-brand menus',
+      'Priority support',
+    ],
+    cta: 'Start free trial',
+    featured: true,
+  },
+  {
+    tier: 'Premium',
+    price: 99,
+    desc: 'Everything in Pro, plus room to scale.',
+    features: [
+      'Unlimited tables & locations',
+      'Cross-location analytics',
+      'Dedicated support & onboarding',
+      'Early access to new features',
+      'White-label branding',
+    ],
+    cta: 'Start free trial',
   },
 ]
 
@@ -576,6 +595,17 @@ export default function Landing() {
             </div>
           ))}
         </Reveal>
+
+        <div className="mx-auto mt-8 max-w-2xl space-y-1.5 text-center text-sm text-stone-500">
+          <p>
+            <span className="font-semibold text-stone-700">Running a food truck?</span> Flat $59/mo
+            with the rewards program included.
+          </p>
+          <p className="text-xs text-stone-400">
+            Prices in CAD. Your subscription is separate from card-processing fees — customers pay
+            on your own terminal, and we never take a cut of your sales.
+          </p>
+        </div>
       </section>
 
       {/* ------------------------------------------------------------ cta -- */}
