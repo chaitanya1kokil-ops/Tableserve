@@ -83,6 +83,23 @@
   .tk .it{font-size:11px;color:#555;margin-top:3px}
   .celebrate{padding:64px 20px;text-align:center;color:#18181B}
   .celebrate .big{font-size:52px}
+  /* restaurant tablet (staff/kitchen side) */
+  .tablet{flex:1;min-width:330px;max-width:500px;align-self:center;background:#0f0f12;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 40px 90px rgba(0,0,0,.5)}
+  .tabhead{background:#fff;color:#18181B;padding:12px 16px;font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #eee}
+  .livedot{width:8px;height:8px;border-radius:50%;background:#10b981;-webkit-box-shadow:0 0 0 4px rgba(16,185,129,.2);box-shadow:0 0 0 4px rgba(16,185,129,.2)}
+  .tbody{background:#faf6ef;padding:16px;min-height:420px;position:relative}
+  .bwait{color:#9a9a93;font-size:13px;text-align:center;padding:44px 0}
+  .btoast{position:absolute;top:12px;left:16px;right:16px;background:#18181B;color:#fff;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;opacity:0;-webkit-transform:translateY(-8px);transform:translateY(-8px);-webkit-transition:all .35s;transition:all .35s;z-index:5}
+  .btoast.show{opacity:1;-webkit-transform:none;transform:none}
+  .tk2{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:12px;-webkit-transition:opacity .4s;transition:opacity .4s}
+  .tk2.dim{opacity:.5}
+  .bar2{height:6px;background:#3b82f6;-webkit-transition:background .4s;transition:background .4s}
+  .tkrow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 14px}
+  .tkname{font-weight:800;color:#18181B;font-size:15px}
+  .tkitems{font-size:12px;color:#666;margin-top:3px}
+  .chip{font-size:11px;font-weight:800;padding:4px 10px;border-radius:100px;background:#dbeafe;color:#1d4ed8;white-space:nowrap;-webkit-transition:all .3s;transition:all .3s}
+  .tkbtn{margin:0 14px 14px;display:block;width:calc(100% - 28px);border:none;border-radius:10px;padding:11px;color:#fff;font-weight:800;font-size:13px;background:#2563eb;-webkit-transition:background .3s;transition:background .3s;cursor:default}
+  .tkbtn.hide{display:none}
   /* video slot */
   .videoslot{flex:1;min-width:320px;border:2px dashed var(--line);border-radius:20px;background:var(--panel);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;min-height:430px}
@@ -188,15 +205,16 @@
     </div>
   </section>
 
-  <!-- 5 LIVE DEMO + VIDEO -->
+  <!-- 5 LIVE DEMO -->
   <section class="slide">
-    <div class="eyebrow">See it in action · auto-playing</div>
-    <h2 style="margin-bottom:8px">The whole flow, start to finish</h2>
-    <div class="row" style="align-items:stretch;gap:34px;margin-top:24px">
+    <div class="eyebrow">See it in action · live simulation</div>
+    <h2 style="margin-bottom:6px">Scan → order → kitchen → served</h2>
+    <p class="muted" style="font-size:14px;margin-bottom:16px">The guest's phone and your restaurant screen, in sync — playing automatically.</p>
+    <div class="row" style="align-items:center;gap:34px">
+      <!-- GUEST PHONE -->
       <div class="phone">
         <div class="notch"></div>
         <div class="screen">
-          <!-- menu -->
           <div class="scr show" id="dMenu">
             <div class="scrhead"><div class="sub">Indian</div><div class="nm">Royal Paan</div><span class="cartbadge" id="dCart" style="display:none">1</span></div>
             <div class="mi" id="dItem"><div class="img">🍛</div><div class="t">Butter Chicken</div><div class="p">$19</div></div>
@@ -204,37 +222,48 @@
             <div class="mi"><div class="img">🥤</div><div class="t">Mango Lassi</div><div class="p">$7</div></div>
             <div class="cta" id="dCta">Place order · $31</div>
           </div>
-          <!-- kitchen -->
-          <div class="scr" id="dKitchen">
-            <div class="board">
-              <div class="bh">🍳 Live orders</div>
-              <div class="tk" id="dTicket"><div class="bar" style="background:#3b82f6"></div><div class="nm" id="dTnm">Table 4 · New</div><div class="it">2× Butter Chicken · Garlic Naan · Lassi</div></div>
-              <div class="tk"><div class="bar" style="background:#f59e0b"></div><div class="nm">Table 7 · Preparing</div><div class="it">Chilli Paneer · Jeera Rice</div></div>
+          <div class="scr" id="dStatus">
+            <div class="scrhead"><div class="sub">Table 4</div><div class="nm">Your order</div></div>
+            <div style="padding:34px 18px;text-align:center">
+              <div id="dStatusIcon" style="font-size:44px">👨‍🍳</div>
+              <div id="dStatusText" style="font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:#18181B;margin-top:14px">Preparing your food…</div>
             </div>
           </div>
-          <!-- reward -->
           <div class="scr" id="dReward">
             <div class="celebrate">
               <div class="big">🎉</div>
-              <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-top:10px">Visit #10 — free item!</div>
+              <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-top:10px">Served — enjoy!</div>
               <div style="margin-top:14px;background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:12px;display:inline-flex;gap:10px;align-items:center">
                 <span style="font-size:26px">🍨</span>
-                <span style="font-weight:700;color:#18181B;font-size:14px">Mango Kulfi&nbsp;·&nbsp;<span style="color:#16a34a">FREE</span></span>
+                <span style="font-weight:700;color:#18181B;font-size:14px">Visit #10 · Kulfi <span style="color:#16a34a">FREE</span></span>
               </div>
-              <p style="font-size:12px;color:#666;margin-top:14px">Rewards bring guests back automatically.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="videoslot">
-        <div class="playbtn"></div>
-        <div style="font-weight:700">Add your real screen recording</div>
-        <p class="muted" style="font-size:13px;max-width:340px">The phone on the left auto-plays the flow. To show a real capture of tableserve.ca, save a clip as <b>demo.mp4</b> next to this file and uncomment the &lt;video&gt; line inside.</p>
-        <!-- Add your recording, then uncomment:
-        <video controls playsinline poster="assets/hero_restaurant_qr.png"><source src="demo.mp4" type="video/mp4"></video> -->
+      <!-- RESTAURANT TABLET (staff / kitchen) -->
+      <div class="tablet">
+        <div class="tabhead"><span class="livedot"></span> Live orders · Royal Paan</div>
+        <div class="tbody">
+          <div class="btoast" id="bToast">🔔 New order — Table 4</div>
+          <div class="bwait" id="bWaiting">Waiting for orders…</div>
+          <div class="tk2" id="bTicket" style="opacity:0">
+            <div class="bar2" id="bBar"></div>
+            <div class="tkrow">
+              <div><div class="tkname">Table 4</div><div class="tkitems">2× Butter Chicken · Garlic Naan · Lassi</div></div>
+              <span class="chip" id="bChip">New</span>
+            </div>
+            <button class="tkbtn" id="bBtn">Start preparing</button>
+          </div>
+          <div class="tk2 dim">
+            <div class="bar2" style="background:#f59e0b"></div>
+            <div class="tkrow"><div><div class="tkname">Table 7</div><div class="tkitems">Chilli Paneer · Jeera Rice</div></div><span class="chip" style="background:#fef3c7;color:#b45309">Preparing</span></div>
+          </div>
+        </div>
       </div>
     </div>
+    <p class="muted" style="margin-top:16px;font-size:12px">Prefer a real screen recording of tableserve.ca? Save it as <b>demo.mp4</b> beside this file and add a &lt;video&gt; tag — but this live simulation needs nothing to run.</p>
   </section>
 
   <!-- 6 FEATURES -->
@@ -375,22 +404,48 @@
   document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;});
   document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx<0?next():prev();}});
 
-  // Auto-playing flow "video": menu -> add -> order -> kitchen new -> ready -> reward
-  var step=0;
-  var mMenu=document.getElementById('dMenu'), mKit=document.getElementById('dKitchen'), mRew=document.getElementById('dReward');
-  var mItem=document.getElementById('dItem'), mCart=document.getElementById('dCart'), mCta=document.getElementById('dCta');
-  var mTnm=document.getElementById('dTnm'), mBar=document.querySelector('#dTicket .bar');
-  function showScr(el){[mMenu,mKit,mRew].forEach(function(s){s.classList.remove('show');});el.classList.add('show');}
+  // Synced live flow: guest phone (left) + restaurant board (right).
+  var G=function(id){return document.getElementById(id);};
+  function showScr(id){['dMenu','dStatus','dReward'].forEach(function(x){G(x).classList.toggle('show',x===id);});}
+  function setStatus(icon,text){G('dStatusIcon').textContent=icon;G('dStatusText').textContent=text;}
+  function toast(msg){var t=G('bToast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1600);}
+  var CHIP={
+    new:{t:'New',cbg:'#dbeafe',cfg:'#1d4ed8',bar:'#3b82f6',btn:'Start preparing',bbg:'#2563eb'},
+    preparing:{t:'Preparing',cbg:'#fef3c7',cfg:'#b45309',bar:'#f59e0b',btn:'Mark ready',bbg:'#f59e0b'},
+    ready:{t:'Ready 🔔',cbg:'#d1fae5',cfg:'#047857',bar:'#10b981',btn:'Mark served',bbg:'#059669'},
+    served:{t:'Served ✓',cbg:'#e7e5e4',cfg:'#57534e',bar:'#a8a29e',btn:'',bbg:''}
+  };
+  function board(state){
+    var ticket=G('bTicket'), wait=G('bWaiting');
+    if(state==='idle'){ticket.style.opacity='0';ticket.classList.remove('dim');wait.style.display='block';return;}
+    wait.style.display='none';ticket.style.opacity='1';
+    var m=CHIP[state], chip=G('bChip'), bar=G('bBar'), btn=G('bBtn');
+    chip.textContent=m.t;chip.style.background=m.cbg;chip.style.color=m.cfg;bar.style.background=m.bar;
+    if(m.btn){btn.classList.remove('hide');btn.textContent=m.btn;btn.style.background=m.bbg;}else{btn.classList.add('hide');}
+    ticket.classList.toggle('dim',state==='served');
+  }
+  var step=-1;
   function flow(){
     step=(step+1)%6;
-    if(step===0){showScr(mMenu);mItem.classList.remove('hl');mCart.style.display='none';mCta.classList.remove('pulse');mCta.textContent='Place order · $31';}
-    else if(step===1){mItem.classList.add('hl');mCart.style.display='inline-block';}       // add item
-    else if(step===2){mCta.classList.add('pulse');mCta.textContent='Paid ✓ · sending…';}    // order+pay
-    else if(step===3){showScr(mKit);mTnm.textContent='Table 4 · New';mBar.style.background='#3b82f6';} // kitchen new
-    else if(step===4){mTnm.textContent='Table 4 · Ready 🔔';mBar.style.background='#10b981';}          // ready
-    else if(step===5){showScr(mRew);}                                                       // reward
+    switch(step){
+      case 0: // guest browsing
+        showScr('dMenu');G('dItem').classList.remove('hl');G('dCart').style.display='none';
+        G('dCta').classList.remove('pulse');G('dCta').textContent='Place order · $31';board('idle');break;
+      case 1: // add item
+        G('dItem').classList.add('hl');G('dCart').style.display='inline-block';break;
+      case 2: // pay + order lands on the restaurant board
+        G('dCta').classList.add('pulse');G('dCta').textContent='Paid ✓ · sent to kitchen';
+        board('new');toast('🔔 New order — Table 4');break;
+      case 3: // kitchen starts preparing
+        showScr('dStatus');setStatus('👨‍🍳','Preparing your food…');board('preparing');break;
+      case 4: // kitchen marks ready
+        setStatus('🔔','Ready — bringing it over!');board('ready');toast('🔔 Order ready — Table 4');break;
+      case 5: // staff serves
+        showScr('dReward');board('served');break;
+    }
   }
-  setInterval(flow,2100);
+  flow();
+  setInterval(flow,2200);
 </script>
 </body>
 </html>
