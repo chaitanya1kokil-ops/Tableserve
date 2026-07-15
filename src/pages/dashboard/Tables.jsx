@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
 import { tableUrl } from '../../lib/format'
+import { tableLimit, PLANS } from '../../lib/constants'
 import {
   Button,
   Card,
@@ -41,6 +42,20 @@ export default function Tables() {
     load()
   }, [load])
 
+  const limit = tableLimit(restaurant) // null = unlimited
+  const remaining = limit == null ? Infinity : Math.max(limit - tables.length, 0)
+  const atCap = remaining <= 0
+
+  const openAdd = () => {
+    if (atCap) {
+      toast.error(
+        `Your ${PLANS[restaurant.plan]?.label || 'plan'} allows up to ${limit} tables. Upgrade to add more.`,
+      )
+      return
+    }
+    setAddModal(true)
+  }
+
   const deleteTable = async (t) => {
     if (!confirm(`Delete "${t.label}"? Its QR code will stop working.`)) return
     const { error } = await supabase.from('tables').delete().eq('id', t.id)
@@ -72,7 +87,9 @@ export default function Tables() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tables &amp; QR codes</h1>
           <p className="text-sm text-gray-500">
-            {tables.length} {tables.length === 1 ? 'table' : 'tables'} · customers scan to order
+            {tables.length}
+            {limit != null ? ` / ${limit}` : ''} {tables.length === 1 ? 'table' : 'tables'} ·
+            customers scan to order
           </p>
         </div>
         <div className="flex gap-2">
@@ -81,11 +98,19 @@ export default function Tables() {
               <Printer className="h-4 w-4" /> Print all
             </Button>
           )}
-          <Button size="sm" onClick={() => setAddModal(true)}>
+          <Button size="sm" onClick={openAdd}>
             <Plus className="h-4 w-4" /> Add tables
           </Button>
         </div>
       </div>
+
+      {atCap && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+          <QrCode className="h-4 w-4 flex-shrink-0" />
+          You’ve reached the {PLANS[restaurant.plan]?.label || 'plan'} limit of {limit} tables.
+          Upgrade your plan to add more.
+        </div>
+      )}
 
       {tables.length === 0 ? (
         <EmptyState
@@ -93,7 +118,7 @@ export default function Tables() {
           title="No tables yet"
           description="Create your tables to generate a unique QR code for each. Print them and place them on the tables."
           action={
-            <Button onClick={() => setAddModal(true)}>
+            <Button onClick={openAdd}>
               <Plus className="h-4 w-4" /> Add tables
             </Button>
           }
@@ -116,6 +141,7 @@ export default function Tables() {
         <AddTablesModal
           rid={rid}
           existingCount={tables.length}
+          remaining={remaining}
           onClose={() => setAddModal(false)}
           onSaved={() => {
             setAddModal(false)
@@ -213,7 +239,7 @@ function TableCard({ table, restaurantId, onRename, onDelete }) {
   )
 }
 
-function AddTablesModal({ rid, existingCount, onClose, onSaved }) {
+function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onSaved }) {
   const toast = useToast()
   const [count, setCount] = useState(1)
   const [prefix, setPrefix] = useState('Table')
@@ -222,6 +248,10 @@ function AddTablesModal({ rid, existingCount, onClose, onSaved }) {
   const save = async () => {
     const n = parseInt(count, 10)
     if (isNaN(n) || n < 1 || n > 100) return toast.error('Enter a number between 1 and 100.')
+    if (n > remaining)
+      return toast.error(
+        `Your plan has room for ${remaining} more ${remaining === 1 ? 'table' : 'tables'}. Upgrade to add more.`,
+      )
     setSaving(true)
     const rows = Array.from({ length: n }, (_, i) => ({
       restaurant_id: rid,

@@ -97,3 +97,23 @@ export const DAYS = [
   { key: 'sat', label: 'Saturday' },
   { key: 'sun', label: 'Sunday' },
 ]
+
+// ---------------------------------------------------------------------------
+// Subscription plans — single source of truth for pricing AND feature gates.
+// Kept in sync with the DB (0016_plan_limits.sql) and the landing page.
+// Trial unlocks everything so new signups experience the full product.
+// ---------------------------------------------------------------------------
+export const PLANS = {
+  trial:   { label: 'Trial',   price: 0,  color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500',   maxTables: null, loyalty: true,  multiBrand: true },
+  starter: { label: 'Starter', price: 59, color: 'bg-stone-200 text-stone-700',   dot: 'bg-stone-500',  maxTables: 10,   loyalty: false, multiBrand: false },
+  pro:     { label: 'Pro',     price: 79, color: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-500',  maxTables: 40,   loyalty: true,  multiBrand: true },
+  premium: { label: 'Premium', price: 99, color: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500', maxTables: null, loyalty: true,  multiBrand: true },
+}
+
+const planFor = (r) => PLANS[r?.plan] || PLANS.trial
+
+// Food trucks always get loyalty (their $59 plan includes it — trucks live on
+// repeat customers); otherwise it follows the plan.
+export const allowsLoyalty = (r) => planFor(r).loyalty || r?.business_type === 'food_truck'
+export const allowsMultiBrand = (r) => planFor(r).multiBrand
+export const tableLimit = (r) => planFor(r).maxTables // null = unlimited

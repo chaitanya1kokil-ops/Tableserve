@@ -22,17 +22,10 @@ import { supabase, imageUrl } from '../../lib/supabase'
 import { formatCurrency, formatDate, timeAgo } from '../../lib/format'
 import { RESTAURANT_STATUS } from '../../lib/constants'
 import { Button, Badge, Input, FullPageSpinner, EmptyState } from '../../components/ui'
+import { PLANS } from '../../lib/constants'
 
 const STATUS_FILTERS = ['all', 'pending', 'active', 'suspended']
 const DAY_MS = 24 * 60 * 60 * 1000
-
-// Subscription tiers — must match the check constraint on restaurants.plan.
-export const PLANS = {
-  trial: { label: 'Trial', price: 0, color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' },
-  starter: { label: 'Starter', price: 59, color: 'bg-stone-200 text-stone-700', dot: 'bg-stone-500' },
-  growth: { label: 'Growth', price: 149, color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
-  pro: { label: 'Pro', price: 299, color: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500' },
-}
 
 // Client health from their most recent order.
 function healthOf(lastOrderAt) {

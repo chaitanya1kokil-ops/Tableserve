@@ -25,6 +25,7 @@ import {
 } from '../../components/ui'
 import ImageUpload from '../../components/ImageUpload'
 import DietMark from '../../components/DietMark'
+import { allowsMultiBrand } from '../../lib/constants'
 
 export default function Menu() {
   const { restaurant } = useAuth()
@@ -218,6 +219,7 @@ export default function Menu() {
           existing={catModal.id ? catModal : null}
           defaultBrand={catModal.brand || ''}
           knownBrands={brands}
+          canBrand={allowsMultiBrand(restaurant)}
           nextSort={categories.length}
           onClose={() => setCatModal(null)}
           onSaved={() => {
@@ -363,7 +365,7 @@ function ItemCard({ item, optionCount, currency, onEdit, onDelete, onToggle }) {
   )
 }
 
-function CategoryModal({ rid, existing, defaultBrand, knownBrands = [], nextSort, onClose, onSaved }) {
+function CategoryModal({ rid, existing, defaultBrand, knownBrands = [], canBrand = true, nextSort, onClose, onSaved }) {
   const toast = useToast()
   const [name, setName] = useState(existing?.name || '')
   const [brand, setBrand] = useState(existing?.brand ?? defaultBrand ?? '')
@@ -411,22 +413,24 @@ function CategoryModal({ rid, existing, defaultBrand, knownBrands = [], nextSort
             onKeyDown={(e) => e.key === 'Enter' && save()}
           />
         </Field>
-        <Field
-          label="Brand (optional)"
-          hint="Run two menus from one QR by grouping categories under brand names. Guests pick a brand first when 2+ exist."
-        >
-          <Input
-            list="menu-brand-suggestions"
-            value={brand}
-            onChange={(e) => setBrand(e.target.value)}
-            placeholder="e.g. Royal Paan"
-          />
-          <datalist id="menu-brand-suggestions">
-            {knownBrands.map((b) => (
-              <option key={b} value={b} />
-            ))}
-          </datalist>
-        </Field>
+        {(canBrand || existing?.brand) && (
+          <Field
+            label="Brand (optional)"
+            hint="Run two menus from one QR by grouping categories under brand names. Guests pick a brand first when 2+ exist. Available on Pro & Premium."
+          >
+            <Input
+              list="menu-brand-suggestions"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="e.g. Royal Paan"
+            />
+            <datalist id="menu-brand-suggestions">
+              {knownBrands.map((b) => (
+                <option key={b} value={b} />
+              ))}
+            </datalist>
+          </Field>
+        )}
       </div>
     </Modal>
   )

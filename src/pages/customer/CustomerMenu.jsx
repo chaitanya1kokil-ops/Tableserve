@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { Button, FullPageSpinner } from '../../components/ui'
 import DietMark from '../../components/DietMark'
+import { allowsLoyalty } from '../../lib/constants'
 
 export default function CustomerMenu() {
   const { restaurantId, tableId } = useParams()
@@ -135,7 +136,7 @@ export default function CustomerMenu() {
   // Single-brand restaurants with loyalty enabled prompt right after the menu
   // loads (multi-brand ones prompt when the loyalty brand is picked).
   useEffect(() => {
-    if (loading || !restaurant?.loyalty_brand || loyaltyMember) return
+    if (loading || !restaurant?.loyalty_brand || !allowsLoyalty(restaurant) || loyaltyMember) return
     const hasBrands = new Set(categories.map((c) => c.brand).filter(Boolean)).size > 1
     if (!hasBrands) maybePromptLoyalty(restaurant.loyalty_brand)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,7 +200,7 @@ export default function CustomerMenu() {
       : grouped
 
   const maybePromptLoyalty = (brand) => {
-    if (!restaurant?.loyalty_brand) return
+    if (!restaurant?.loyalty_brand || !allowsLoyalty(restaurant)) return
     if (brand !== restaurant.loyalty_brand) return
     if (loyaltyMember) return
     try {
@@ -275,7 +276,7 @@ export default function CustomerMenu() {
         />
       ) : (
         <>
-          {restaurant.loyalty_brand && (!multiBrand || brandChoice === restaurant.loyalty_brand) && (
+          {restaurant.loyalty_brand && allowsLoyalty(restaurant) && (!multiBrand || brandChoice === restaurant.loyalty_brand) && (
             <div className="mx-auto max-w-2xl px-4 pt-3">
               {loyaltyMember ? (
                 <div className="relative overflow-hidden rounded-2xl bg-stone-900 px-4 py-2.5 text-white">
@@ -394,7 +395,7 @@ export default function CustomerMenu() {
           accent={accent}
           taxRate={Number(restaurant.tax_rate) || 0}
           loyaltyMemberId={loyaltyMember?.id || null}
-          loyaltyEnabled={Boolean(restaurant.loyalty_brand)}
+          loyaltyEnabled={Boolean(restaurant.loyalty_brand) && allowsLoyalty(restaurant)}
           loyaltyName={loyaltyMember?.name || ''}
           onJoinLoyalty={() => setLoyaltyOpen(true)}
           isTruck={isTruck}

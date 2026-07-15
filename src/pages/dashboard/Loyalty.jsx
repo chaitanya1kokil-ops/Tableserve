@@ -5,6 +5,7 @@ import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatDate } from '../../lib/format'
 import { Button, Badge, Input, FullPageSpinner, EmptyState } from '../../components/ui'
+import { allowsLoyalty, PLANS } from '../../lib/constants'
 
 const rewardsAvailable = (m) => Math.max(Math.floor((m.visits || 0) / 10) - (m.rewards_redeemed || 0), 0)
 
@@ -92,6 +93,35 @@ export default function Loyalty() {
   }
 
   if (loading) return <FullPageSpinner label="Loading members…" />
+
+  // Loyalty is a Pro/Premium feature (and always on for food trucks).
+  if (!allowsLoyalty(restaurant)) {
+    return (
+      <div className="pb-8">
+        <div className="mb-5">
+          <h1 className="font-display text-3xl font-semibold text-stone-900">Loyalty</h1>
+          <p className="mt-1 text-sm text-stone-500">Rewards keep your guests coming back.</p>
+        </div>
+        <div className="relative overflow-hidden rounded-3xl bg-stone-900 p-8 text-center text-white">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'radial-gradient(120% 90% at 50% 0%, rgba(180,83,9,.5), transparent 60%)' }}
+          />
+          <div className="relative mx-auto max-w-md">
+            <span className="inline-grid h-12 w-12 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/20">
+              <Star className="h-6 w-6 text-amber-300" />
+            </span>
+            <h2 className="mt-4 font-display text-2xl font-semibold">Rewards is a Pro feature</h2>
+            <p className="mt-2 text-sm text-white/70">
+              Run a “every 10th visit is free” program, collect a customer email list, and bring
+              guests back. Available on the <strong>Pro</strong> ({PLANS.pro.price}/mo) and{' '}
+              <strong>Premium</strong> plans. Contact us to upgrade.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const filtered = members.filter(
     (m) =>
