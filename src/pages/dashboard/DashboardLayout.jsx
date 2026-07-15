@@ -49,11 +49,11 @@ export default function DashboardLayout() {
 
   return (
     <div
-      className="min-h-[100dvh] bg-[#faf6ef] lg:flex"
+      className="min-h-[100dvh] bg-[#faf6ef] md:flex"
       style={{ '--brand': restaurant?.accent_color || '#b45309' }}
     >
-      {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-col border-r border-gray-100 bg-white lg:flex">
+      {/* Sidebar — shown from tablet width up (iPad portrait included) */}
+      <aside className="hidden w-60 flex-col border-r border-gray-100 bg-white md:flex lg:w-64">
         <div className="flex items-center gap-2 px-5 py-5 font-extrabold text-gray-900">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
             <Store className="h-5 w-5" />
@@ -85,8 +85,8 @@ export default function DashboardLayout() {
 
       {/* Main */}
       <div className="flex flex-1 flex-col">
-        {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+        {/* Mobile header (phones only) */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
           <div className="flex items-center gap-2 font-bold text-gray-900">
             {restaurant?.logo_url ? (
               <img src={imageUrl(restaurant.logo_url)} alt="" className="h-7 w-7 rounded-lg object-cover" />
@@ -103,8 +103,8 @@ export default function DashboardLayout() {
         </header>
 
         {calls.length > 0 && (
-          <div className="z-20 border-b border-orange-200 bg-orange-50 lg:sticky lg:top-0">
-            <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 lg:px-8">
+          <div className="z-20 border-b border-orange-200 bg-orange-50 md:sticky md:top-0">
+            <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 md:px-8">
               <span className="flex flex-shrink-0 items-center gap-2 text-sm font-semibold text-orange-800">
                 <Bell className="h-5 w-5 animate-bounce text-orange-500" />
                 <span className="hidden sm:inline">
@@ -137,15 +137,15 @@ export default function DashboardLayout() {
           </div>
         )}
 
-        <main className="flex-1 px-4 pb-24 pt-5 lg:px-8 lg:pb-8">
+        <main className="flex-1 px-4 pb-24 pt-5 md:px-8 md:pb-8">
           <div className="mx-auto max-w-5xl">
             <Outlet context={{ muted, toggleMute }} />
           </div>
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom lg:hidden">
+      {/* Bottom nav (phones only) */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom md:hidden">
         {nav.filter((item) => !item.desktopOnly).map((item) => (
           <NavLink
             key={item.to}
