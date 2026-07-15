@@ -2,6 +2,13 @@
 // Each status carries the full color treatment used across the app:
 // `color` chip, `dot`, `bar` (card top strip) and `btn` (advance-action button).
 export const ORDER_STATUSES = {
+  awaiting_payment: {
+    label: 'Awaiting payment',
+    color: 'bg-orange-100 text-orange-700',
+    dot: 'bg-orange-500',
+    bar: 'bg-orange-400',
+    btn: 'bg-orange-600 hover:bg-orange-700',
+  },
   new: {
     label: 'New',
     color: 'bg-blue-100 text-blue-700',

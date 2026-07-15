@@ -21,14 +21,16 @@ import { useServerCalls } from '../../hooks/useServerCalls'
 import { useOrderSounds } from '../../hooks/useOrderSounds'
 import { useNewOrderCount } from '../../hooks/useNewOrderCount'
 
+// `restaurantOnly` items are hidden for food trucks (they pay online, have no
+// tables, and use a single combined orders board instead of a kitchen display).
 const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
-  { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet },
-  { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
+  { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
+  { to: '/kitchen', label: 'Kitchen', icon: ChefHat, restaurantOnly: true },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true },
-  { to: '/dashboard/tables', label: 'Tables', icon: QrCode },
+  { to: '/dashboard/tables', label: 'Tables', icon: QrCode, restaurantOnly: true },
   { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
@@ -38,6 +40,9 @@ export default function DashboardLayout() {
   const { calls, resolve, muted, toggleMute } = useServerCalls(restaurant?.id)
   useOrderSounds(restaurant?.id, muted)
   const newOrders = useNewOrderCount(restaurant?.id)
+
+  const isTruck = restaurant?.business_type === 'food_truck'
+  const nav = NAV.filter((item) => !(isTruck && item.restaurantOnly))
 
   return (
     <div
@@ -56,7 +61,7 @@ export default function DashboardLayout() {
         <RestaurantBadge restaurant={restaurant} />
 
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <SideLink
               key={item.to}
               item={item}
@@ -138,7 +143,7 @@ export default function DashboardLayout() {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom lg:hidden">
-        {NAV.filter((item) => !item.desktopOnly).map((item) => (
+        {nav.filter((item) => !item.desktopOnly).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

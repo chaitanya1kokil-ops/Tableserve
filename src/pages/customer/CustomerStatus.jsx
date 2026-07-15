@@ -64,18 +64,20 @@ export default function CustomerStatus() {
   }, [restaurantId, toast])
 
   const load = useCallback(async () => {
+    // Restaurant: orders for this table, reset once the bill is paid at checkout.
+    // Food truck (no table): the guest's own orders (RLS-scoped), tracked from
+    // 'awaiting payment' right through until they're collected.
+    let q = supabase
+      .from('orders')
+      .select('*, items:order_items(*)')
+      .eq('restaurant_id', restaurantId)
+      .not('status', 'in', '(completed,cancelled)')
+    q = tableId
+      ? q.eq('table_id', tableId).is('paid_at', null)
+      : q.is('table_id', null)
     const [{ data: rest }, { data: ords }] = await Promise.all([
       supabase.from('restaurants').select('*').eq('id', restaurantId).maybeSingle(),
-      supabase
-        .from('orders')
-        .select('*, items:order_items(*)')
-        .eq('restaurant_id', restaurantId)
-        .eq('table_id', tableId)
-        // Paid/closed orders are history: once the bill is settled at checkout,
-        // the guest's view resets so the table starts a fresh session.
-        .is('paid_at', null)
-        .neq('status', 'completed')
-        .order('created_at', { ascending: false }),
+      q.order('created_at', { ascending: false }),
     ])
     setRestaurant(rest || null)
     setOrders(ords || [])
@@ -96,11 +98,13 @@ export default function CustomerStatus() {
   useEffect(() => {
     if (!ready) return
     load()
+    // Scope by restaurant (works with or without a table); RLS limits the
+    // rows to the guest's own orders either way.
     const channel = supabase
-      .channel(`my-orders-${tableId}`)
+      .channel(`my-orders-${restaurantId}-${tableId || 'truck'}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `table_id=eq.${tableId}` },
+        { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
         scheduleReload,
       )
       .subscribe()
@@ -108,10 +112,12 @@ export default function CustomerStatus() {
       clearTimeout(reloadTimer.current)
       supabase.removeChannel(channel)
     }
-  }, [ready, tableId, load, scheduleReload])
+  }, [ready, restaurantId, tableId, load, scheduleReload])
 
   const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
+  const isTruck = !tableId // truck status route carries no table
+  const menuPath = tableId ? `/r/${restaurantId}/t/${tableId}` : `/r/${restaurantId}`
 
   const requestBill = async () => {
     setRequesting(true)
@@ -175,7 +181,7 @@ export default function CustomerStatus() {
             <Button
               className="mt-4"
               style={{ backgroundColor: accent }}
-              onClick={() => navigate(`/r/${restaurantId}/t/${tableId}`)}
+              onClick={() => navigate(menuPath)}
             >
               View menu
             </Button>
@@ -191,7 +197,7 @@ export default function CustomerStatus() {
           <div className="mx-auto max-w-2xl px-4 py-3">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="text-gray-500">
-                Table total
+                {isTruck ? 'Order total' : 'Table total'}
                 {sessionTax > 0 && (
                   <span className="block text-xs text-gray-400">
                     incl. {formatCurrency(sessionTax, currency)} tax
@@ -202,25 +208,28 @@ export default function CustomerStatus() {
                 {formatCurrency(sessionTotal, currency)}
               </span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => navigate(`/r/${restaurantId}/t/${tableId}`)}
-              >
-                <Plus className="h-4 w-4" /> Add items
+            {isTruck ? (
+              /* Food trucks pay online per order — no shared tab or bill request. */
+              <Button variant="outline" className="w-full" onClick={() => navigate(menuPath)}>
+                <Plus className="h-4 w-4" /> Order more
               </Button>
-              <Button
-                className="flex-1"
-                style={{ backgroundColor: accent }}
-                loading={requesting}
-                disabled={!hasOpen || allBilled}
-                onClick={requestBill}
-              >
-                <Receipt className="h-4 w-4" />
-                {allBilled ? 'Bill requested' : 'Request bill'}
-              </Button>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => navigate(menuPath)}>
+                  <Plus className="h-4 w-4" /> Add items
+                </Button>
+                <Button
+                  className="flex-1"
+                  style={{ backgroundColor: accent }}
+                  loading={requesting}
+                  disabled={!hasOpen || allBilled}
+                  onClick={requestBill}
+                >
+                  <Receipt className="h-4 w-4" />
+                  {allBilled ? 'Bill requested' : 'Request bill'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

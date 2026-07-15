@@ -143,7 +143,9 @@ export default function CustomerMenu() {
 
   const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
-  const canOrder = Boolean(tableId) && restaurant?.status === 'active'
+  const isTruck = restaurant?.business_type === 'food_truck'
+  // Trucks order from one QR (no table); restaurants need a scanned table.
+  const canOrder = (Boolean(tableId) || isTruck) && restaurant?.status === 'active'
 
   const cartCount = cart.reduce((n, l) => n + l.quantity, 0)
   const cartTotal = cart.reduce((s, l) => s + l.lineTotal, 0)
@@ -242,11 +244,15 @@ export default function CustomerMenu() {
         calling={calling}
         onCall={callServer}
         onViewOrders={
-          tableId ? () => navigate(`/r/${restaurantId}/t/${tableId}/status`) : null
+          tableId
+            ? () => navigate(`/r/${restaurantId}/t/${tableId}/status`)
+            : isTruck
+              ? () => navigate(`/r/${restaurantId}/status`)
+              : null
         }
       />
 
-      {!tableId && (
+      {!tableId && !isTruck && (
         <div className="mx-auto max-w-2xl px-4 pt-3">
           <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -389,7 +395,9 @@ export default function CustomerMenu() {
           taxRate={Number(restaurant.tax_rate) || 0}
           loyaltyMemberId={loyaltyMember?.id || null}
           loyaltyEnabled={Boolean(restaurant.loyalty_brand)}
+          loyaltyName={loyaltyMember?.name || ''}
           onJoinLoyalty={() => setLoyaltyOpen(true)}
+          isTruck={isTruck}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
@@ -397,7 +405,7 @@ export default function CustomerMenu() {
             setCart([])
             setCartOpen(false)
             afterOrderLoyalty()
-            navigate(`/r/${restaurantId}/t/${tableId}/status`)
+            navigate(tableId ? `/r/${restaurantId}/t/${tableId}/status` : `/r/${restaurantId}/status`)
           }}
         />
       )}
@@ -790,10 +798,11 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 }
 
 /* ----------------------------------------------------------- cart sheet --- */
-function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, onJoinLoyalty, restaurantId, tableId, onClose, onPlaced }) {
+function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, loyaltyName, onJoinLoyalty, isTruck, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
   const [notes, setNotes] = useState('')
-  const [orderType, setOrderType] = useState('dine_in')
+  const [orderType, setOrderType] = useState(isTruck ? 'takeout' : 'dine_in')
+  const [customerName, setCustomerName] = useState(loyaltyName || '')
   const [placing, setPlacing] = useState(false)
 
   const subtotal = cart.reduce((s, l) => s + l.lineTotal, 0)
@@ -814,6 +823,10 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
 
   const placeOrder = async () => {
     if (cart.length === 0) return
+    if (isTruck && !customerName.trim()) {
+      toast.error('Please enter your name so we can call you.')
+      return
+    }
     setPlacing(true)
     const payload = cart.map((l) => ({
       menu_item_id: l.itemId,
@@ -834,13 +847,16 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
       p_notes: notes.trim() || null,
       p_order_type: orderType,
       p_loyalty_member_id: loyaltyMemberId,
+      p_customer_name: isTruck ? customerName.trim() : null,
     })
     setPlacing(false)
     if (error) {
       toast.error(error.message || 'Could not place order.')
       return
     }
-    toast.success('Order placed! 🎉')
+    // TODO(payments): for trucks, redirect to Stripe payment here; the order is
+    // created 'awaiting_payment' and only reaches the kitchen once paid.
+    toast.success(isTruck ? 'Order placed — pay to send it to the kitchen.' : 'Order placed! 🎉')
     onPlaced()
   }
 
@@ -860,30 +876,45 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
             <p className="py-10 text-center text-sm text-gray-400">Your cart is empty.</p>
           ) : (
             <div className="space-y-3">
-              {/* Dine-in / takeout choice */}
-              <div className="grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1">
-                {[
-                  ['dine_in', 'Dine-in', UtensilsCrossed],
-                  ['takeout', 'Takeout', ShoppingBag],
-                ].map(([key, label, Icon]) => (
-                  <button
-                    key={key}
-                    onClick={() => setOrderType(key)}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition ${
-                      orderType === key
-                        ? 'bg-white text-stone-900 shadow-sm'
-                        : 'text-stone-500'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" style={orderType === key ? { color: accent } : undefined} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {orderType === 'takeout' && (
-                <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  Packed to go — pick it up at the counter when it’s ready.
-                </p>
+              {isTruck ? (
+                /* Food truck: order by name, collected when called. */
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-stone-700">
+                    Your name
+                  </label>
+                  <input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="We’ll call this when it’s ready"
+                    className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900"
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Dine-in / takeout choice */}
+                  <div className="grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1">
+                    {[
+                      ['dine_in', 'Dine-in', UtensilsCrossed],
+                      ['takeout', 'Takeout', ShoppingBag],
+                    ].map(([key, label, Icon]) => (
+                      <button
+                        key={key}
+                        onClick={() => setOrderType(key)}
+                        className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition ${
+                          orderType === key ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" style={orderType === key ? { color: accent } : undefined} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {orderType === 'takeout' && (
+                    <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Packed to go — pick it up at the counter when it’s ready.
+                    </p>
+                  )}
+                </>
               )}
               {loyaltyEnabled && !loyaltyMemberId && (
                 <button
@@ -973,7 +1004,7 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
               className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-bold text-white disabled:opacity-60"
               style={{ backgroundColor: accent }}
             >
-              {placing ? 'Placing order…' : 'Place order'}
+              {placing ? 'Placing order…' : isTruck ? 'Continue to payment' : 'Place order'}
               {!placing && <ArrowRight className="h-5 w-5" />}
             </button>
           </div>

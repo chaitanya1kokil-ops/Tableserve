@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Store, Check } from 'lucide-react'
+import { Store, Check, Truck, UtensilsCrossed } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import { supabase, uploadImage } from '../lib/supabase'
@@ -21,7 +21,9 @@ export default function Onboarding() {
     phone: '',
     address: '',
     accent_color: ACCENT_PRESETS[0],
+    business_type: 'restaurant',
   })
+  const isTruck = form.business_type === 'food_truck'
   const [logoFile, setLogoFile] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -48,6 +50,7 @@ export default function Onboarding() {
           phone: form.phone.trim() || null,
           address: form.address.trim() || null,
           accent_color: form.accent_color,
+          business_type: form.business_type,
           status: 'active',
         })
         .select()
@@ -96,12 +99,51 @@ export default function Onboarding() {
       </header>
 
       <div className="mx-auto max-w-2xl px-5 py-8">
-        <h1 className="text-2xl font-bold text-gray-900">Set up your restaurant</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Set up your business</h1>
         <p className="mt-1 text-sm text-gray-500">
-          This is what customers see when they scan a table. You can change everything later.
+          This is what customers see when they scan your QR code. You can change everything later.
         </p>
 
         <form onSubmit={onSubmit} className="mt-7 space-y-6">
+          {/* Business type */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-gray-700">What are you?</p>
+            <p className="text-xs text-gray-500">This shapes how ordering works for your guests.</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {[
+                {
+                  key: 'restaurant',
+                  icon: UtensilsCrossed,
+                  title: 'Restaurant',
+                  desc: 'Table QR codes, dine-in ordering, pay at the end.',
+                },
+                {
+                  key: 'food_truck',
+                  icon: Truck,
+                  title: 'Food truck',
+                  desc: 'One QR, order by name, pay upfront, collect when ready.',
+                },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setForm({ ...form, business_type: opt.key })}
+                  className={`rounded-xl border-2 p-4 text-left transition ${
+                    form.business_type === opt.key
+                      ? 'border-brand bg-brand/5'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <opt.icon
+                    className={`h-6 w-6 ${form.business_type === opt.key ? 'text-brand' : 'text-gray-400'}`}
+                  />
+                  <p className="mt-2 font-bold text-gray-900">{opt.title}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="grid gap-5 sm:grid-cols-[140px,1fr]">
               <div>
@@ -109,8 +151,12 @@ export default function Onboarding() {
                 <ImageUpload value={null} onChange={setLogoFile} label="Logo" />
               </div>
               <div className="space-y-4">
-                <Field label="Restaurant name" required>
-                  <Input value={form.name} onChange={set('name')} placeholder="Bella Napoli" />
+                <Field label={isTruck ? 'Food truck name' : 'Restaurant name'} required>
+                  <Input
+                    value={form.name}
+                    onChange={set('name')}
+                    placeholder={isTruck ? 'Smoke & Barrel BBQ' : 'Bella Napoli'}
+                  />
                 </Field>
                 <Field label="Cuisine">
                   <Select value={form.cuisine} onChange={set('cuisine')}>
@@ -171,7 +217,7 @@ export default function Onboarding() {
           </div>
 
           <Button type="submit" size="lg" className="w-full" loading={saving}>
-            Create restaurant
+            {isTruck ? 'Create food truck' : 'Create restaurant'}
           </Button>
         </form>
       </div>

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { hasSupabaseConfig } from './lib/supabase'
+import { useAuth } from './context/AuthContext'
 import { RequireOwner, RequireOnboarding, RequireAdmin } from './components/guards'
 import SetupNotice from './pages/SetupNotice'
 
@@ -17,6 +18,7 @@ import Overview from './pages/dashboard/Overview'
 import Menu from './pages/dashboard/Menu'
 import Tables from './pages/dashboard/Tables'
 import Orders from './pages/dashboard/Orders'
+import FoodTruckBoard from './pages/dashboard/FoodTruckBoard'
 import Checkout from './pages/dashboard/Checkout'
 import Loyalty from './pages/dashboard/Loyalty'
 import Settings from './pages/dashboard/Settings'
@@ -26,6 +28,13 @@ import Admin from './pages/admin/Admin'
 
 import CustomerMenu from './pages/customer/CustomerMenu'
 import CustomerStatus from './pages/customer/CustomerStatus'
+
+// Food trucks get a streamlined name-based board; restaurants get the full
+// orders board. Both live at /dashboard/orders.
+function OrdersRoute() {
+  const { restaurant } = useAuth()
+  return restaurant?.business_type === 'food_truck' ? <FoodTruckBoard /> : <Orders />
+}
 
 export default function App() {
   // If env vars aren't set, show a friendly setup screen instead of a blank app.
@@ -64,7 +73,7 @@ export default function App() {
         <Route index element={<Overview />} />
         <Route path="menu" element={<Menu />} />
         <Route path="tables" element={<Tables />} />
-        <Route path="orders" element={<Orders />} />
+        <Route path="orders" element={<OrdersRoute />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="loyalty" element={<Loyalty />} />
         <Route path="settings" element={<Settings />} />
@@ -93,7 +102,9 @@ export default function App() {
       {/* Public customer ordering (reached by scanning a table QR code) */}
       <Route path="/r/:restaurantId/t/:tableId" element={<CustomerMenu />} />
       <Route path="/r/:restaurantId/t/:tableId/status" element={<CustomerStatus />} />
-      {/* Browse-only (no table) — e.g. someone visits without scanning */}
+      {/* Food-truck ordering + status (one QR, no table) */}
+      <Route path="/r/:restaurantId/status" element={<CustomerStatus />} />
+      {/* Truck QR, or browse-only for a restaurant visited without a table */}
       <Route path="/r/:restaurantId" element={<CustomerMenu />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
