@@ -211,31 +211,33 @@ export default function Analytics() {
   )
 }
 
-// Simple hand-rolled vertical bar graph — no chart library. Scrolls
-// horizontally on small screens so every bar stays readable on mobile.
-function BarGraph({ bars, max, highlight, minWidth = 26 }) {
+// Hand-rolled vertical bar graph — no chart library. Each column has a light
+// track so the chart keeps its shape even with quiet hours, the peak is
+// highlighted, and it scrolls horizontally so bars stay finger-friendly on
+// phones and iPads.
+function BarGraph({ bars, max, highlight, minWidth = 34 }) {
   return (
-    <div className="flex items-end gap-1.5 overflow-x-auto pb-1 sm:gap-2" style={{ height: 200 }}>
+    <div className="-mx-1 flex items-stretch gap-1.5 overflow-x-auto px-1 pb-1 sm:gap-2" style={{ height: 210 }}>
       {bars.map((b, i) => {
         const on = highlight?.(b, i)
+        const pct = max ? Math.round((b.value / max) * 100) : 0
         return (
-          <div
-            key={i}
-            className="flex flex-1 flex-col items-center gap-1"
-            style={{ minWidth }}
-          >
-            <span className="text-[11px] font-semibold text-stone-500">{b.value || ''}</span>
-            <div className="flex w-full flex-1 items-end">
+          <div key={i} className="flex flex-1 flex-col items-center gap-1.5" style={{ minWidth }}>
+            <span className={`text-[10px] font-bold ${on ? 'text-brand' : 'text-stone-400'}`}>
+              {b.value || ''}
+            </span>
+            <div className="relative flex w-full flex-1 items-end overflow-hidden rounded-xl bg-stone-100">
               <div
-                className={`w-full rounded-t-md transition-all ${on ? 'bg-brand' : 'bg-brand/40'}`}
-                style={{
-                  height: `${(b.value / max) * 100}%`,
-                  minHeight: b.value ? 4 : 0,
-                }}
+                className={`w-full rounded-xl transition-[height] duration-500 ${
+                  on ? 'bg-gradient-to-t from-brand to-brand' : 'bg-gradient-to-t from-brand/55 to-brand/30'
+                }`}
+                style={{ height: `${pct}%`, minHeight: b.value ? 8 : 0 }}
                 title={`${b.label}: ${b.value} ${b.value === 1 ? 'order' : 'orders'}`}
               />
             </div>
-            <span className="whitespace-nowrap text-[11px] text-stone-400">{b.label}</span>
+            <span className={`whitespace-nowrap text-[11px] font-medium ${on ? 'text-stone-700' : 'text-stone-400'}`}>
+              {b.label}
+            </span>
           </div>
         )
       })}

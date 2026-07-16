@@ -102,7 +102,9 @@ export default function Onboarding() {
           currency: form.currency,
           tax_rate: taxRate,
           plan: form.plan,
-          status: 'active',
+          // Stays 'pending' until Stripe Checkout completes (webhook flips it to
+          // 'active'). Prevents skipping payment by hitting Back from Stripe.
+          status: 'pending',
         })
         .select()
         .single()
@@ -148,6 +150,9 @@ export default function Onboarding() {
         // Couldn't start checkout — fall through to the dashboard.
       }
 
+      // Checkout didn't start (billing not configured) — activate so the owner
+      // isn't stranded on the pending gate.
+      await supabase.from('restaurants').update({ status: 'active' }).eq('id', restaurant.id)
       await refreshRestaurant()
       toast.success(`${isTruck ? 'Food truck' : 'Restaurant'} created! 🎉`)
       navigate('/dashboard', { replace: true })

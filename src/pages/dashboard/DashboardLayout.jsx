@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet, Link } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -14,12 +14,14 @@ import {
   ChefHat,
   BarChart3,
   CreditCard,
+  Loader2,
   Bell,
   X,
   ShieldCheck,
   Lock,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../components/Toast'
 import { OwnerPinModal } from '../../components/OwnerAccess'
 import { imageUrl } from '../../lib/supabase'
 import { RESTAURANT_STATUS } from '../../lib/constants'
@@ -62,6 +64,10 @@ export default function DashboardLayout() {
       !(!isTruck && item.truckOnly) &&
       !(!isOwner && item.ownerOnly),
   )
+
+  // New restaurants stay 'pending' until Stripe Checkout completes. Block the
+  // dashboard so payment can't be skipped by hitting Back from Stripe.
+  if (restaurant?.status === 'pending') return <SubscriptionGate />
 
   return (
     <div
@@ -256,6 +262,73 @@ function SideLink({ item, badge = 0 }) {
         </span>
       )}
     </NavLink>
+  )
+}
+
+// Shown when a restaurant is still 'pending' (hasn't completed Checkout). Lets
+// the owner resume payment; auto-refreshes so it clears the moment the Stripe
+// webhook marks them active after a successful trial signup.
+function SubscriptionGate() {
+  const { restaurant, user, signOut, refreshRestaurant } = useAuth()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const t = setInterval(() => refreshRestaurant(), 4000)
+    return () => clearInterval(t)
+  }, [refreshRestaurant])
+
+  async function resume() {
+    setBusy(true)
+    try {
+      const resp = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurantId: restaurant.id,
+          plan: restaurant.plan,
+          interval: restaurant.billing_interval || 'month',
+          email: user?.email,
+        }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (data?.url) {
+        window.location.href = data.url
+        return
+      }
+      throw new Error(data?.error || 'Could not start checkout.')
+    } catch (e) {
+      toast.error(e.message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="grid min-h-[100dvh] place-items-center bg-[#faf6ef] px-5">
+      <div className="w-full max-w-md rounded-3xl border border-stone-100 bg-white p-7 text-center shadow-sm">
+        <Logo className="mx-auto h-10 w-10" />
+        <h1 className="mt-4 font-display text-2xl font-semibold text-stone-900">One last step</h1>
+        <p className="mt-2 text-sm text-stone-500">
+          Add a payment method to activate <strong className="text-stone-700">{restaurant?.name}</strong>{' '}
+          and start your <strong className="text-stone-700">14-day free trial</strong>. You won’t be
+          charged until the trial ends, and you can cancel anytime.
+        </p>
+        <button
+          onClick={resume}
+          disabled={busy}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+          Add payment &amp; start free trial
+        </button>
+        <p className="mt-3 text-xs text-stone-400">
+          Just completed payment? This updates automatically in a few seconds.
+        </p>
+        <button onClick={signOut} className="mt-4 text-sm font-medium text-stone-500 hover:text-stone-800">
+          Sign out
+        </button>
+      </div>
+    </div>
   )
 }
 
