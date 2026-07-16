@@ -56,15 +56,21 @@ export default function Onboarding() {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
   const next = () => {
-    if (step === 1 && !form.name.trim())
-      return toast.error(`Please enter your ${isTruck ? 'food truck' : 'restaurant'} name.`)
+    if (step === 1) {
+      if (!form.name.trim())
+        return toast.error(`Please enter your ${isTruck ? 'food truck' : 'restaurant'} name.`)
+      if (!form.biz_phone.trim()) return toast.error('Please enter your business phone.')
+      if (!form.address.trim()) return toast.error('Please enter your business address.')
+    }
     if (step === 2 && !form.full_name.trim()) return toast.error('Please enter your name.')
     setStep((s) => Math.min(3, s + 1))
   }
   const back = () => setStep((s) => Math.max(1, s - 1))
 
   const submit = async () => {
-    const taxRate = form.tax_rate === '' ? 0 : Number(form.tax_rate)
+    if (form.tax_rate === '' || form.tax_rate === null)
+      return toast.error('Please enter your tax rate (use 0 if you don’t charge tax).')
+    const taxRate = Number(form.tax_rate)
     if (Number.isNaN(taxRate) || taxRate < 0 || taxRate > 100)
       return toast.error('Tax rate must be between 0 and 100.')
     if (!/^\d{4,6}$/.test(form.owner_pin))
@@ -235,7 +241,7 @@ function BusinessStep({ form, set, setForm, isTruck, setLogoFile }) {
           <Field label={isTruck ? 'Food truck name' : 'Restaurant name'} required>
             <Input value={form.name} onChange={set('name')} placeholder={isTruck ? 'Smoke & Barrel BBQ' : 'Bella Napoli'} />
           </Field>
-          <Field label="Cuisine">
+          <Field label="Cuisine" required>
             <Select value={form.cuisine} onChange={set('cuisine')}>
               {CUISINES.map((c) => (
                 <option key={c}>{c}</option>
@@ -249,14 +255,14 @@ function BusinessStep({ form, set, setForm, isTruck, setLogoFile }) {
         <Textarea value={form.description} onChange={set('description')} placeholder="Wood-fired Neapolitan pizza & handmade pasta." />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Business phone">
+        <Field label="Business phone" required>
           <Input value={form.biz_phone} onChange={set('biz_phone')} placeholder="(555) 123-4567" />
         </Field>
         <Field label="Website">
           <Input value={form.website} onChange={set('website')} placeholder="yoursite.com" />
         </Field>
       </div>
-      <Field label="Address">
+      <Field label="Address" required>
         <Input value={form.address} onChange={set('address')} placeholder="12 Main St, Toronto" />
       </Field>
 
@@ -318,14 +324,14 @@ function FinishStep({ form, set, setForm, email, isTruck }) {
         <p className="text-sm text-stone-500">A few last settings — all changeable later.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Currency">
+        <Field label="Currency" required>
           <Select value={form.currency} onChange={set('currency')}>
             {CURRENCIES.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </Select>
         </Field>
-        <Field label="Tax rate (%)" hint="Applied to every order.">
+        <Field label="Tax rate (%)" hint="Applied to every order." required>
           <Input type="number" min="0" max="100" step="0.01" value={form.tax_rate} onChange={set('tax_rate')} placeholder="e.g. 13" />
         </Field>
       </div>
