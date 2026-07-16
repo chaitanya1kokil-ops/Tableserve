@@ -12,6 +12,7 @@ import {
   Store,
   AlertTriangle,
   ChefHat,
+  BarChart3,
   Bell,
   X,
   ShieldCheck,
@@ -32,6 +33,7 @@ import Logo from '../../components/Logo'
 const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
+  { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true, desktopOnly: true },
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
