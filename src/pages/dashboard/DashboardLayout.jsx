@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NavLink, Outlet, Link } from 'react-router-dom'
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   ClipboardList,
@@ -19,6 +19,7 @@ import {
   X,
   ShieldCheck,
   Lock,
+  MoreHorizontal,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -33,17 +34,20 @@ import Logo from '../../components/Logo'
 // `restaurantOnly` items are hidden for food trucks (they pay online, have no
 // tables, and use a single combined orders board instead of a kitchen display).
 // `ownerOnly` items (revenue/analytics) are hidden in staff mode.
+// `mobilePrimary` items get a slot in the phone bottom bar; everything else is
+// reachable on phones via the "More" sheet (iPad+ shows all items in the
+// sidebar). This keeps full feature parity on iPhone without overflowing the bar.
 const NAV = [
-  { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true },
-  { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
-  { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true, desktopOnly: true },
+  { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true, mobilePrimary: true },
+  { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList, mobilePrimary: true },
+  { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true },
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
-  { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
-  { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
+  { to: '/kitchen', label: 'Kitchen', icon: ChefHat, mobilePrimary: true },
+  { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed, mobilePrimary: true },
   { to: '/dashboard/qr', label: 'QR code', icon: QrCode, truckOnly: true },
-  { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true, ownerOnly: true },
+  { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, ownerOnly: true },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode, restaurantOnly: true },
-  { to: '/dashboard/subscription', label: 'Subscription', icon: CreditCard, ownerOnly: true, desktopOnly: true },
+  { to: '/dashboard/subscription', label: 'Subscription', icon: CreditCard, ownerOnly: true },
   { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
@@ -56,6 +60,8 @@ export default function DashboardLayout() {
 
   const { isOwner, ownerPinSet, ownerMode, lockOwner } = useAuth()
   const [pinOpen, setPinOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const { pathname } = useLocation()
 
   const isTruck = restaurant?.business_type === 'food_truck'
   const nav = NAV.filter(
@@ -63,6 +69,14 @@ export default function DashboardLayout() {
       !(isTruck && item.restaurantOnly) &&
       !(!isTruck && item.truckOnly) &&
       !(!isOwner && item.ownerOnly),
+  )
+
+  // Phone bottom bar = primary tabs + a "More" sheet holding the rest, so every
+  // page stays reachable on iPhone (iPad+ uses the full sidebar above).
+  const mobilePrimary = nav.filter((item) => item.mobilePrimary)
+  const mobileMore = nav.filter((item) => !item.mobilePrimary)
+  const moreActive = mobileMore.some((item) =>
+    item.end ? pathname === item.to : pathname.startsWith(item.to),
   )
 
   // New restaurants stay 'pending' until Stripe Checkout completes. Block the
@@ -212,9 +226,9 @@ export default function DashboardLayout() {
         </main>
       </div>
 
-      {/* Bottom nav (phones only) */}
+      {/* Bottom nav (phones only): primary tabs + a "More" sheet for the rest */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom md:hidden">
-        {nav.filter((item) => !item.desktopOnly).map((item) => (
+        {mobilePrimary.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -236,7 +250,49 @@ export default function DashboardLayout() {
             {item.label}
           </NavLink>
         ))}
+        {mobileMore.length > 0 && (
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
+              moreActive ? 'text-brand' : 'text-gray-400'
+            }`}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            More
+          </button>
+        )}
       </nav>
+
+      {/* "More" sheet — every remaining tab, so iPhone has full parity */}
+      {moreOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMoreOpen(false)}>
+          <div className="absolute inset-0 bg-black/40 animate-fade-in" />
+          <div
+            className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-gray-200" />
+            <div className="grid grid-cols-4 gap-2">
+              {mobileMore.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => setMoreOpen(false)}
+                  className={({ isActive }) =>
+                    `flex flex-col items-center gap-1.5 rounded-2xl px-1 py-3 text-[11px] font-medium ${
+                      isActive ? 'bg-brand text-white' : 'text-gray-600 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-center leading-tight">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {pinOpen && <OwnerPinModal onClose={() => setPinOpen(false)} />}
     </div>
