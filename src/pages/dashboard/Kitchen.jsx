@@ -40,6 +40,7 @@ export default function Kitchen() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [muted, setMuted] = useState(false)
+  const [soundReady, setSoundReady] = useState(false)
   const [, forceTick] = useState(0) // refresh elapsed timers periodically
 
   const reloadTimer = useRef(null)
@@ -53,8 +54,11 @@ export default function Kitchen() {
       const Ctx = window.AudioContext || window.webkitAudioContext
       if (Ctx) audioRef.current = new Ctx()
     }
-    if (audioRef.current?.state === 'suspended') audioRef.current.resume()
-    return audioRef.current
+    const ctx = audioRef.current
+    const p = ctx?.resume?.()
+    if (p && p.then) p.then(() => setSoundReady(ctx.state === 'running')).catch(() => {})
+    else setSoundReady(ctx?.state === 'running')
+    return ctx
   }, [])
 
   // One bell strike: layered sine partials with natural decay (same voice as
@@ -86,6 +90,20 @@ export default function Kitchen() {
     const now = ctx.currentTime
     strike(ctx, now, 659, 0.9) // E5
     strike(ctx, now + 0.28, 988, 1) // B5
+  }, [ensureAudio, strike])
+
+  // Tap on the "enable sound" prompt: unlock audio and confirm with a chime.
+  const enableSound = useCallback(() => {
+    const ctx = ensureAudio()
+    if (!ctx) return
+    const play = () => {
+      const now = ctx.currentTime
+      strike(ctx, now, 659, 0.9)
+      strike(ctx, now + 0.28, 988, 1)
+      setSoundReady(true)
+    }
+    if (ctx.state === 'running') play()
+    else if (ctx.resume) ctx.resume().then(play).catch(() => {})
   }, [ensureAudio, strike])
 
   // Unlock audio on the first tap anywhere (browser autoplay policy) — the
@@ -254,6 +272,16 @@ export default function Kitchen() {
           </Link>
         </div>
       </header>
+
+      {!soundReady && !muted && (
+        <button
+          onClick={enableSound}
+          className="flex w-full items-center justify-center gap-2 bg-amber-500 px-4 py-3 text-base font-bold text-slate-950 transition hover:bg-amber-400"
+        >
+          <Volume2 className="h-5 w-5" />
+          Tap here to turn on new-order sound
+        </button>
+      )}
 
       {loading ? (
         <div className="grid min-h-[60vh] place-items-center text-slate-400">Loading kitchen…</div>
