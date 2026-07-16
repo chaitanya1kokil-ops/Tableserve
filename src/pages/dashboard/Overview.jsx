@@ -7,6 +7,7 @@ import {
   Flame,
   CircleDollarSign,
   BarChart3,
+  CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -289,22 +290,41 @@ export default function Overview() {
             </Card>
           </div>
 
-          {/* Deeper charts (peak hours, busiest days) live on the Analytics tab. */}
-          <Link
-            to="/dashboard/analytics"
-            className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100 transition hover:ring-brand/40"
-          >
-            <div className="flex items-center gap-3">
-              <span className="inline-flex rounded-xl bg-brand/10 p-2.5 text-brand">
-                <BarChart3 className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="font-display text-lg font-semibold text-stone-900">Analytics</p>
-                <p className="text-sm text-stone-500">Peak hours and your busiest days of the week.</p>
+          {/* Owner shortcuts — also reachable on phones where these tabs are
+              sidebar-only. */}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <Link
+              to="/dashboard/analytics"
+              className="flex items-center justify-between gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100 transition hover:ring-brand/40"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex rounded-xl bg-brand/10 p-2.5 text-brand">
+                  <BarChart3 className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="font-display text-lg font-semibold text-stone-900">Analytics</p>
+                  <p className="text-sm text-stone-500">Peak hours and busiest days.</p>
+                </div>
               </div>
-            </div>
-            <span className="text-sm font-semibold text-brand">View →</span>
-          </Link>
+              <span className="text-sm font-semibold text-brand">View →</span>
+            </Link>
+
+            <Link
+              to="/dashboard/subscription"
+              className="flex items-center justify-between gap-3 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100 transition hover:ring-brand/40"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex rounded-xl bg-brand/10 p-2.5 text-brand">
+                  <CreditCard className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="font-display text-lg font-semibold text-stone-900">Subscription</p>
+                  <p className="text-sm text-stone-500">Plan, invoices &amp; billing.</p>
+                </div>
+              </div>
+              <span className="text-sm font-semibold text-brand">Manage →</span>
+            </Link>
+          </div>
         </>
       )}
     </div>

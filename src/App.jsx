@@ -17,6 +17,7 @@ import Onboarding from './pages/Onboarding'
 import DashboardLayout from './pages/dashboard/DashboardLayout'
 import Overview from './pages/dashboard/Overview'
 import Analytics from './pages/dashboard/Analytics'
+import Subscription from './pages/dashboard/Subscription'
 import Menu from './pages/dashboard/Menu'
 import Tables from './pages/dashboard/Tables'
 import Orders from './pages/dashboard/Orders'
@@ -86,6 +87,7 @@ export default function App() {
         <Route path="orders" element={<OrdersRoute />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="analytics" element={<OwnerOnly><Analytics /></OwnerOnly>} />
+        <Route path="subscription" element={<OwnerOnly><Subscription /></OwnerOnly>} />
         <Route path="loyalty" element={<OwnerOnly><Loyalty /></OwnerOnly>} />
         <Route path="settings" element={<Settings />} />
       </Route>

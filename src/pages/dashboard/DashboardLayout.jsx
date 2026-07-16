@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   ChefHat,
   BarChart3,
+  CreditCard,
   Bell,
   X,
   ShieldCheck,
@@ -40,6 +41,7 @@ const NAV = [
   { to: '/dashboard/qr', label: 'QR code', icon: QrCode, truckOnly: true },
   { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true, ownerOnly: true },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode, restaurantOnly: true },
+  { to: '/dashboard/subscription', label: 'Subscription', icon: CreditCard, ownerOnly: true, desktopOnly: true },
   { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
