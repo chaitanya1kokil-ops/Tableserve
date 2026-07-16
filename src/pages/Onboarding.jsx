@@ -124,6 +124,24 @@ export default function Onboarding() {
         await supabase.from('restaurants').update({ logo_url: path }).eq('id', restaurant.id)
       }
 
+      // Start the subscription: redirect to Stripe Checkout to collect a card
+      // and begin the 14-day free trial. If Stripe isn't configured, the API
+      // returns { skip: true } and onboarding completes without payment.
+      try {
+        const resp = await fetch('/api/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restaurantId: restaurant.id, plan: form.plan, email: user.email }),
+        })
+        const data = await resp.json().catch(() => ({}))
+        if (data?.url) {
+          window.location.href = data.url
+          return
+        }
+      } catch {
+        // Couldn't start checkout — fall through to the dashboard.
+      }
+
       await refreshRestaurant()
       toast.success(`${isTruck ? 'Food truck' : 'Restaurant'} created! 🎉`)
       navigate('/dashboard', { replace: true })
@@ -200,7 +218,7 @@ export default function Onboarding() {
             </Button>
           ) : (
             <Button loading={saving} onClick={submit}>
-              {isTruck ? 'Create food truck' : 'Create restaurant'}
+              Start 14-day free trial
             </Button>
           )}
         </div>
