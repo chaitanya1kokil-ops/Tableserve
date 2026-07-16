@@ -47,6 +47,8 @@ export default function Subscription() {
   const [busyKey, setBusyKey] = useState(null)
   const [invoices, setInvoices] = useState([])
   const [invLoading, setInvLoading] = useState(false)
+  const [connect, setConnect] = useState(null)
+  const [connectBusy, setConnectBusy] = useState(false)
 
   const loadInvoices = useCallback(async () => {
     if (!restaurant?.stripe_customer_id) return
@@ -67,6 +69,44 @@ export default function Subscription() {
   useEffect(() => {
     loadInvoices()
   }, [loadInvoices])
+
+  const loadConnect = useCallback(async () => {
+    if (!isTruck) return
+    try {
+      const resp = await fetch('/api/connect-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId: restaurant.id }),
+      })
+      setConnect(await resp.json().catch(() => ({})))
+    } catch {
+      /* ignore */
+    }
+  }, [isTruck, restaurant.id])
+
+  useEffect(() => {
+    loadConnect()
+  }, [loadConnect])
+
+  async function connectStripe() {
+    setConnectBusy(true)
+    try {
+      const resp = await fetch('/api/connect-onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId: restaurant.id }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (data?.url) {
+        window.location.href = data.url
+        return
+      }
+      throw new Error(data?.error || 'Could not start Stripe onboarding.')
+    } catch (e) {
+      toast.error(e.message)
+      setConnectBusy(false)
+    }
+  }
 
   const heroPrice = currentInterval === 'year' ? yearlyTotal(current.price) : current.price
   const heroUnit = currentInterval === 'year' ? 'yr' : 'mo'
@@ -149,6 +189,40 @@ export default function Subscription() {
         <h1 className="font-display text-3xl font-semibold text-stone-900">Subscription</h1>
         <p className="mt-1 text-sm text-stone-500">Manage your plan, payment method, and invoices.</p>
       </div>
+
+      {/* Food trucks: connect their own Stripe to take customer payments */}
+      {isTruck && (
+        <div className="mb-6 rounded-2xl border border-brand/20 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex flex-shrink-0 rounded-xl bg-brand/10 p-2 text-brand">
+                <CreditCard className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-display text-lg font-semibold text-stone-900">Accept customer payments</p>
+                <p className="max-w-md text-sm text-stone-500">
+                  Connect your own Stripe so diners pay you directly for their orders. The money lands
+                  in your bank — TableServe never holds it.
+                </p>
+                {connect?.ready ? (
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
+                    <Check className="h-4 w-4" /> Connected — ready to accept payments
+                  </p>
+                ) : connect?.connected ? (
+                  <p className="mt-2 text-sm font-semibold text-amber-600">
+                    Setup started but not finished — Stripe still needs a few details.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm text-stone-400">Not connected yet.</p>
+                )}
+              </div>
+            </div>
+            <Button onClick={connectStripe} loading={connectBusy} variant={connect?.ready ? 'outline' : 'primary'}>
+              {connect?.ready ? 'Update details' : connect?.connected ? 'Finish setup' : 'Connect Stripe'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Current plan hero */}
       <div className="relative overflow-hidden rounded-3xl bg-stone-900 p-6 text-white shadow-sm">
