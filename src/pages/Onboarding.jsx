@@ -10,20 +10,24 @@ import {
   ArrowLeft,
   Building2,
   User,
+  CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import { supabase, uploadImage } from '../lib/supabase'
 import { slugify } from '../lib/format'
-import { CUISINES, ACCENT_PRESETS, CURRENCIES } from '../lib/constants'
+import { CUISINES, ACCENT_PRESETS, CURRENCIES, PLANS } from '../lib/constants'
 import { Button, Field, Input, Textarea, Select } from '../components/ui'
 import ImageUpload from '../components/ImageUpload'
 
 const STEPS = [
   { n: 1, label: 'Business', icon: Building2 },
   { n: 2, label: 'Your details', icon: User },
-  { n: 3, label: 'Finish', icon: ShieldCheck },
+  { n: 3, label: 'Plan', icon: CreditCard },
+  { n: 4, label: 'Finish', icon: ShieldCheck },
 ]
+
+const LAST_STEP = STEPS.length
 
 export default function Onboarding() {
   const { user, signOut, refreshRestaurant } = useAuth()
@@ -47,6 +51,8 @@ export default function Onboarding() {
     full_name: user?.user_metadata?.full_name || '',
     owner_phone: '',
     title: 'Owner',
+    // Plan
+    plan: 'pro',
     // Finish
     currency: 'USD',
     tax_rate: '',
@@ -63,7 +69,7 @@ export default function Onboarding() {
       if (!form.address.trim()) return toast.error('Please enter your business address.')
     }
     if (step === 2 && !form.full_name.trim()) return toast.error('Please enter your name.')
-    setStep((s) => Math.min(3, s + 1))
+    setStep((s) => Math.min(LAST_STEP, s + 1))
   }
   const back = () => setStep((s) => Math.max(1, s - 1))
 
@@ -94,6 +100,7 @@ export default function Onboarding() {
           business_type: form.business_type,
           currency: form.currency,
           tax_rate: taxRate,
+          plan: form.plan,
           status: 'active',
         })
         .select()
@@ -177,7 +184,8 @@ export default function Onboarding() {
         <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm sm:p-6">
           {step === 1 && <BusinessStep form={form} set={set} setForm={setForm} isTruck={isTruck} setLogoFile={setLogoFile} />}
           {step === 2 && <DetailsStep form={form} set={set} email={user?.email} />}
-          {step === 3 && <FinishStep form={form} set={set} setForm={setForm} email={user?.email} isTruck={isTruck} />}
+          {step === 3 && <PlanStep form={form} setForm={setForm} />}
+          {step === 4 && <FinishStep form={form} set={set} setForm={setForm} email={user?.email} isTruck={isTruck} />}
         </div>
 
         <div className="mt-5 flex items-center justify-between gap-3">
@@ -188,7 +196,7 @@ export default function Onboarding() {
           ) : (
             <span />
           )}
-          {step < 3 ? (
+          {step < LAST_STEP ? (
             <Button onClick={next}>
               Continue <ArrowRight className="h-4 w-4" />
             </Button>
@@ -311,6 +319,85 @@ function DetailsStep({ form, set, email }) {
       </div>
       <div className="rounded-xl bg-stone-50 px-4 py-3 text-sm text-stone-500">
         You’ll sign in with <strong className="text-stone-800">{email}</strong>.
+      </div>
+    </div>
+  )
+}
+
+// Feature bullets shown on each plan card, derived from PLANS (single source
+// of truth) so pricing and limits never drift from the landing page / admin.
+function planFeatures(key) {
+  const p = PLANS[key]
+  const f = ['QR ordering & kitchen display', '0% commission on every order']
+  f.push(p.maxTables === null ? 'Unlimited tables' : `Up to ${p.maxTables} tables`)
+  if (p.loyalty) f.push('Loyalty & rewards')
+  if (p.multiBrand) f.push('Multiple brands / locations')
+  return f
+}
+
+function PlanStep({ form, setForm }) {
+  const tiers = ['starter', 'pro', 'premium']
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="font-display text-xl font-semibold text-stone-900">Choose your plan</h2>
+        <p className="text-sm text-stone-500">
+          Every plan starts with a <strong className="text-stone-700">14-day free trial</strong>.
+          No charge today — you won’t be billed until the trial ends, and you can switch plans or
+          cancel anytime before then.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {tiers.map((key) => {
+          const p = PLANS[key]
+          const selected = form.plan === key
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setForm({ ...form, plan: key })}
+              className={`w-full rounded-2xl border-2 p-4 text-left transition ${
+                selected ? 'border-brand bg-brand/5' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`grid h-5 w-5 flex-shrink-0 place-items-center rounded-full border-2 ${
+                      selected ? 'border-brand bg-brand' : 'border-gray-300'
+                    }`}
+                  >
+                    {selected && <Check className="h-3 w-3 text-white" />}
+                  </span>
+                  <span className="text-lg font-bold text-gray-900">{p.label}</span>
+                  {key === 'pro' && (
+                    <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">
+                      Popular
+                    </span>
+                  )}
+                </div>
+                <div className="whitespace-nowrap text-right">
+                  <span className="text-2xl font-extrabold text-gray-900">${p.price}</span>
+                  <span className="text-sm text-gray-500">/mo</span>
+                </div>
+              </div>
+              <ul className="mt-3 grid gap-1.5 pl-7 sm:grid-cols-2">
+                {planFeatures(key).map((f) => (
+                  <li key={f} className="flex items-center gap-1.5 text-sm text-gray-600">
+                    <Check className="h-4 w-4 flex-shrink-0 text-brand" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex items-center gap-2 rounded-xl bg-stone-50 px-4 py-3 text-sm text-stone-500">
+        <ShieldCheck className="h-4 w-4 flex-shrink-0 text-brand" />
+        Card details and the 14-day trial come next — you’re never charged during the trial.
       </div>
     </div>
   )
