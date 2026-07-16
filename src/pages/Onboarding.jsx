@@ -53,6 +53,7 @@ export default function Onboarding() {
     title: 'Owner',
     // Plan
     plan: 'pro',
+    interval: 'month',
     // Finish
     currency: 'USD',
     tax_rate: '',
@@ -131,7 +132,12 @@ export default function Onboarding() {
         const resp = await fetch('/api/create-checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ restaurantId: restaurant.id, plan: form.plan, email: user.email }),
+          body: JSON.stringify({
+            restaurantId: restaurant.id,
+            plan: form.plan,
+            interval: form.interval,
+            email: user.email,
+          }),
         })
         const data = await resp.json().catch(() => ({}))
         if (data?.url) {
@@ -365,8 +371,13 @@ function planFeatures(key) {
   return f
 }
 
+// Yearly = 10× monthly (2 months free), matching the billing endpoints.
+const yearlyTotal = (monthly) => monthly * 10
+const yearlySavings = (monthly) => monthly * 2
+
 function PlanStep({ form, setForm, isTruck }) {
   const tiers = isTruck ? ['food_truck'] : ['starter', 'pro', 'premium']
+  const yearly = form.interval === 'year'
   return (
     <div className="space-y-5">
       <div>
@@ -381,10 +392,39 @@ function PlanStep({ form, setForm, isTruck }) {
         </p>
       </div>
 
+      {/* Monthly / Yearly toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex items-center gap-1 rounded-full bg-stone-100 p-1">
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, interval: 'month' })}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              !yearly ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, interval: 'year' })}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+              yearly ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+            }`}
+          >
+            Yearly
+            <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+              2 MONTHS FREE
+            </span>
+          </button>
+        </div>
+      </div>
+
       <div className="space-y-3">
         {tiers.map((key) => {
           const p = PLANS[key]
           const selected = form.plan === key
+          const price = yearly ? yearlyTotal(p.price) : p.price
+          const unit = yearly ? 'yr' : 'mo'
           return (
             <button
               key={key}
@@ -411,8 +451,15 @@ function PlanStep({ form, setForm, isTruck }) {
                   )}
                 </div>
                 <div className="whitespace-nowrap text-right">
-                  <span className="text-2xl font-extrabold text-gray-900">${p.price}</span>
-                  <span className="text-sm text-gray-500"> CAD/mo</span>
+                  <span className="text-2xl font-extrabold text-gray-900">
+                    ${price.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-gray-500"> CAD/{unit}</span>
+                  {yearly && (
+                    <p className="text-xs font-semibold text-emerald-600">
+                      Save ${yearlySavings(p.price).toLocaleString()}/yr
+                    </p>
+                  )}
                 </div>
               </div>
               <ul className="mt-3 grid gap-1.5 pl-7 sm:grid-cols-2">
