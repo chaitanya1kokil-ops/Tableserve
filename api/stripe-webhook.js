@@ -62,6 +62,7 @@ export default async function handler(req, res) {
           subscription_status: sub?.status || 'trialing',
           trial_ends_at: iso(sub?.trial_end),
           current_period_end: iso(sub?.current_period_end),
+          billing_interval: sub?.items?.data?.[0]?.price?.recurring?.interval || null,
           status: 'active',
         })
         break
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
           subscription_status: sub.status,
           trial_ends_at: iso(sub.trial_end),
           current_period_end: iso(sub.current_period_end),
+          billing_interval: sub.items?.data?.[0]?.price?.recurring?.interval || null,
         }
         const rs = restaurantStatusFor(sub.status)
         if (rs) fields.status = rs

@@ -1,25 +1,40 @@
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-// Plan → Stripe price. Amounts in cents; a recurring monthly price is created
-// once per plan (keyed by lookup_key) and reused thereafter. Kept in sync with
-// PLANS in src/lib/constants.js.
+// Plan → Stripe amounts (cents). Yearly = 10× monthly (2 months free). Kept in
+// sync with PLANS in src/lib/constants.js and api/change-plan.js.
 const PLAN_PRICES = {
-  starter: { amount: 9900, name: 'TableServe Starter' },
-  pro: { amount: 17900, name: 'TableServe Pro' },
-  premium: { amount: 29900, name: 'TableServe Premium' },
-  food_truck: { amount: 7900, name: 'TableServe Food Truck' },
+  starter: { month: 9900, year: 99000, name: 'TableServe Starter' },
+  pro: { month: 17900, year: 179000, name: 'TableServe Pro' },
+  premium: { month: 29900, year: 299000, name: 'TableServe Premium' },
+  food_truck: { month: 7900, year: 79000, name: 'TableServe Food Truck' },
 }
-
 const TRIAL_DAYS = 14
 const CURRENCY = 'cad'
+
+// Get-or-create the recurring price for a plan + interval. Currency and
+// interval are part of the lookup key because Stripe prices are immutable.
+export async function getOrCreatePrice(stripe, plan, interval) {
+  const def = PLAN_PRICES[plan]
+  if (!def) return null
+  const amount = interval === 'year' ? def.year : def.month
+  const lookupKey = `tableserve_${plan}_${interval}_${CURRENCY}`
+  const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 })
+  if (found.data.length) return found.data[0]
+  const product = await stripe.products.create({ name: def.name })
+  return stripe.prices.create({
+    product: product.id,
+    unit_amount: amount,
+    currency: CURRENCY,
+    recurring: { interval },
+    lookup_key: lookupKey,
+  })
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const secret = process.env.STRIPE_SECRET_KEY
-  // If Stripe isn't configured yet, tell the client to finish onboarding
-  // without payment (keeps the flow working before keys are wired).
   if (!secret) return res.status(200).json({ skip: true })
 
   const stripe = new Stripe(secret)
@@ -30,29 +45,13 @@ export default async function handler(req, res) {
 
   try {
     const { restaurantId, plan, email } = req.body || {}
-    const def = PLAN_PRICES[plan]
-    if (!restaurantId || !def) return res.status(400).json({ error: 'Missing or invalid restaurantId/plan' })
-
-    // Get-or-create the recurring price for this plan. Currency is baked into
-    // the lookup key because Stripe prices are immutable — switching currency
-    // means a new price, not an edit of the old one.
-    const lookupKey = `tableserve_${plan}_monthly_${CURRENCY}`
-    let price
-    const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 })
-    if (found.data.length) {
-      price = found.data[0]
-    } else {
-      const product = await stripe.products.create({ name: def.name })
-      price = await stripe.prices.create({
-        product: product.id,
-        unit_amount: def.amount,
-        currency: CURRENCY,
-        recurring: { interval: 'month' },
-        lookup_key: lookupKey,
-      })
+    const interval = req.body?.interval === 'year' ? 'year' : 'month'
+    if (!restaurantId || !PLAN_PRICES[plan]) {
+      return res.status(400).json({ error: 'Missing or invalid restaurantId/plan' })
     }
 
-    // Get-or-create the Stripe customer, remembered on the restaurant.
+    const price = await getOrCreatePrice(stripe, plan, interval)
+
     const { data: r } = await supabase
       .from('restaurants')
       .select('stripe_customer_id, name')
@@ -81,7 +80,7 @@ export default async function handler(req, res) {
       metadata: { restaurant_id: restaurantId, plan },
       allow_promotion_codes: true,
       success_url: `${origin}/dashboard?billing=success`,
-      cancel_url: `${origin}/dashboard?billing=cancelled`,
+      cancel_url: `${origin}/dashboard/subscription?billing=cancelled`,
     })
 
     return res.status(200).json({ url: session.url })

@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { CreditCard, Check, ArrowUpRight, ShieldCheck, Receipt } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { CreditCard, Check, ArrowUpRight, Receipt, Download, Loader2, Sparkles } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { PLANS } from '../../lib/constants'
-import { formatDate } from '../../lib/format'
-import { Card, Badge, Button } from '../../components/ui'
+import { formatCurrency, formatDate } from '../../lib/format'
+import { Badge, Button } from '../../components/ui'
 
 const STATUS_UI = {
   trialing: { label: 'Free trial', className: 'bg-blue-100 text-blue-700' },
@@ -13,6 +13,14 @@ const STATUS_UI = {
   unpaid: { label: 'Unpaid', className: 'bg-red-100 text-red-700' },
   incomplete: { label: 'Incomplete', className: 'bg-amber-100 text-amber-700' },
   canceled: { label: 'Canceled', className: 'bg-stone-200 text-stone-600' },
+}
+
+const INVOICE_STATUS = {
+  paid: 'bg-emerald-100 text-emerald-700',
+  open: 'bg-amber-100 text-amber-700',
+  draft: 'bg-stone-100 text-stone-500',
+  void: 'bg-stone-100 text-stone-500',
+  uncollectible: 'bg-red-100 text-red-700',
 }
 
 function planPerks(key) {
@@ -24,12 +32,14 @@ function planPerks(key) {
   return f
 }
 
+// Yearly = 10× monthly (2 months free). Helpers keep the display consistent.
+const yearlyTotal = (monthly) => monthly * 10
+const yearlySavings = (monthly) => monthly * 2
+
 export default function Subscription() {
   const { restaurant, user, refreshRestaurant } = useAuth()
   const toast = useToast()
-
-  const [portalBusy, setPortalBusy] = useState(false)
-  const [busyPlan, setBusyPlan] = useState(null)
+  const accent = restaurant?.accent_color || '#b45309'
 
   const isTruck = restaurant?.business_type === 'food_truck'
   const currentKey = restaurant?.plan || 'trial'
@@ -37,6 +47,36 @@ export default function Subscription() {
   const status = restaurant?.subscription_status
   const statusUi = status ? STATUS_UI[status] : null
   const hasSubscription = !!restaurant?.stripe_subscription_id
+  const currentInterval = restaurant?.billing_interval === 'year' ? 'year' : 'month'
+
+  const [interval, setInterval] = useState(currentInterval)
+  const [portalBusy, setPortalBusy] = useState(false)
+  const [busyKey, setBusyKey] = useState(null)
+  const [invoices, setInvoices] = useState([])
+  const [invLoading, setInvLoading] = useState(false)
+
+  const loadInvoices = useCallback(async () => {
+    if (!restaurant?.stripe_customer_id) return
+    setInvLoading(true)
+    try {
+      const resp = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId: restaurant.id }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      setInvoices(data?.invoices || [])
+    } finally {
+      setInvLoading(false)
+    }
+  }, [restaurant?.id, restaurant?.stripe_customer_id])
+
+  useEffect(() => {
+    loadInvoices()
+  }, [loadInvoices])
+
+  const heroPrice = currentInterval === 'year' ? yearlyTotal(current.price) : current.price
+  const heroUnit = currentInterval === 'year' ? 'yr' : 'mo'
 
   const dateLine = () => {
     if (status === 'trialing' && restaurant?.trial_ends_at)
@@ -70,22 +110,21 @@ export default function Subscription() {
   }
 
   async function choosePlan(planKey) {
-    if (planKey === currentKey) return
-    setBusyPlan(planKey)
+    const key = `${planKey}_${interval}`
+    setBusyKey(key)
     try {
       const resp = await fetch('/api/change-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantId: restaurant.id, plan: planKey }),
+        body: JSON.stringify({ restaurantId: restaurant.id, plan: planKey, interval }),
       })
       const data = await resp.json().catch(() => ({}))
 
-      // No subscription yet → start one through Checkout (with the free trial).
       if (data?.needsCheckout) {
         const c = await fetch('/api/create-checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ restaurantId: restaurant.id, plan: planKey, email: user?.email }),
+          body: JSON.stringify({ restaurantId: restaurant.id, plan: planKey, interval, email: user?.email }),
         })
         const cd = await c.json().catch(() => ({}))
         if (cd?.url) {
@@ -97,14 +136,15 @@ export default function Subscription() {
 
       if (data?.ok) {
         await refreshRestaurant()
-        toast.success(`Switched to ${PLANS[planKey].label}.`)
+        loadInvoices()
+        toast.success(`Updated to ${PLANS[planKey].label}, billed ${interval === 'year' ? 'yearly' : 'monthly'}.`)
       } else {
         throw new Error(data?.error || 'Could not change plan.')
       }
     } catch (e) {
       toast.error(e.message)
     } finally {
-      setBusyPlan(null)
+      setBusyKey(null)
     }
   }
 
@@ -117,78 +157,126 @@ export default function Subscription() {
         <p className="mt-1 text-sm text-stone-500">Manage your plan, payment method, and invoices.</p>
       </div>
 
-      {/* Current plan */}
-      <Card className="p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* Current plan hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-stone-900 p-6 text-white shadow-sm">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: `radial-gradient(130% 120% at 100% 0%, ${accent}66, transparent 60%)` }}
+        />
+        <div className="relative flex flex-wrap items-start justify-between gap-5">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex rounded-xl bg-brand/10 p-2 text-brand">
-                <CreditCard className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="font-display text-xl font-semibold text-stone-900">
-                  {current.label} plan
-                </p>
-                <p className="text-sm text-stone-500">
-                  ${current.price}
-                  <span className="text-stone-400"> CAD/mo</span>
-                </p>
-              </div>
+            <div className="mb-3 inline-flex rounded-xl bg-white/10 p-2 ring-1 ring-white/15">
+              <CreditCard className="h-5 w-5" />
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <p className="text-xs uppercase tracking-wide text-white/50">Current plan</p>
+            <div className="mt-0.5 flex items-end gap-2">
+              <p className="font-display text-3xl font-semibold">{current.label}</p>
               {statusUi ? (
                 <Badge className={statusUi.className}>{statusUi.label}</Badge>
               ) : (
-                <Badge className="bg-stone-200 text-stone-600">No subscription</Badge>
+                <Badge className="bg-white/15 text-white">No subscription</Badge>
               )}
-              <span className="text-sm text-stone-500">{dateLine()}</span>
             </div>
+            <p className="mt-1 text-white/70">
+              <span className="text-lg font-semibold text-white">${heroPrice.toLocaleString()}</span>{' '}
+              CAD/{heroUnit}
+            </p>
+            <p className="mt-2 text-sm text-white/60">{dateLine()}</p>
           </div>
 
-          <Button variant="outline" onClick={manageBilling} loading={portalBusy} disabled={!hasSubscription}>
-            <Receipt className="h-4 w-4" /> Billing &amp; invoices
-          </Button>
+          <button
+            onClick={manageBilling}
+            disabled={!hasSubscription || portalBusy}
+            className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-stone-900 transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {portalBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />}
+            Billing &amp; invoices
+          </button>
         </div>
 
         {!hasSubscription && (
-          <div className="mt-4 flex items-start gap-2 rounded-xl bg-stone-50 px-4 py-3 text-sm text-stone-500">
-            <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />
+          <p className="relative mt-4 rounded-xl bg-white/5 px-4 py-3 text-sm text-white/70">
             You don’t have an active subscription yet. Choose a plan below to start your 14-day free
-            trial — you can view invoices and manage your card here once it’s set up.
-          </div>
+            trial — no charge today.
+          </p>
         )}
-      </Card>
+      </div>
 
       {/* Change / choose plan */}
-      <div className="mt-6">
-        <h2 className="mb-3 font-display text-lg font-semibold text-stone-900">
-          {hasSubscription ? 'Change plan' : 'Choose a plan'}
-        </h2>
+      <div className="mt-8">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-display text-xl font-semibold text-stone-900">
+            {hasSubscription ? 'Change plan' : 'Choose a plan'}
+          </h2>
+          {/* Monthly / Yearly toggle */}
+          <div className="inline-flex items-center gap-1 self-start rounded-full bg-stone-100 p-1">
+            <button
+              onClick={() => setInterval('month')}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+                interval === 'month' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setInterval('year')}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
+                interval === 'year' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+              }`}
+            >
+              Yearly
+              <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                2 MONTHS FREE
+              </span>
+            </button>
+          </div>
+        </div>
+
         <div className={`grid gap-3 ${isTruck ? '' : 'sm:grid-cols-3'}`}>
           {tiers.map((key) => {
             const p = PLANS[key]
-            const isCurrent = key === currentKey
+            const isCurrent = key === currentKey && interval === currentInterval
             const isUpgrade = p.price > current.price
+            const sameTierSwitch = key === currentKey && interval !== currentInterval
+            const price = interval === 'year' ? yearlyTotal(p.price) : p.price
+            const unit = interval === 'year' ? 'yr' : 'mo'
+            const featured = key === 'pro'
+            const busy = busyKey === `${key}_${interval}`
+            const label = !hasSubscription
+              ? 'Choose'
+              : sameTierSwitch
+                ? interval === 'year'
+                  ? 'Switch to yearly'
+                  : 'Switch to monthly'
+                : isUpgrade
+                  ? 'Upgrade'
+                  : 'Switch'
             return (
               <div
                 key={key}
-                className={`rounded-2xl border-2 p-4 ${
-                  isCurrent ? 'border-brand bg-brand/5' : 'border-stone-200'
+                className={`relative flex flex-col rounded-2xl border-2 p-5 transition ${
+                  isCurrent ? 'border-brand bg-brand/5' : featured ? 'border-brand/30' : 'border-stone-200'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <p className="font-bold text-stone-900">{p.label}</p>
-                  {key === 'pro' && !isCurrent && (
-                    <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">
-                      Popular
-                    </span>
-                  )}
+                {featured && !isCurrent && (
+                  <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                    <Sparkles className="h-3 w-3" /> Popular
+                  </span>
+                )}
+                <p className="font-display text-lg font-bold text-stone-900">{p.label}</p>
+                <div className="mt-1">
+                  <span className="text-3xl font-extrabold text-stone-900">${price.toLocaleString()}</span>
+                  <span className="text-sm text-stone-400"> CAD/{unit}</span>
                 </div>
-                <p className="mt-1">
-                  <span className="text-2xl font-extrabold text-stone-900">${p.price}</span>
-                  <span className="text-sm text-stone-400"> CAD/mo</span>
-                </p>
-                <ul className="mt-3 space-y-1.5">
+                {interval === 'year' ? (
+                  <p className="mt-0.5 text-xs font-semibold text-emerald-600">
+                    Save ${yearlySavings(p.price).toLocaleString()} a year
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-xs text-stone-400">or ${yearlyTotal(p.price).toLocaleString()}/yr — 2 months free</p>
+                )}
+
+                <ul className="mt-4 flex-1 space-y-1.5">
                   {planPerks(key).map((f) => (
                     <li key={f} className="flex items-center gap-1.5 text-sm text-stone-600">
                       <Check className="h-4 w-4 flex-shrink-0 text-brand" />
@@ -196,20 +284,21 @@ export default function Subscription() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-4">
+
+                <div className="mt-5">
                   {isCurrent ? (
-                    <span className="flex items-center justify-center gap-1.5 rounded-xl bg-stone-100 py-2 text-sm font-semibold text-stone-500">
+                    <span className="flex items-center justify-center gap-1.5 rounded-xl bg-stone-100 py-2.5 text-sm font-semibold text-stone-500">
                       <Check className="h-4 w-4" /> Current plan
                     </span>
                   ) : (
                     <Button
                       className="w-full justify-center"
-                      variant={isUpgrade ? 'primary' : 'outline'}
-                      loading={busyPlan === key}
-                      disabled={!!busyPlan}
+                      variant={isUpgrade || featured ? 'primary' : 'outline'}
+                      loading={busy}
+                      disabled={!!busyKey}
                       onClick={() => choosePlan(key)}
                     >
-                      {hasSubscription ? (isUpgrade ? 'Upgrade' : 'Switch') : 'Choose'}
+                      {label}
                       {isUpgrade && <ArrowUpRight className="h-4 w-4" />}
                     </Button>
                   )}
@@ -218,12 +307,64 @@ export default function Subscription() {
             )
           })}
         </div>
-        {hasSubscription && !isTruck && (
+        {hasSubscription && (
           <p className="mt-3 text-xs text-stone-400">
-            Upgrades take effect immediately (prorated). Downgrades apply the same way. During a free
-            trial you won’t be charged until it ends.
+            Plan changes take effect immediately (prorated). While on a free trial you won’t be
+            charged until it ends.
           </p>
         )}
+      </div>
+
+      {/* Payment history */}
+      <div className="mt-8">
+        <h2 className="mb-3 font-display text-xl font-semibold text-stone-900">Payment history</h2>
+        <div className="overflow-hidden rounded-2xl border border-stone-100 bg-white shadow-sm">
+          {invLoading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-stone-400">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading invoices…
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <Receipt className="mx-auto h-8 w-8 text-stone-300" />
+              <p className="mt-2 text-sm font-medium text-stone-500">No payments yet</p>
+              <p className="text-xs text-stone-400">
+                Invoices appear here after your first charge (once the free trial ends).
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-100">
+              {invoices.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-stone-800">
+                      {formatCurrency(inv.amount / 100, (inv.currency || 'cad').toUpperCase())}
+                    </p>
+                    <p className="text-xs text-stone-400">
+                      {formatDate(new Date(inv.created * 1000).toISOString())}
+                      {inv.number ? ` · ${inv.number}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge className={INVOICE_STATUS[inv.status] || 'bg-stone-100 text-stone-500'}>
+                      {inv.status}
+                    </Badge>
+                    {(inv.pdf || inv.url) && (
+                      <a
+                        href={inv.pdf || inv.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span className="hidden sm:inline">Receipt</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
