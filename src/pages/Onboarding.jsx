@@ -412,7 +412,7 @@ function PlanStep({ form, setForm, isTruck }) {
                 </div>
                 <div className="whitespace-nowrap text-right">
                   <span className="text-2xl font-extrabold text-gray-900">${p.price}</span>
-                  <span className="text-sm text-gray-500">/mo</span>
+                  <span className="text-sm text-gray-500"> CAD/mo</span>
                 </div>
               </div>
               <ul className="mt-3 grid gap-1.5 pl-7 sm:grid-cols-2">

@@ -8,12 +8,13 @@ const PLAN_PRICES = {
   premium: { amount: 29900, name: 'TableServe Premium' },
   food_truck: { amount: 7900, name: 'TableServe Food Truck' },
 }
-const CURRENCY = 'usd'
+const CURRENCY = 'cad'
 
 async function getOrCreatePrice(stripe, plan) {
   const def = PLAN_PRICES[plan]
   if (!def) return null
-  const lookupKey = `tableserve_${plan}_monthly`
+  // Currency is part of the key — Stripe prices are immutable per currency.
+  const lookupKey = `tableserve_${plan}_monthly_${CURRENCY}`
   const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 })
   if (found.data.length) return found.data[0]
   const product = await stripe.products.create({ name: def.name })

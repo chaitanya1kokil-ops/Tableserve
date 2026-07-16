@@ -131,7 +131,7 @@ export default function Subscription() {
                 </p>
                 <p className="text-sm text-stone-500">
                   ${current.price}
-                  <span className="text-stone-400">/mo</span>
+                  <span className="text-stone-400"> CAD/mo</span>
                 </p>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function Subscription() {
                 </div>
                 <p className="mt-1">
                   <span className="text-2xl font-extrabold text-stone-900">${p.price}</span>
-                  <span className="text-sm text-stone-400">/mo</span>
+                  <span className="text-sm text-stone-400"> CAD/mo</span>
                 </p>
                 <ul className="mt-3 space-y-1.5">
                   {planPerks(key).map((f) => (

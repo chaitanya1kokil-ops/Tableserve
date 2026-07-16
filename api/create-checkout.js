@@ -12,7 +12,7 @@ const PLAN_PRICES = {
 }
 
 const TRIAL_DAYS = 14
-const CURRENCY = 'usd'
+const CURRENCY = 'cad'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -33,8 +33,10 @@ export default async function handler(req, res) {
     const def = PLAN_PRICES[plan]
     if (!restaurantId || !def) return res.status(400).json({ error: 'Missing or invalid restaurantId/plan' })
 
-    // Get-or-create the recurring price for this plan.
-    const lookupKey = `tableserve_${plan}_monthly`
+    // Get-or-create the recurring price for this plan. Currency is baked into
+    // the lookup key because Stripe prices are immutable — switching currency
+    // means a new price, not an edit of the old one.
+    const lookupKey = `tableserve_${plan}_monthly_${CURRENCY}`
     let price
     const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 })
     if (found.data.length) {
