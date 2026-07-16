@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { CreditCard, Check, ArrowUpRight, Receipt, Download, Loader2, Sparkles } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
-import { PLANS } from '../../lib/constants'
+import { PLANS, PLAN_FEATURES } from '../../lib/constants'
 import { formatCurrency, formatDate } from '../../lib/format'
 import { Badge, Button } from '../../components/ui'
 
@@ -23,14 +23,7 @@ const INVOICE_STATUS = {
   uncollectible: 'bg-red-100 text-red-700',
 }
 
-function planPerks(key) {
-  const p = PLANS[key]
-  if (key === 'food_truck') return ['Single QR — order by name', 'Online payments', 'Loyalty & rewards']
-  const f = [p.maxTables === null ? 'Unlimited tables' : `Up to ${p.maxTables} tables`]
-  if (p.loyalty) f.push('Loyalty & rewards')
-  if (p.multiBrand) f.push('Multiple brands')
-  return f
-}
+const planPerks = (key) => PLAN_FEATURES[key] || []
 
 // Yearly = 10× monthly (2 months free). Helpers keep the display consistent.
 const yearlyTotal = (monthly) => monthly * 10

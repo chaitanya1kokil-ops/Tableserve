@@ -112,6 +112,41 @@ export const PLANS = {
   food_truck: { label: 'Food Truck', price: 79,  color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500',   maxTables: null, loyalty: true,  multiBrand: false },
 }
 
+// Detailed feature lists shown on plan cards (onboarding + Subscription tab).
+// Higher tiers reference the one below with "Everything in …".
+export const PLAN_FEATURES = {
+  starter: [
+    'Up to 10 tables',
+    'QR menu & instant ordering',
+    'Kitchen display screen',
+    'Live orders board & server calls',
+    'Menu & modifier management',
+    'Card payments — 0% commission',
+  ],
+  pro: [
+    'Everything in Starter',
+    'Up to 40 tables',
+    'Loyalty & rewards program',
+    'Multiple brands / locations',
+    'Full analytics — peak hours & trends',
+    'Owner & staff PIN roles',
+  ],
+  premium: [
+    'Everything in Pro',
+    'Unlimited tables',
+    'Priority support',
+    'Personalised onboarding',
+  ],
+  food_truck: [
+    'Single QR — order by name',
+    'Online card payments',
+    'Loyalty & rewards program',
+    'Kitchen display & orders board',
+    'Analytics & best-sellers',
+    '0% commission on orders',
+  ],
+}
+
 const planFor = (r) => PLANS[r?.plan] || PLANS.trial
 
 // Food trucks always get loyalty (their $59 plan includes it — trucks live on

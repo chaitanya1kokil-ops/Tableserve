@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import { supabase, uploadImage } from '../lib/supabase'
 import { slugify } from '../lib/format'
-import { CUISINES, ACCENT_PRESETS, CURRENCIES, PLANS } from '../lib/constants'
+import { CUISINES, ACCENT_PRESETS, CURRENCIES, PLANS, PLAN_FEATURES } from '../lib/constants'
 import { Button, Field, Input, Textarea, Select } from '../components/ui'
 import ImageUpload from '../components/ImageUpload'
 import Logo from '../components/Logo'
@@ -357,24 +357,9 @@ function DetailsStep({ form, set, email }) {
   )
 }
 
-// Feature bullets shown on each plan card, derived from PLANS (single source
-// of truth) so pricing and limits never drift from the landing page / admin.
-function planFeatures(key) {
-  if (key === 'food_truck') {
-    return [
-      'Single QR — order by name',
-      'Online card payments',
-      'Loyalty & rewards',
-      '0% commission on orders',
-    ]
-  }
-  const p = PLANS[key]
-  const f = ['QR ordering & kitchen display', '0% commission on every order']
-  f.push(p.maxTables === null ? 'Unlimited tables' : `Up to ${p.maxTables} tables`)
-  if (p.loyalty) f.push('Loyalty & rewards')
-  if (p.multiBrand) f.push('Multiple brands / locations')
-  return f
-}
+// Feature bullets shown on each plan card — shared with the Subscription tab
+// via PLAN_FEATURES so the two never drift.
+const planFeatures = (key) => PLAN_FEATURES[key] || []
 
 // Yearly = 10× monthly (2 months free), matching the billing endpoints.
 const yearlyTotal = (monthly) => monthly * 10
