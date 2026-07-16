@@ -294,8 +294,8 @@ export default function CustomerMenu() {
                     </span>
                     <span className="flex-shrink-0 text-xs font-semibold text-amber-200/90">
                       {loyaltyMember.rewards_available > 0
-                        ? `${loyaltyMember.rewards_available} free ${loyaltyMember.rewards_available === 1 ? 'item' : 'items'} available 🎉`
-                        : `${10 - ((loyaltyMember.visits || 0) % 10)} to a free item`}
+                        ? `${loyaltyMember.rewards_available} reward${loyaltyMember.rewards_available === 1 ? '' : 's'} ready 🎉`
+                        : `${(loyaltyMember.reward_every || 10) - ((loyaltyMember.visits || 0) % (loyaltyMember.reward_every || 10))} visit${(loyaltyMember.reward_every || 10) - ((loyaltyMember.visits || 0) % (loyaltyMember.reward_every || 10)) === 1 ? '' : 's'} to go`}
                     </span>
                   </div>
                 </div>
@@ -305,7 +305,8 @@ export default function CustomerMenu() {
                   className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 ring-1 ring-stone-200 transition active:scale-[.99]"
                 >
                   <Star className="h-4 w-4 text-amber-500" />
-                  {restaurant.loyalty_brand} Rewards — every 10th visit gets a free item
+                  {restaurant.loyalty_brand} Rewards — earn {restaurant.loyalty_reward || 'a reward'} every{' '}
+                  {restaurant.loyalty_reward_every || 10} visits
                 </button>
               )}
             </div>
@@ -1137,7 +1138,9 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
     }
   }
 
-  const remaining = member ? 10 - ((member.visits || 0) % 10) : 10
+  const every = restaurant.loyalty_reward_every || 10
+  const rewardText = restaurant.loyalty_reward || 'a free item'
+  const remaining = member ? every - ((member.visits || 0) % every) : every
   const rewardNow = member && member.rewards_available > 0
 
   return (
@@ -1158,7 +1161,7 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
               {restaurant.loyalty_brand} Rewards
             </h3>
             <p className="mt-1 text-sm text-white/70">
-              Every 10th visit earns you a free item. Visits count when you order.
+              Earn {rewardText} every {every} visits. Visits count when you order.
             </p>
           </div>
           <button
@@ -1176,16 +1179,16 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
             </p>
             <p className="mt-1.5 text-sm text-stone-500">
               {rewardNow
-                ? `You have ${member.rewards_available} free ${member.rewards_available === 1 ? 'item' : 'items'} waiting — show this to your server!`
+                ? `You have ${member.rewards_available} reward${member.rewards_available === 1 ? '' : 's'} waiting — show this to your server!`
                 : member.visits === 0
                   ? 'You’re in. Your visit counts once your first bill is paid.'
-                  : `You’ve completed ${member.visits} ${member.visits === 1 ? 'visit' : 'visits'} — ${remaining} more to your free item.`}
+                  : `You’ve completed ${member.visits} ${member.visits === 1 ? 'visit' : 'visits'} — ${remaining} more to ${rewardText}.`}
             </p>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-stone-100">
               <div
                 className="h-full rounded-full transition-all"
                 style={{
-                  width: `${rewardNow ? 100 : ((member.visits % 10) / 10) * 100}%`,
+                  width: `${rewardNow ? 100 : ((member.visits % every) / every) * 100}%`,
                   backgroundColor: accent,
                 }}
               />
@@ -1255,8 +1258,8 @@ function LoyaltyModal({ restaurant, accent, onClose, onJoined }) {
               </button>
             </div>
             <p className="mt-4 border-t border-stone-100 pt-3 text-[11px] leading-relaxed text-stone-400">
-              How it works: a visit counts when your bill is paid (one visit per sitting). Every
-              10th visit earns one free item, chosen with the restaurant and redeemed in store.
+              How it works: a visit counts when your bill is paid (one visit per sitting). Every{' '}
+              {every} visits earns {rewardText}, chosen with the restaurant and redeemed in store.
               Visits are credited to the member who places the order.
             </p>
           </div>

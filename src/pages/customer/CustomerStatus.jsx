@@ -49,11 +49,12 @@ export default function CustomerStatus() {
       const { data } = await supabase.rpc('loyalty_status', { p_member: stored.id })
       if (!data) return
       if ((data.visits || 0) > (stored.visits || 0)) {
+        const ev = data.reward_every || 10
         if ((data.rewards_available || 0) > (stored.rewards_available || 0)) {
-          toast.success(`🎉 Visit #${data.visits} — you've earned a FREE item for next time!`)
+          toast.success(`🎉 Visit #${data.visits} — you've earned ${data.reward || 'a free item'}!`)
         } else {
           toast.success(
-            `⭐ Visit #${data.visits} counted — ${10 - (data.visits % 10)} more to your free item.`,
+            `⭐ Visit #${data.visits} counted — ${ev - (data.visits % ev)} more to ${data.reward || 'your reward'}.`,
           )
         }
       }
