@@ -7,13 +7,6 @@ import {
   Ban,
   Inbox,
   Plus,
-  Banknote,
-  CreditCard,
-  HandCoins,
-  Wallet,
-  TrendingUp,
-  Flame,
-  Utensils,
   ShoppingBag,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -27,7 +20,6 @@ import NewOrderModal from './NewOrderModal'
 const FILTERS = [
   { key: 'active', label: 'Active', statuses: ['new', 'preparing', 'ready', 'served'] },
   { key: 'completed', label: 'Completed', statuses: ['completed'] },
-  { key: 'analytics', label: 'Analytics', statuses: null },
 ]
 
 // Staff can advance orders up to "served" here. Completing an order happens
@@ -40,7 +32,7 @@ const ADVANCE_LABEL = {
 }
 
 export default function Orders() {
-  const { restaurant, isOwner } = useAuth()
+  const { restaurant } = useAuth()
   const toast = useToast()
   const rid = restaurant.id
 
@@ -147,7 +139,7 @@ export default function Orders() {
 
       {/* Filter tabs */}
       <div className="mb-5 flex gap-1 rounded-xl bg-gray-100 p-1">
-        {FILTERS.filter((f) => f.key !== 'analytics' || isOwner).map((f) => (
+        {FILTERS.map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
@@ -169,9 +161,7 @@ export default function Orders() {
         ))}
       </div>
 
-      {filter === 'analytics' && isOwner ? (
-        <OrdersAnalytics rid={rid} orders={orders} currency={restaurant.currency} />
-      ) : visible.length === 0 ? (
+      {visible.length === 0 ? (
         <EmptyState
           icon={Inbox}
           title={filter === 'active' ? 'No active orders' : 'Nothing here yet'}
@@ -397,193 +387,3 @@ function TableHistoryCard({ label, orders, currency }) {
   )
 }
 
-/* ------------------------------------------------------- service analytics -- */
-const METHOD_META = {
-  cash: { label: 'Cash', icon: Banknote },
-  card: { label: 'Card', icon: CreditCard },
-  other: { label: 'Other', icon: HandCoins },
-}
-
-// Today-focused service analytics: sales, collected vs open, tips, payment
-// mix, top items and busiest tables. Longer-range trends live on Overview.
-function OrdersAnalytics({ rid, orders, currency }) {
-  const [payments, setPayments] = useState([])
-
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-
-  useEffect(() => {
-    ;(async () => {
-      const { data } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('restaurant_id', rid)
-        .gte('created_at', todayStart.toISOString())
-      setPayments(data || [])
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rid, orders.length])
-
-  const today = orders.filter(
-    (o) => new Date(o.created_at) >= todayStart && o.status !== 'cancelled',
-  )
-  const sales = today.reduce((s, o) => s + Number(o.total || 0), 0)
-  const itemsSold = today.reduce(
-    (n, o) => n + (o.items || []).reduce((a, it) => a + (it.quantity || 0), 0),
-    0,
-  )
-  const collected = payments.reduce((s, p) => s + Number(p.amount || 0), 0)
-  const tips = payments.reduce((s, p) => s + Number(p.tip || 0), 0)
-  // Live open tabs (any day): served food that hasn't been paid yet.
-  const openTabs = orders.filter(
-    (o) => !o.paid_at && !['cancelled', 'completed'].includes(o.status),
-  )
-  const outstanding = openTabs.reduce((s, o) => s + Number(o.total || 0), 0)
-
-  const byMethod = {}
-  for (const p of payments) {
-    const m = (byMethod[p.method] ||= { amount: 0, tip: 0, count: 0 })
-    m.amount += Number(p.amount || 0)
-    m.tip += Number(p.tip || 0)
-    m.count += 1
-  }
-
-  const tally = {}
-  for (const o of today) {
-    for (const it of o.items || []) {
-      tally[it.name_snapshot] = (tally[it.name_snapshot] || 0) + (it.quantity || 0)
-    }
-  }
-  const topItems = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  const maxQty = topItems[0]?.[1] || 1
-
-  const tableTally = {}
-  for (const o of today) {
-    const key = o.table?.label || 'No table'
-    const t = (tableTally[key] ||= { orders: 0, total: 0 })
-    t.orders += 1
-    t.total += Number(o.total || 0)
-  }
-  const topTables = Object.entries(tableTally)
-    .sort((a, b) => b[1].total - a[1].total)
-    .slice(0, 5)
-
-  const stats = [
-    { label: 'Sales today', value: formatCurrency(sales, currency), icon: TrendingUp, tint: 'bg-emerald-50 text-emerald-600' },
-    { label: 'Collected today', value: formatCurrency(collected, currency), icon: Wallet, tint: 'bg-blue-50 text-blue-600' },
-    { label: 'Tips today', value: formatCurrency(tips, currency), icon: HandCoins, tint: 'bg-amber-50 text-amber-600' },
-    { label: `Open tabs (${openTabs.length ? new Set(openTabs.map((o) => o.table?.label)).size : 0} tables)`, value: formatCurrency(outstanding, currency), icon: Receipt, tint: 'bg-orange-50 text-orange-600' },
-  ]
-
-  return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-100">
-            <div className={`mb-2 inline-flex rounded-xl p-2 ${s.tint}`}>
-              <s.icon className="h-5 w-5" />
-            </div>
-            <p className="font-display text-2xl font-semibold text-stone-900">{s.value}</p>
-            <p className="text-xs text-stone-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* Payment mix */}
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100">
-          <h2 className="mb-4 font-display text-lg font-semibold text-stone-900">
-            Payments today
-          </h2>
-          {payments.length === 0 ? (
-            <p className="py-6 text-center text-sm text-stone-400">
-              No payments recorded yet today.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(METHOD_META).map(([key, meta]) => {
-                const m = byMethod[key]
-                if (!m) return null
-                return (
-                  <div key={key} className="flex items-center gap-3">
-                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-stone-100 text-stone-600">
-                      <meta.icon className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-semibold text-stone-800">{meta.label}</span>
-                        <span className="font-bold text-stone-900">
-                          {formatCurrency(m.amount, currency)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-stone-400">
-                        {m.count} {m.count === 1 ? 'payment' : 'payments'}
-                        {m.tip > 0 && <> · {formatCurrency(m.tip, currency)} tips</>}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Top items today */}
-        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100">
-          <div className="mb-4 flex items-center gap-2">
-            <Flame className="h-5 w-5 text-orange-500" />
-            <h2 className="font-display text-lg font-semibold text-stone-900">Top items today</h2>
-          </div>
-          {topItems.length === 0 ? (
-            <p className="py-6 text-center text-sm text-stone-400">No sales yet today.</p>
-          ) : (
-            <div className="space-y-3">
-              {topItems.map(([name, qty], i) => (
-                <div key={name} className="flex items-center gap-3">
-                  <span className="w-4 text-sm font-bold text-stone-400">{i + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="truncate font-medium text-stone-800">{name}</span>
-                      <span className="text-stone-500">{qty} sold</span>
-                    </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-100">
-                      <div
-                        className="h-full rounded-full bg-brand"
-                        style={{ width: `${(qty / maxQty) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Busiest tables */}
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100">
-        <div className="mb-4 flex items-center gap-2">
-          <Utensils className="h-5 w-5 text-stone-400" />
-          <h2 className="font-display text-lg font-semibold text-stone-900">Busiest tables today</h2>
-        </div>
-        {topTables.length === 0 ? (
-          <p className="py-6 text-center text-sm text-stone-400">No orders yet today.</p>
-        ) : (
-          <div className="divide-y divide-stone-100">
-            {topTables.map(([label, t]) => (
-              <div key={label} className="flex items-center justify-between py-2.5 text-sm">
-                <span className="font-semibold text-stone-800">{label}</span>
-                <span className="text-stone-500">
-                  {t.orders} {t.orders === 1 ? 'order' : 'orders'} ·{' '}
-                  <span className="font-bold text-stone-900">
-                    {formatCurrency(t.total, currency)}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}

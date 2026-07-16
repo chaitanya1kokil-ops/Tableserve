@@ -8,6 +8,11 @@ import {
   CalendarDays,
   BarChart3,
   Activity,
+  Flame,
+  Wallet,
+  HandCoins,
+  Banknote,
+  CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -21,6 +26,11 @@ const PERIODS = [
 ]
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const WEEKDAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const METHOD_META = {
+  cash: { label: 'Cash', icon: Banknote },
+  card: { label: 'Card', icon: CreditCard },
+  other: { label: 'Other', icon: HandCoins },
+}
 
 function sod(d) {
   const x = new Date(d)
@@ -61,8 +71,10 @@ export default function Analytics() {
   const rid = restaurant.id
   const currency = restaurant.currency
 
+  const isTruck = restaurant.business_type === 'food_truck'
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState([])
+  const [payments, setPayments] = useState([])
   const [period, setPeriod] = useState('30d')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -73,13 +85,22 @@ export default function Analytics() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('orders')
-      .select('total, status, created_at, items:order_items(quantity)')
-      .eq('restaurant_id', rid)
-      .gte('created_at', range.start.toISOString())
-      .lt('created_at', range.end.toISOString())
-    setOrders(data || [])
+    const [ordRes, payRes] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('total, status, created_at, table:tables(label), items:order_items(name_snapshot, quantity)')
+        .eq('restaurant_id', rid)
+        .gte('created_at', range.start.toISOString())
+        .lt('created_at', range.end.toISOString()),
+      supabase
+        .from('payments')
+        .select('amount, tip, method, created_at')
+        .eq('restaurant_id', rid)
+        .gte('created_at', range.start.toISOString())
+        .lt('created_at', range.end.toISOString()),
+    ])
+    setOrders(ordRes.data || [])
+    setPayments(payRes.data || [])
     setLoading(false)
   }, [rid, range.start, range.end])
 
@@ -122,6 +143,31 @@ export default function Analytics() {
   const weekBars = WEEKDAYS.map((label, i) => ({ label, full: WEEKDAYS_FULL[i], value: weekAgg[i] }))
   const maxWeek = Math.max(1, ...weekAgg)
   const busiestDayIdx = weekAgg.indexOf(maxWeek)
+
+  // Payments collected over the range (moved here from the Orders board).
+  const collected = payments.reduce((s, p) => s + Number(p.amount || 0), 0)
+  const tips = payments.reduce((s, p) => s + Number(p.tip || 0), 0)
+  const byMethod = {}
+  for (const p of payments) {
+    const m = (byMethod[p.method] ||= { amount: 0, count: 0 })
+    m.amount += Number(p.amount || 0)
+    m.count += 1
+  }
+
+  // Top items + busiest tables over the range.
+  const tally = {}
+  for (const o of paid) for (const it of o.items || []) tally[it.name_snapshot] = (tally[it.name_snapshot] || 0) + (it.quantity || 0)
+  const topItems = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const maxQty = topItems[0]?.[1] || 1
+
+  const tableTally = {}
+  for (const o of paid) {
+    const key = o.table?.label || 'No table'
+    const t = (tableTally[key] ||= { orders: 0, total: 0 })
+    t.orders += 1
+    t.total += Number(o.total || 0)
+  }
+  const topTables = Object.entries(tableTally).sort((a, b) => b[1].total - a[1].total).slice(0, 5)
 
   return (
     <div>
@@ -251,6 +297,102 @@ export default function Analytics() {
                 subtitle={<>{WEEKDAYS_FULL[busiestDayIdx]} is your busiest day.</>}
                 tooltipFor={(b) => `${b.full} · ${b.value} ${b.value === 1 ? 'order' : 'orders'}`}
               />
+            )}
+          </Card>
+
+          {/* Top items + busiest tables */}
+          <div className="mt-6 grid gap-5 lg:grid-cols-2">
+            <Card className="p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Flame className="h-5 w-5 text-orange-500" />
+                <h2 className="font-display text-lg font-semibold text-stone-900">Top items</h2>
+              </div>
+              {topItems.length === 0 ? (
+                <p className="py-6 text-center text-sm text-stone-400">No sales in this period.</p>
+              ) : (
+                <div className="space-y-3">
+                  {topItems.map(([name, qty], i) => (
+                    <div key={name} className="flex items-center gap-3">
+                      <span className="w-4 text-sm font-bold text-stone-400">{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="truncate font-medium text-stone-800">{name}</span>
+                          <span className="text-stone-500">{qty} sold</span>
+                        </div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${(qty / maxQty) * 100}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {!isTruck && (
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <Utensils className="h-5 w-5 text-stone-400" />
+                  <h2 className="font-display text-lg font-semibold text-stone-900">Busiest tables</h2>
+                </div>
+                {topTables.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-stone-400">No orders in this period.</p>
+                ) : (
+                  <div className="divide-y divide-stone-100">
+                    {topTables.map(([label, t]) => (
+                      <div key={label} className="flex items-center justify-between py-2.5 text-sm">
+                        <span className="font-semibold text-stone-800">{label}</span>
+                        <span className="text-stone-500">
+                          {t.orders} {t.orders === 1 ? 'order' : 'orders'} ·{' '}
+                          <span className="font-bold text-stone-900">{formatCurrency(t.total, currency)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
+
+          {/* Payments */}
+          <Card className="mt-6 p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-stone-400" />
+              <h2 className="font-display text-lg font-semibold text-stone-900">Payments</h2>
+            </div>
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-stone-50 p-3">
+                <p className="text-xs text-stone-500">Collected</p>
+                <p className="font-display text-xl font-semibold text-stone-900">{formatCurrency(collected, currency)}</p>
+              </div>
+              <div className="rounded-2xl bg-stone-50 p-3">
+                <p className="text-xs text-stone-500">Tips</p>
+                <p className="font-display text-xl font-semibold text-stone-900">{formatCurrency(tips, currency)}</p>
+              </div>
+            </div>
+            {payments.length === 0 ? (
+              <p className="py-4 text-center text-sm text-stone-400">No payments recorded in this period.</p>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(METHOD_META).map(([key, meta]) => {
+                  const m = byMethod[key]
+                  if (!m) return null
+                  return (
+                    <div key={key} className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-stone-100 text-stone-600">
+                        <meta.icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-semibold text-stone-800">{meta.label}</span>
+                          <span className="font-bold text-stone-900">{formatCurrency(m.amount, currency)}</span>
+                        </div>
+                        <p className="text-xs text-stone-400">{m.count} {m.count === 1 ? 'payment' : 'payments'}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </Card>
         </>
