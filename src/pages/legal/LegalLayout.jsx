@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Store } from 'lucide-react'
+import Logo from '../../components/Logo'
 
 // Shared shell for legal pages: light header, readable prose column, footer.
 export default function LegalLayout({ title, effectiveDate, children }) {
@@ -8,9 +8,7 @@ export default function LegalLayout({ title, effectiveDate, children }) {
       <header className="sticky top-0 z-40 border-b border-stone-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
           <Link to="/" className="flex items-center gap-2 font-extrabold">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
-              <Store className="h-5 w-5" />
-            </span>
+            <Logo className="h-8 w-8" />
             TableServe
           </Link>
           <nav className="flex items-center gap-5 text-sm font-medium text-stone-500">

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Store,
   Check,
   Truck,
   UtensilsCrossed,
@@ -19,6 +18,7 @@ import { slugify } from '../lib/format'
 import { CUISINES, ACCENT_PRESETS, CURRENCIES, PLANS } from '../lib/constants'
 import { Button, Field, Input, Textarea, Select } from '../components/ui'
 import ImageUpload from '../components/ImageUpload'
+import Logo from '../components/Logo'
 
 const STEPS = [
   { n: 1, label: 'Business', icon: Building2 },
@@ -139,9 +139,7 @@ export default function Onboarding() {
       <header className="border-b border-stone-100 bg-white">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2 font-extrabold text-gray-900">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
-              <Store className="h-5 w-5" />
-            </span>
+            <Logo className="h-8 w-8" />
             TableServe
           </div>
           <Button variant="ghost" size="sm" onClick={signOut}>

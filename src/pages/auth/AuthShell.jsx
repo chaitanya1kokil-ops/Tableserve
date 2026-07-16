@@ -1,14 +1,12 @@
 import { Link } from 'react-router-dom'
-import { Store } from 'lucide-react'
+import Logo from '../../components/Logo'
 
 export default function AuthShell({ title, subtitle, children, footer }) {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-gray-50">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-10">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2 font-extrabold text-gray-900">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand text-white">
-            <Store className="h-5 w-5" />
-          </span>
+          <Logo className="h-9 w-9" />
           TableServe
         </Link>
 

@@ -24,6 +24,7 @@ import { RESTAURANT_STATUS } from '../../lib/constants'
 import { useServerCalls } from '../../hooks/useServerCalls'
 import { useOrderSounds } from '../../hooks/useOrderSounds'
 import { useNewOrderCount } from '../../hooks/useNewOrderCount'
+import Logo from '../../components/Logo'
 
 // `restaurantOnly` items are hidden for food trucks (they pay online, have no
 // tables, and use a single combined orders board instead of a kitchen display).
@@ -66,9 +67,7 @@ export default function DashboardLayout() {
       {/* Sidebar — shown from tablet width up (iPad portrait included) */}
       <aside className="hidden w-60 flex-col border-r border-gray-100 bg-white md:flex lg:w-64">
         <div className="flex items-center gap-2 px-5 py-5 font-extrabold text-gray-900">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">
-            <Store className="h-5 w-5" />
-          </span>
+          <Logo className="h-8 w-8" />
           TableServe
         </div>
 
