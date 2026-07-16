@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useId } from 'react'
 import {
   TrendingUp,
   ShoppingBag,
@@ -20,6 +20,7 @@ const PERIODS = [
   { key: '90d', label: '90 days' },
 ]
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const WEEKDAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 function sod(d) {
   const x = new Date(d)
@@ -118,7 +119,7 @@ export default function Analytics() {
   // Orders per weekday (Mon–Sun).
   const weekAgg = Array(7).fill(0)
   for (const o of paid) weekAgg[(new Date(o.created_at).getDay() + 6) % 7] += 1
-  const weekBars = WEEKDAYS.map((label, i) => ({ label, value: weekAgg[i] }))
+  const weekBars = WEEKDAYS.map((label, i) => ({ label, full: WEEKDAYS_FULL[i], value: weekAgg[i] }))
   const maxWeek = Math.max(1, ...weekAgg)
   const busiestDayIdx = weekAgg.indexOf(maxWeek)
 
@@ -210,25 +211,46 @@ export default function Analytics() {
             {hourBars.length === 0 ? (
               <p className="py-10 text-center text-sm text-stone-400">No orders in this period.</p>
             ) : (
-              <PeakHoursChart bars={hourBars} max={maxHour} peakIdx={peakIdx} peakHour={peakHour} />
+              <ToggleChart
+                bars={hourBars}
+                max={maxHour}
+                peakIdx={peakIdx}
+                subtitle={
+                  peakHour ? (
+                    <>
+                      Busiest around{' '}
+                      <span className="font-semibold text-stone-700">{fmtHourLong(peakHour.hour)}</span> —{' '}
+                      {peakHour.value} {peakHour.value === 1 ? 'order' : 'orders'}.
+                    </>
+                  ) : (
+                    'When your orders come in.'
+                  )
+                }
+                showLabel={(b) => b.hour % 2 === 0}
+                tooltipFor={(b) => `${fmtHourLong(b.hour)} · ${b.value} ${b.value === 1 ? 'order' : 'orders'}`}
+              />
             )}
           </Card>
 
           {/* Orders per day of week */}
           <Card className="mt-6 p-5">
-            <div className="mb-1 flex items-center gap-2">
+            <div className="mb-4 flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-stone-400" />
               <h2 className="font-display text-lg font-semibold text-stone-900">
                 Orders per day of the week
               </h2>
             </div>
-            <p className="mb-4 text-sm text-stone-500">
-              {paid.length ? `${WEEKDAYS[busiestDayIdx]} is your busiest day.` : 'Monday to Sunday.'}
-            </p>
             {paid.length === 0 ? (
               <p className="py-10 text-center text-sm text-stone-400">No orders in this period.</p>
             ) : (
-              <WeekdayBars bars={weekBars} max={maxWeek} peakIdx={busiestDayIdx} />
+              <ToggleChart
+                bars={weekBars}
+                max={maxWeek}
+                peakIdx={busiestDayIdx}
+                showValues
+                subtitle={<>{WEEKDAYS_FULL[busiestDayIdx]} is your busiest day.</>}
+                tooltipFor={(b) => `${b.full} · ${b.value} ${b.value === 1 ? 'order' : 'orders'}`}
+              />
             )}
           </Card>
         </>
@@ -237,15 +259,18 @@ export default function Analytics() {
   )
 }
 
-// Peak-hours chart with a bar/line toggle. Hour labels show every 2 hours to
-// stay uncluttered on phones/iPads; hovering any column reveals the exact hour
-// and its order count via the tooltip.
-function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
+// Reusable chart with a bar/line toggle, used for both peak hours and orders
+// per weekday. `showLabel` thins axis labels (every 2h for hours); hovering any
+// column reveals its exact value via the tooltip. `showValues` puts counts
+// above bars (used for the 7-bar weekday chart).
+function ToggleChart({ bars, max, peakIdx, subtitle, showLabel = () => true, tooltipFor, showValues = false }) {
   const [type, setType] = useState('bar')
   const [hover, setHover] = useState(null)
+  const gid = useId()
   const n = bars.length
   const active = hover ?? peakIdx
   const activeBar = bars[active]
+  const at = (i) => `${((i + 0.5) / n) * 100}%`
 
   const pointY = (v) => 100 - (v / max) * 100
   const line = bars.map((b, i) => `${i === 0 ? 'M' : 'L'} ${i + 0.5} ${pointY(b.value)}`).join(' ')
@@ -254,13 +279,7 @@ function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-sm text-stone-500">
-          {peakHour ? (
-            <>Busiest around <span className="font-semibold text-stone-700">{fmtHourLong(peakHour.hour)}</span> — {peakHour.value} {peakHour.value === 1 ? 'order' : 'orders'}.</>
-          ) : (
-            'When your orders come in.'
-          )}
-        </p>
+        <p className="text-sm text-stone-500">{subtitle}</p>
         <div className="inline-flex flex-shrink-0 rounded-lg bg-stone-100 p-0.5">
           <button
             onClick={() => setType('bar')}
@@ -280,13 +299,12 @@ function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
       </div>
 
       <div className="relative select-none" style={{ height: 180 }} onMouseLeave={() => setHover(null)}>
-        {/* Tooltip */}
         {activeBar && (
           <div
             className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-900 px-2 py-1 text-[11px] font-semibold text-white shadow-lg"
-            style={{ left: `${((active + 0.5) / n) * 100}%`, top: -4 }}
+            style={{ left: at(active), top: -4 }}
           >
-            {fmtHourLong(activeBar.hour)} · {activeBar.value} {activeBar.value === 1 ? 'order' : 'orders'}
+            {tooltipFor(activeBar)}
           </div>
         )}
 
@@ -294,12 +312,12 @@ function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
           <>
             <svg className="absolute inset-0 h-full w-full text-brand" viewBox={`0 0 ${n} 100`} preserveAspectRatio="none">
               <defs>
-                <linearGradient id="peakfill" x1="0" x2="0" y1="0" y2="1">
+                <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
                   <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
                   <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              <path d={area} fill="url(#peakfill)" />
+              <path d={area} fill={`url(#${gid})`} />
               <path
                 d={line}
                 fill="none"
@@ -312,13 +330,10 @@ function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
             </svg>
             {activeBar && (
               <>
-                <div
-                  className="pointer-events-none absolute top-0 h-full w-px bg-stone-200"
-                  style={{ left: `${((active + 0.5) / n) * 100}%` }}
-                />
+                <div className="pointer-events-none absolute top-0 h-full w-px bg-stone-200" style={{ left: at(active) }} />
                 <div
                   className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-brand shadow"
-                  style={{ left: `${((active + 0.5) / n) * 100}%`, top: `${pointY(activeBar.value)}%` }}
+                  style={{ left: at(active), top: `${pointY(activeBar.value)}%` }}
                 />
               </>
             )}
@@ -329,10 +344,15 @@ function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
               const on = i === active
               const pct = Math.round((b.value / max) * 100)
               return (
-                <div key={i} className="flex flex-1 items-end px-[2px]">
-                  <div className="relative h-full w-full overflow-hidden rounded-lg bg-stone-100">
+                <div key={i} className="flex h-full flex-1 flex-col items-center gap-1 px-[2px]">
+                  {showValues && (
+                    <span className={`text-[10px] font-bold ${on ? 'text-brand' : 'text-stone-400'}`}>
+                      {b.value || ''}
+                    </span>
+                  )}
+                  <div className="relative flex w-full flex-1 items-end overflow-hidden rounded-lg bg-stone-100">
                     <div
-                      className={`absolute bottom-0 w-full rounded-lg transition-[height] duration-500 ${
+                      className={`w-full rounded-lg transition-[height] duration-500 ${
                         on ? 'bg-gradient-to-t from-brand to-brand' : 'bg-gradient-to-t from-brand/50 to-brand/30'
                       }`}
                       style={{ height: `${pct}%`, minHeight: b.value ? 6 : 0 }}
@@ -344,7 +364,6 @@ function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
           </div>
         )}
 
-        {/* Hover zones (work for both chart types) */}
         <div className="absolute inset-0 flex">
           {bars.map((b, i) => (
             <div key={i} className="flex-1 cursor-pointer" onMouseEnter={() => setHover(i)} />
@@ -352,44 +371,16 @@ function PeakHoursChart({ bars, max, peakIdx, peakHour }) {
         </div>
       </div>
 
-      {/* Hour labels — every 2 hours to avoid crowding */}
       <div className="mt-2 flex">
         {bars.map((b, i) => (
           <div
             key={i}
             className={`flex-1 text-center text-[11px] ${i === active ? 'font-bold text-stone-700' : 'text-stone-400'}`}
           >
-            {b.hour % 2 === 0 ? b.label : ''}
+            {showLabel(b, i) ? b.label : ''}
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-// Simple weekday bar chart with column tracks and a highlighted busiest day.
-function WeekdayBars({ bars, max, peakIdx }) {
-  return (
-    <div className="flex items-stretch gap-2" style={{ height: 190 }}>
-      {bars.map((b, i) => {
-        const on = i === peakIdx
-        const pct = Math.round((b.value / max) * 100)
-        return (
-          <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
-            <span className={`text-[10px] font-bold ${on ? 'text-brand' : 'text-stone-400'}`}>{b.value || ''}</span>
-            <div className="relative flex w-full flex-1 items-end overflow-hidden rounded-xl bg-stone-100">
-              <div
-                className={`w-full rounded-xl transition-[height] duration-500 ${
-                  on ? 'bg-gradient-to-t from-brand to-brand' : 'bg-gradient-to-t from-brand/50 to-brand/30'
-                }`}
-                style={{ height: `${pct}%`, minHeight: b.value ? 8 : 0 }}
-                title={`${b.label}: ${b.value} ${b.value === 1 ? 'order' : 'orders'}`}
-              />
-            </div>
-            <span className={`text-[11px] font-medium ${on ? 'text-stone-700' : 'text-stone-400'}`}>{b.label}</span>
-          </div>
-        )
-      })}
     </div>
   )
 }
