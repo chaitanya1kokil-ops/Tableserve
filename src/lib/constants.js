@@ -104,10 +104,12 @@ export const DAYS = [
 // Trial unlocks everything so new signups experience the full product.
 // ---------------------------------------------------------------------------
 export const PLANS = {
-  trial:   { label: 'Trial',   price: 0,  color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500',   maxTables: null, loyalty: true,  multiBrand: true },
-  starter: { label: 'Starter', price: 99,  color: 'bg-stone-200 text-stone-700',   dot: 'bg-stone-500',  maxTables: 10,   loyalty: false, multiBrand: false },
-  pro:     { label: 'Pro',     price: 179, color: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-500',  maxTables: 40,   loyalty: true,  multiBrand: true },
-  premium: { label: 'Premium', price: 299, color: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500', maxTables: null, loyalty: true,  multiBrand: true },
+  trial:      { label: 'Trial',      price: 0,   color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500',      maxTables: null, loyalty: true,  multiBrand: true },
+  starter:    { label: 'Starter',    price: 99,  color: 'bg-stone-200 text-stone-700',     dot: 'bg-stone-500',     maxTables: 10,   loyalty: false, multiBrand: false },
+  pro:        { label: 'Pro',        price: 179, color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500',     maxTables: 40,   loyalty: true,  multiBrand: true },
+  premium:    { label: 'Premium',    price: 299, color: 'bg-violet-100 text-violet-700',   dot: 'bg-violet-500',    maxTables: null, loyalty: true,  multiBrand: true },
+  // Flat plan for food trucks — one QR, order-by-name, online payments, loyalty.
+  food_truck: { label: 'Food Truck', price: 79,  color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500',   maxTables: null, loyalty: true,  multiBrand: false },
 }
 
 const planFor = (r) => PLANS[r?.plan] || PLANS.trial

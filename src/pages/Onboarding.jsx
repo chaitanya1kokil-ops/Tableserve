@@ -184,7 +184,7 @@ export default function Onboarding() {
         <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm sm:p-6">
           {step === 1 && <BusinessStep form={form} set={set} setForm={setForm} isTruck={isTruck} setLogoFile={setLogoFile} />}
           {step === 2 && <DetailsStep form={form} set={set} email={user?.email} />}
-          {step === 3 && <PlanStep form={form} setForm={setForm} />}
+          {step === 3 && <PlanStep form={form} setForm={setForm} isTruck={isTruck} />}
           {step === 4 && <FinishStep form={form} set={set} setForm={setForm} email={user?.email} isTruck={isTruck} />}
         </div>
 
@@ -228,7 +228,13 @@ function BusinessStep({ form, set, setForm, isTruck, setLogoFile }) {
           <button
             key={opt.key}
             type="button"
-            onClick={() => setForm({ ...form, business_type: opt.key })}
+            onClick={() =>
+              setForm({
+                ...form,
+                business_type: opt.key,
+                plan: opt.key === 'food_truck' ? 'food_truck' : 'pro',
+              })
+            }
             className={`rounded-xl border-2 p-4 text-left transition ${
               form.business_type === opt.key ? 'border-brand bg-brand/5' : 'border-gray-200 hover:border-gray-300'
             }`}
@@ -327,6 +333,14 @@ function DetailsStep({ form, set, email }) {
 // Feature bullets shown on each plan card, derived from PLANS (single source
 // of truth) so pricing and limits never drift from the landing page / admin.
 function planFeatures(key) {
+  if (key === 'food_truck') {
+    return [
+      'Single QR — order by name',
+      'Online card payments',
+      'Loyalty & rewards',
+      '0% commission on orders',
+    ]
+  }
   const p = PLANS[key]
   const f = ['QR ordering & kitchen display', '0% commission on every order']
   f.push(p.maxTables === null ? 'Unlimited tables' : `Up to ${p.maxTables} tables`)
@@ -335,16 +349,19 @@ function planFeatures(key) {
   return f
 }
 
-function PlanStep({ form, setForm }) {
-  const tiers = ['starter', 'pro', 'premium']
+function PlanStep({ form, setForm, isTruck }) {
+  const tiers = isTruck ? ['food_truck'] : ['starter', 'pro', 'premium']
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="font-display text-xl font-semibold text-stone-900">Choose your plan</h2>
+        <h2 className="font-display text-xl font-semibold text-stone-900">
+          {isTruck ? 'Your plan' : 'Choose your plan'}
+        </h2>
         <p className="text-sm text-stone-500">
-          Every plan starts with a <strong className="text-stone-700">14-day free trial</strong>.
-          No charge today — you won’t be billed until the trial ends, and you can switch plans or
-          cancel anytime before then.
+          {isTruck ? 'Your food truck plan' : 'Every plan'} starts with a{' '}
+          <strong className="text-stone-700">14-day free trial</strong>. No charge today — you won’t
+          be billed until the trial ends, and you can {isTruck ? 'cancel' : 'switch plans or cancel'}{' '}
+          anytime before then.
         </p>
       </div>
 
