@@ -67,8 +67,8 @@ export default function Onboarding() {
     const taxRate = form.tax_rate === '' ? 0 : Number(form.tax_rate)
     if (Number.isNaN(taxRate) || taxRate < 0 || taxRate > 100)
       return toast.error('Tax rate must be between 0 and 100.')
-    if (form.owner_pin && !/^\d{4,6}$/.test(form.owner_pin))
-      return toast.error('Owner PIN must be 4 to 6 digits.')
+    if (!/^\d{4,6}$/.test(form.owner_pin))
+      return toast.error('Please set an owner PIN — 4 to 6 digits.')
 
     setSaving(true)
     try {
@@ -104,7 +104,7 @@ export default function Onboarding() {
       })
       if (profErr) throw profErr
 
-      if (form.owner_pin) await supabase.rpc('set_owner_pin', { p_pin: form.owner_pin })
+      await supabase.rpc('set_owner_pin', { p_pin: form.owner_pin })
 
       if (logoFile) {
         const path = await uploadImage(logoFile, `${restaurant.id}`, 'logo')
@@ -297,7 +297,7 @@ function DetailsStep({ form, set, email }) {
         </Field>
         <Field label="Your role">
           <Select value={form.title} onChange={set('title')}>
-            {['Owner', 'Co-owner', 'Manager', 'Other'].map((r) => (
+            {['Owner', 'Manager', 'Staff'].map((r) => (
               <option key={r}>{r}</option>
             ))}
           </Select>
@@ -332,12 +332,12 @@ function FinishStep({ form, set, setForm, email, isTruck }) {
 
       <div className="rounded-xl border border-gray-200 p-4">
         <p className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-          <ShieldCheck className="h-4 w-4 text-brand" /> Owner PIN (optional)
+          <ShieldCheck className="h-4 w-4 text-brand" /> Owner PIN <span className="text-red-500">*</span>
         </p>
         <p className="mt-0.5 text-xs text-gray-500">
           A 4–6 digit code only you know. Staff run the {isTruck ? 'truck' : 'tablet'} day-to-day;
-          enter this PIN to switch to owner view and see revenue and analytics. You can set it later
-          in Settings.
+          enter this PIN to switch to owner view and see revenue and analytics. Required — you can
+          change it later in Settings.
         </p>
         <input
           inputMode="numeric"

@@ -32,7 +32,7 @@ const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList },
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
-  { to: '/kitchen', label: 'Kitchen', icon: ChefHat, restaurantOnly: true },
+  { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
   { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/dashboard/qr', label: 'QR code', icon: QrCode, truckOnly: true },
   { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, desktopOnly: true, ownerOnly: true },
