@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
 
@@ -17,14 +17,20 @@ export function useOrderSounds(restaurantId, muted) {
   useEffect(() => {
     mutedRef.current = muted
   }, [muted])
+  // True once the browser has let us create a running AudioContext (needs a
+  // user gesture). The dashboard shows an "enable sound" prompt until then.
+  const [soundReady, setSoundReady] = useState(false)
 
   const ensureAudio = useCallback(() => {
     if (!audioRef.current) {
       const Ctx = window.AudioContext || window.webkitAudioContext
       if (Ctx) audioRef.current = new Ctx()
     }
-    audioRef.current?.resume?.()
-    return audioRef.current
+    const ctx = audioRef.current
+    const p = ctx?.resume?.()
+    if (p && p.then) p.then(() => setSoundReady(ctx.state === 'running')).catch(() => {})
+    else setSoundReady(ctx?.state === 'running')
+    return ctx
   }, [])
 
   // Unlock audio on the first user interaction (browser autoplay policy).
@@ -86,6 +92,21 @@ export function useOrderSounds(restaurantId, muted) {
     strike(ctx, now + 0.36, 784, 1, true) // G5
   }, [ensureAudio, strike])
 
+  // Called from a tap on the "enable sound" prompt: unlock audio and confirm
+  // with a short chime so staff know it's on.
+  const enableSound = useCallback(() => {
+    const ctx = ensureAudio()
+    if (!ctx) return
+    const play = () => {
+      const now = ctx.currentTime
+      strike(ctx, now, 659, 0.8)
+      strike(ctx, now + 0.28, 988, 0.9)
+      setSoundReady(true)
+    }
+    if (ctx.state === 'running') play()
+    else if (ctx.resume) ctx.resume().then(play).catch(() => {})
+  }, [ensureAudio, strike])
+
   const tableLabel = useCallback(async (tableId) => {
     if (!tableId) return 'A table'
     const { data } = await supabase
@@ -136,4 +157,6 @@ export function useOrderSounds(restaurantId, muted) {
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [restaurantId, ringNewOrder, ringReady, tableLabel, toast])
+
+  return { soundReady, enableSound }
 }

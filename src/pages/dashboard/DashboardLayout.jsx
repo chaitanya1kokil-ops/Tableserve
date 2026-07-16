@@ -44,7 +44,7 @@ export default function DashboardLayout() {
   const { restaurant, signOut } = useAuth()
   const status = RESTAURANT_STATUS[restaurant?.status] || RESTAURANT_STATUS.active
   const { calls, resolve, muted, toggleMute } = useServerCalls(restaurant?.id)
-  useOrderSounds(restaurant?.id, muted)
+  const { soundReady, enableSound } = useOrderSounds(restaurant?.id, muted)
   const newOrders = useNewOrderCount(restaurant?.id)
 
   const { isOwner, ownerPinSet, ownerMode, lockOwner } = useAuth()
@@ -150,6 +150,16 @@ export default function DashboardLayout() {
             </button>
           </div>
         </header>
+
+        {!soundReady && !muted && (
+          <button
+            onClick={enableSound}
+            className="flex w-full items-center justify-center gap-2 bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800"
+          >
+            <Bell className="h-4 w-4 text-amber-300" />
+            Tap once to turn on order sounds
+          </button>
+        )}
 
         {calls.length > 0 && (
           <div className="z-20 border-b border-orange-200 bg-orange-50 md:sticky md:top-0">
