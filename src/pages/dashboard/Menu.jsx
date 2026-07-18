@@ -7,6 +7,9 @@ import {
   FolderPlus,
   GripVertical,
   Image as ImageIcon,
+  ChevronUp,
+  ChevronDown,
+  Pin,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -97,6 +100,35 @@ export default function Menu() {
     if (error) return toast.error(error.message)
     toast.success('Category deleted.')
     load()
+  }
+
+  // Reorder a category within its brand ('up' | 'down' | 'top'). Reindexes the
+  // visible set to a clean 0..n sequence and persists it (optimistic).
+  const reorderCategory = async (category, direction, visible) => {
+    const list = [...visible]
+    const from = list.findIndex((c) => c.id === category.id)
+    const to = direction === 'top' ? 0 : direction === 'up' ? from - 1 : from + 1
+    if (from === -1 || to < 0 || to >= list.length || to === from) return
+
+    const [moved] = list.splice(from, 1)
+    list.splice(to, 0, moved)
+    const orderMap = new Map(list.map((c, i) => [c.id, i]))
+
+    setCategories((prev) =>
+      [...prev]
+        .map((c) => (orderMap.has(c.id) ? { ...c, sort_order: orderMap.get(c.id) } : c))
+        .sort((a, b) => a.sort_order - b.sort_order),
+    )
+
+    const results = await Promise.all(
+      list.map((c, i) =>
+        supabase.from('menu_categories').update({ sort_order: i }).eq('id', c.id),
+      ),
+    )
+    if (results.some((r) => r.error)) {
+      toast.error('Could not save the new order.')
+      load()
+    }
   }
 
   if (loading) return <FullPageSpinner label="Loading your menu…" />
@@ -191,13 +223,18 @@ export default function Menu() {
               toast={toast}
             />
           )}
-          {grouped.map(({ category, items: catItems }) => (
+          {grouped.map(({ category, items: catItems }, idx) => (
             <CategorySection
               key={category.id}
               category={category}
               items={catItems}
               optionsByItem={optionsByItem}
               currency={restaurant.currency}
+              isFirst={idx === 0}
+              isLast={idx === grouped.length - 1}
+              onPin={() => reorderCategory(category, 'top', visibleCategories)}
+              onMoveUp={() => reorderCategory(category, 'up', visibleCategories)}
+              onMoveDown={() => reorderCategory(category, 'down', visibleCategories)}
               onEditCategory={() => setCatModal(category)}
               onDeleteCategory={() => deleteCategory(category)}
               onAddItem={() => setItemModal({ category_id: category.id })}
@@ -263,6 +300,11 @@ function CategorySection({
   items,
   optionsByItem,
   currency,
+  isFirst,
+  isLast,
+  onPin,
+  onMoveUp,
+  onMoveDown,
   onEditCategory,
   onDeleteCategory,
   onAddItem,
@@ -272,7 +314,7 @@ function CategorySection({
 }) {
   return (
     <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-100 sm:p-5">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-baseline gap-2.5">
           <h2 className="font-display text-xl font-semibold text-stone-900">{category.name}</h2>
           <span className="text-xs font-medium text-stone-400">
@@ -280,6 +322,35 @@ function CategorySection({
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {onPin && !isFirst && (
+            <button
+              onClick={onPin}
+              title="Pin to top"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-600"
+            >
+              <Pin className="h-4 w-4" />
+            </button>
+          )}
+          {onMoveUp && (
+            <button
+              onClick={onMoveUp}
+              disabled={isFirst}
+              title="Move up"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          )}
+          {onMoveDown && (
+            <button
+              onClick={onMoveDown}
+              disabled={isLast}
+              title="Move down"
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          )}
           {onEditCategory && (
             <button onClick={onEditCategory} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
               <Pencil className="h-4 w-4" />
