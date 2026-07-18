@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins, Gift } from 'lucide-react'
+import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins, Gift, ShoppingBag } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatTime } from '../../lib/format'
@@ -73,12 +73,21 @@ export default function Checkout() {
   }, [rid, load])
 
   const tabs = useMemo(() => {
-    const byTable = {}
+    const groups = {}
     for (const o of orders) {
-      const key = o.table_id || 'none'
-      ;(byTable[key] ||= { key, label: o.table?.label || 'No table', orders: [] }).orders.push(o)
+      // Takeout/counter orders carry a customer name and are paid individually;
+      // dine-in orders are grouped by their table into one running tab.
+      const key = o.customer_name ? `c:${o.id}` : `t:${o.table_id || 'none'}`
+      ;(groups[key] ||= {
+        key,
+        label: o.customer_name || o.table?.label || 'No table',
+        name: o.customer_name || null,
+        counterLabel: o.customer_name ? o.table?.label || null : null,
+        tableId: o.table_id || null,
+        orders: [],
+      }).orders.push(o)
     }
-    return Object.values(byTable)
+    return Object.values(groups)
       .map((t) => ({
         ...t,
         subtotal: t.orders.reduce((s, o) => s + Number(o.subtotal ?? o.total ?? 0), 0),
@@ -126,16 +135,21 @@ export default function Checkout() {
                 t.billRequested ? 'ring-2 ring-orange-300' : 'ring-1 ring-stone-100'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-stone-900">{t.label}</span>
-                {t.billRequested && (
-                  <Badge className="bg-orange-100 text-orange-700">
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate font-bold text-stone-900">{t.label}</span>
+                {t.name ? (
+                  <Badge className="flex-shrink-0 bg-violet-100 text-violet-700">
+                    <ShoppingBag className="h-3 w-3" /> Takeout
+                  </Badge>
+                ) : t.billRequested ? (
+                  <Badge className="flex-shrink-0 bg-orange-100 text-orange-700">
                     <Receipt className="h-3 w-3" /> Bill requested
                   </Badge>
-                )}
+                ) : null}
               </div>
               <p className="mt-1 text-xs text-stone-400">
-                {t.orders.length} {t.orders.length === 1 ? 'round' : 'rounds'} · {t.itemCount}{' '}
+                {t.counterLabel ? `${t.counterLabel} · ` : ''}
+                {t.orders.length} {t.orders.length === 1 ? 'order' : 'orders'} · {t.itemCount}{' '}
                 {t.itemCount === 1 ? 'item' : 'items'} · since {formatTime(t.openedAt)}
               </p>
               <div className="mt-3 flex items-end justify-between">
@@ -227,7 +241,7 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
     if (!balanced) return
     setSettling(true)
     const { error } = await supabase.rpc('settle_tab', {
-      p_table_id: tab.key === 'none' ? null : tab.key,
+      p_table_id: tab.tableId,
       p_order_ids: tab.orders.map((o) => o.id),
       p_payments: payments.map((p) => ({
         method: p.method,
@@ -247,9 +261,17 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl bg-white animate-slide-up sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h3 className="font-display text-xl font-semibold text-stone-900">
-            Pay {tab.label}
-          </h3>
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-xl font-semibold text-stone-900">
+              Pay {tab.label}
+            </h3>
+            {tab.name && (
+              <p className="flex items-center gap-1 text-xs font-medium text-violet-600">
+                <ShoppingBag className="h-3.5 w-3.5" /> Takeout
+                {tab.counterLabel ? ` · ${tab.counterLabel}` : ''}
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100">
             <X className="h-5 w-5" />
           </button>
