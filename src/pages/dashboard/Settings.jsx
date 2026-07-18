@@ -453,17 +453,25 @@ function PrintingCard({ restaurant, toast }) {
             <strong> CloudPRNT</strong> section, paste this as the <strong>Server URL</strong>, enable
             it, and save:
           </p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 truncate rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-              {cloudUrl || 'Save settings to generate your URL'}
-            </code>
-            <Button variant="outline" size="sm" onClick={copyUrl} disabled={!cloudUrl}>
-              <Copy className="h-4 w-4" /> Copy
-            </Button>
-          </div>
-          <p className="text-xs text-gray-400">
-            The printer prints new orders on its own — keep it on wifi. Use a poll interval of 5–10s.
-          </p>
+          {s.enabled && cloudUrl ? (
+            <>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                  {cloudUrl}
+                </code>
+                <Button variant="outline" size="sm" onClick={copyUrl}>
+                  <Copy className="h-4 w-4" /> Copy
+                </Button>
+              </div>
+              <p className="text-xs text-gray-400">
+                The printer prints new orders on its own — keep it on wifi. Use a poll interval of 5–10s.
+              </p>
+            </>
+          ) : (
+            <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-400">
+              Turn on “Auto-print new orders” above and press Save — your Server URL appears here.
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
