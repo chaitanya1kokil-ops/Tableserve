@@ -298,6 +298,22 @@ export default function Settings() {
 }
 
 /* ---------------------------------------------------------- owner PIN --- */
+const CLOUDPRNT_STEPS = [
+  'Turn on "Auto-print new orders" above and press Save — this generates your Server URL.',
+  'Put the Star printer on the same wifi. To find its IP, hold the FEED button while switching it on — it prints a self-test with the address.',
+  'On a phone or laptop on that same wifi, open http://<printer-ip> in a browser.',
+  'Open the CloudPRNT page, paste the Server URL from above, set polling to 5–10 seconds, tick Enable, and Save.',
+  'Reboot the printer, then place a test order — it prints within a few seconds.',
+]
+
+const PRINTNODE_STEPS = [
+  'Connect your printer to a small always-on device (any PC / Mac / mini-PC) next to the kitchen.',
+  'Create an account at printnode.com and install their client on that device — your printer shows up in it.',
+  'In PrintNode, copy your API key (Account → API keys) and your Printer ID (shown next to the printer).',
+  'Paste both in the fields above, turn on "Auto-print new orders", and press Save.',
+  'Tap "Send test print" — a test ticket should come out of the printer.',
+]
+
 // Self-serve kitchen printer setup. Each restaurant connects its OWN printer,
 // choosing Star CloudPRNT (printer polls us; no PC) or PrintNode (any printer
 // via a small always-on device). Config lives in the owner-only
@@ -466,6 +482,18 @@ function PrintingCard({ restaurant, toast }) {
           </Field>
         </div>
       )}
+
+      {/* Short connect guide, switches with the chosen option */}
+      <div className="mt-4 rounded-xl bg-gray-50 p-4">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">
+          How to connect {s.provider === 'cloudprnt' ? 'a Star CloudPRNT printer' : 'with PrintNode'}
+        </p>
+        <ol className="list-decimal space-y-1.5 pl-4 text-sm text-gray-600">
+          {(s.provider === 'cloudprnt' ? CLOUDPRNT_STEPS : PRINTNODE_STEPS).map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
+        </ol>
+      </div>
 
       <div className="mt-4 flex gap-2">
         <Button size="sm" onClick={save} loading={saving}>
