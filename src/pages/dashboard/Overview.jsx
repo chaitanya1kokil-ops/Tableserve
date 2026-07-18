@@ -98,7 +98,8 @@ export default function Overview() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   // Stats for the selected range.
-  const paid = orders.filter((o) => o.status !== 'cancelled')
+  // Exclude cancelled and not-yet-paid (food-truck 'awaiting_payment') orders.
+  const paid = orders.filter((o) => o.status !== 'cancelled' && o.status !== 'awaiting_payment')
   const revenue = paid.reduce((sum, o) => sum + Number(o.total || 0), 0)
   const avg = paid.length ? revenue / paid.length : 0
   const itemsSold = paid.reduce(

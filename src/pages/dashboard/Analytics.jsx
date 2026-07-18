@@ -108,7 +108,8 @@ export default function Analytics() {
     load()
   }, [load])
 
-  const paid = orders.filter((o) => o.status !== 'cancelled')
+  // Exclude cancelled and not-yet-paid (food-truck 'awaiting_payment') orders.
+  const paid = orders.filter((o) => o.status !== 'cancelled' && o.status !== 'awaiting_payment')
   const revenue = paid.reduce((sum, o) => sum + Number(o.total || 0), 0)
   const avg = paid.length ? revenue / paid.length : 0
   const itemsSold = paid.reduce(

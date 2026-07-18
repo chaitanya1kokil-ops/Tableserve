@@ -23,7 +23,9 @@ export default function Settings() {
     currency: restaurant.currency || 'USD',
     tax_rate: restaurant.tax_rate ?? 0,
     google_review_url: restaurant.google_review_url || '',
+    stripe_link: restaurant.stripe_link || '',
   })
+  const isTruck = restaurant.business_type === 'food_truck'
   const [logoFile, setLogoFile] = useState(undefined)
   const [saving, setSaving] = useState(false)
 
@@ -46,6 +48,7 @@ export default function Settings() {
         currency: form.currency,
         tax_rate: taxRate,
         google_review_url: form.google_review_url.trim() || null,
+        stripe_link: form.stripe_link.trim() || null,
       }
 
       if (logoFile instanceof File) {
@@ -211,6 +214,24 @@ export default function Settings() {
             />
           </Field>
         </Card>
+
+        {isTruck && (
+          <Card className="p-5">
+            <h2 className="mb-1 font-bold text-gray-900">Online payment</h2>
+            <p className="mb-3 text-sm text-gray-500">
+              Paste your Stripe payment link. When set, customers are sent here to pay right after
+              placing their order. Leave blank to take payment at the window.
+            </p>
+            <Field label="Stripe payment link">
+              <Input
+                type="url"
+                value={form.stripe_link}
+                onChange={set('stripe_link')}
+                placeholder="https://buy.stripe.com/…"
+              />
+            </Field>
+          </Card>
+        )}
 
         {/* Notifications */}
         <Card className="p-5">

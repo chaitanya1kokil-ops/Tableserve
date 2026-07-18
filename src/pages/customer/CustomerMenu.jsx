@@ -426,7 +426,7 @@ export default function CustomerMenu() {
           isTruck={isTruck}
           isCounter={isCounter}
           presetName={counterName}
-          paymentUrl={isCounter ? table?.stripe_link : null}
+          paymentUrl={isCounter ? table?.stripe_link : isTruck ? restaurant?.stripe_link : null}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
