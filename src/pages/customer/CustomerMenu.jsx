@@ -504,11 +504,17 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onVi
               href={restaurant.google_review_url}
               target="_blank"
               rel="noreferrer"
-              aria-label="Leave a Google review"
-              className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/25 backdrop-blur transition active:scale-95"
+              aria-label="Review us on Google"
+              className="flex flex-shrink-0 flex-col items-center gap-1 rounded-2xl bg-white px-3.5 py-2.5 shadow-lg shadow-black/20 ring-1 ring-black/5 transition hover:-translate-y-0.5 active:scale-95"
             >
-              <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
-              Reviews
+              <span className="flex items-center gap-0.5">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                ))}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-stone-600">
+                Review us
+              </span>
             </a>
           )}
         </div>
