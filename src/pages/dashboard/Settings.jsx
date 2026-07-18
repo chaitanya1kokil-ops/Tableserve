@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Check, ExternalLink, Store, Volume2, VolumeX, Bell, ShieldCheck } from 'lucide-react'
+import { Check, ExternalLink, Store, Volume2, VolumeX, Bell, ShieldCheck, Printer, Copy } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase, uploadImage } from '../../lib/supabase'
@@ -256,6 +256,9 @@ export default function Settings() {
           </button>
         </Card>
 
+        {/* Kitchen printing — self-serve, per restaurant */}
+        <PrintingCard restaurant={restaurant} toast={toast} />
+
         {/* Owner PIN — only editable in owner mode */}
         {isOwner && (
           <OwnerPinCard
@@ -295,6 +298,189 @@ export default function Settings() {
 }
 
 /* ---------------------------------------------------------- owner PIN --- */
+// Self-serve kitchen printer setup. Each restaurant connects its OWN printer,
+// choosing Star CloudPRNT (printer polls us; no PC) or PrintNode (any printer
+// via a small always-on device). Config lives in the owner-only
+// printer_settings table — never on the public restaurants row.
+function PrintingCard({ restaurant, toast }) {
+  const [s, setS] = useState({
+    enabled: false,
+    provider: 'cloudprnt',
+    token: '',
+    printnode_api_key: '',
+    printnode_printer_id: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    supabase
+      .from('printer_settings')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (alive && data) setS((prev) => ({ ...prev, ...data }))
+      })
+    return () => {
+      alive = false
+    }
+  }, [restaurant.id])
+
+  const cloudUrl = s.token
+    ? `${window.location.origin}/api/cloudprnt?rid=${restaurant.id}&k=${s.token}`
+    : ''
+
+  const save = async () => {
+    setSaving(true)
+    const { data, error } = await supabase
+      .from('printer_settings')
+      .upsert(
+        {
+          restaurant_id: restaurant.id,
+          enabled: s.enabled,
+          provider: s.provider,
+          printnode_api_key: s.printnode_api_key || null,
+          printnode_printer_id: s.printnode_printer_id || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'restaurant_id' },
+      )
+      .select('*')
+      .maybeSingle()
+    setSaving(false)
+    if (error) return toast.error(error.message)
+    if (data) setS((prev) => ({ ...prev, ...data })) // picks up the generated token
+    toast.success('Printer settings saved.')
+  }
+
+  const sendTest = async () => {
+    if (!s.token) return toast.error('Save your settings first.')
+    setTesting(true)
+    try {
+      const resp = await fetch('/api/print-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId: restaurant.id, token: s.token, test: true }),
+      })
+      const d = await resp.json().catch(() => ({}))
+      if (!resp.ok) throw new Error(d.error || 'Test print failed.')
+      toast.success('Test ticket sent to your printer.')
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const copyUrl = () => {
+    navigator.clipboard?.writeText(cloudUrl)
+    toast.success('Server URL copied.')
+  }
+
+  return (
+    <Card className="p-5">
+      <h2 className="mb-1 flex items-center gap-2 font-bold text-gray-900">
+        <Printer className="h-5 w-5 text-gray-500" /> Kitchen printer
+      </h2>
+      <p className="mb-4 text-sm text-gray-500">
+        Auto-print every new order. Pick the option that matches your printer — no help from us needed.
+      </p>
+
+      {/* Enable toggle */}
+      <button
+        type="button"
+        onClick={() => setS({ ...s, enabled: !s.enabled })}
+        className="mb-4 flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:bg-gray-50"
+      >
+        <span className="text-sm font-semibold text-gray-800">Auto-print new orders</span>
+        <span
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition ${
+            s.enabled ? 'bg-emerald-500' : 'bg-gray-300'
+          }`}
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+              s.enabled ? 'translate-x-[22px]' : 'translate-x-0.5'
+            }`}
+          />
+        </span>
+      </button>
+
+      {/* Provider choice */}
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        {[
+          { key: 'cloudprnt', label: 'Star CloudPRNT', hint: 'Cloud printer — no PC' },
+          { key: 'printnode', label: 'PrintNode', hint: 'Any printer + a device' },
+        ].map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => setS({ ...s, provider: p.key })}
+            className={`rounded-xl border px-3 py-3 text-left transition ${
+              s.provider === p.key
+                ? 'border-brand bg-brand/5 ring-1 ring-brand'
+                : 'border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <span className="block text-sm font-semibold text-gray-900">{p.label}</span>
+            <span className="block text-xs text-gray-500">{p.hint}</span>
+          </button>
+        ))}
+      </div>
+
+      {s.provider === 'cloudprnt' ? (
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600">
+            In your Star printer's settings page, open <strong>CloudPRNT</strong>, paste this as the
+            <strong> Server URL</strong>, enable it, and save:
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 truncate rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+              {cloudUrl || 'Save settings to generate your URL'}
+            </code>
+            <Button variant="outline" size="sm" onClick={copyUrl} disabled={!cloudUrl}>
+              <Copy className="h-4 w-4" /> Copy
+            </Button>
+          </div>
+          <p className="text-xs text-gray-400">
+            The printer prints new orders on its own — keep it on wifi. Use a poll interval of 5–10s.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <Field label="PrintNode API key">
+            <Input
+              value={s.printnode_api_key || ''}
+              onChange={(e) => setS({ ...s, printnode_api_key: e.target.value })}
+              placeholder="From printnode.com → API keys"
+            />
+          </Field>
+          <Field label="Printer ID">
+            <Input
+              value={s.printnode_printer_id || ''}
+              onChange={(e) => setS({ ...s, printnode_printer_id: e.target.value })}
+              placeholder="The numeric printer ID in PrintNode"
+            />
+          </Field>
+        </div>
+      )}
+
+      <div className="mt-4 flex gap-2">
+        <Button size="sm" onClick={save} loading={saving}>
+          Save
+        </Button>
+        {s.provider === 'printnode' && (
+          <Button variant="outline" size="sm" onClick={sendTest} loading={testing}>
+            <Printer className="h-4 w-4" /> Send test print
+          </Button>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function OwnerPinCard({ hasPin, onSaved, toast }) {
   const [pin, setPin] = useState('')
   const [saving, setSaving] = useState(false)
