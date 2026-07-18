@@ -145,6 +145,8 @@ export default function CustomerMenu() {
   const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
   const isTruck = restaurant?.business_type === 'food_truck'
+  // A counter/register QR = takeout-only ordering point (ask name, force takeout).
+  const isCounter = table?.kind === 'counter'
   // Trucks order from one QR (no table); restaurants need a scanned table.
   const canOrder = (Boolean(tableId) || isTruck) && restaurant?.status === 'active'
 
@@ -401,6 +403,7 @@ export default function CustomerMenu() {
           loyaltyName={loyaltyMember?.name || ''}
           onJoinLoyalty={() => setLoyaltyOpen(true)}
           isTruck={isTruck}
+          isCounter={isCounter}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
@@ -538,7 +541,15 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onVi
         {table && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold ring-1 ring-white/20">
-              <UtensilsCrossed className="h-4 w-4" /> {table.label}
+              {table.kind === 'counter' ? (
+                <>
+                  <ShoppingBag className="h-4 w-4" /> Takeout · {table.label}
+                </>
+              ) : (
+                <>
+                  <UtensilsCrossed className="h-4 w-4" /> {table.label}
+                </>
+              )}
             </span>
             {canCall && (
               <button
@@ -832,10 +843,12 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 }
 
 /* ----------------------------------------------------------- cart sheet --- */
-function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, loyaltyName, onJoinLoyalty, isTruck, restaurantId, tableId, onClose, onPlaced }) {
+function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, loyaltyName, onJoinLoyalty, isTruck, isCounter, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
+  // Trucks and counter/register QRs both order by name and are takeout-only.
+  const needsName = isTruck || isCounter
   const [notes, setNotes] = useState('')
-  const [orderType, setOrderType] = useState(isTruck ? 'takeout' : 'dine_in')
+  const [orderType, setOrderType] = useState(needsName ? 'takeout' : 'dine_in')
   const [customerName, setCustomerName] = useState(loyaltyName || '')
   const [placing, setPlacing] = useState(false)
 
@@ -857,7 +870,7 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
 
   const placeOrder = async () => {
     if (cart.length === 0) return
-    if (isTruck && !customerName.trim()) {
+    if (needsName && !customerName.trim()) {
       toast.error('Please enter your name so we can call you.')
       return
     }
@@ -881,7 +894,7 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
       p_notes: notes.trim() || null,
       p_order_type: orderType,
       p_loyalty_member_id: loyaltyMemberId,
-      p_customer_name: isTruck ? customerName.trim() : null,
+      p_customer_name: needsName ? customerName.trim() : null,
     })
     setPlacing(false)
     if (error) {
@@ -910,8 +923,8 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
             <p className="py-10 text-center text-sm text-gray-400">Your cart is empty.</p>
           ) : (
             <div className="space-y-3">
-              {isTruck ? (
-                /* Food truck: order by name, collected when called. */
+              {needsName ? (
+                /* Truck or counter/register: order by name, takeout only. */
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-stone-700">
                     Your name
@@ -922,6 +935,12 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
                     placeholder="We’ll call this when it’s ready"
                     className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900"
                   />
+                  {isCounter && (
+                    <p className="mt-2 flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      <ShoppingBag className="h-4 w-4 flex-shrink-0" />
+                      Takeout order — pick it up at the counter when your name is called.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <>

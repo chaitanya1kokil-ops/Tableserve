@@ -191,8 +191,15 @@ function TableCard({ table, restaurantId, onRename, onDelete }) {
   return (
     <Card className="p-4" data-table-card data-label={table.label}>
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-gray-900">{table.label}</h3>
-        <div className="flex gap-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="truncate font-bold text-gray-900">{table.label}</h3>
+          {table.kind === 'counter' && (
+            <span className="flex-shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+              Takeout
+            </span>
+          )}
+        </div>
+        <div className="flex flex-shrink-0 gap-1">
           <button onClick={onRename} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
             <Pencil className="h-4 w-4" />
           </button>
@@ -241,26 +248,42 @@ function TableCard({ table, restaurantId, onRename, onDelete }) {
 
 function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onSaved }) {
   const toast = useToast()
+  const [kind, setKind] = useState('table')
   const [count, setCount] = useState(1)
   const [prefix, setPrefix] = useState('Table')
   const [saving, setSaving] = useState(false)
+
+  const isCounter = kind === 'counter'
+
+  // Switch type; swap the default prefix unless the user typed a custom one.
+  const pickKind = (k) => {
+    setKind(k)
+    setPrefix((p) =>
+      p === 'Table' || p === 'Counter' || !p.trim() ? (k === 'counter' ? 'Counter' : 'Table') : p,
+    )
+    if (k === 'counter') setCount(1)
+  }
+
+  const base = prefix.trim() || (isCounter ? 'Counter' : 'Table')
+  const labelFor = (i, n) => (isCounter ? (n === 1 ? base : `${base} ${i + 1}`) : `${base} ${existingCount + i + 1}`)
 
   const save = async () => {
     const n = parseInt(count, 10)
     if (isNaN(n) || n < 1 || n > 100) return toast.error('Enter a number between 1 and 100.')
     if (n > remaining)
       return toast.error(
-        `Your plan has room for ${remaining} more ${remaining === 1 ? 'table' : 'tables'}. Upgrade to add more.`,
+        `Your plan has room for ${remaining} more ${remaining === 1 ? 'QR' : 'QRs'}. Upgrade to add more.`,
       )
     setSaving(true)
     const rows = Array.from({ length: n }, (_, i) => ({
       restaurant_id: rid,
-      label: `${prefix.trim() || 'Table'} ${existingCount + i + 1}`,
+      label: labelFor(i, n),
+      kind,
     }))
     const { error } = await supabase.from('tables').insert(rows)
     setSaving(false)
     if (error) return toast.error(error.message)
-    toast.success(`${n} ${n === 1 ? 'table' : 'tables'} added.`)
+    toast.success(isCounter ? 'Counter QR added.' : `${n} ${n === 1 ? 'table' : 'tables'} added.`)
     onSaved()
   }
 
@@ -268,7 +291,7 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
     <Modal
       open
       onClose={onClose}
-      title="Add tables"
+      title={isCounter ? 'Add counter QR' : 'Add tables'}
       maxWidth="max-w-md"
       footer={
         <div className="flex gap-2">
@@ -282,9 +305,38 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
       }
     >
       <div className="space-y-4">
+        {/* Type: dining table vs counter/register (takeout) */}
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+          {[
+            ['table', 'Dining table'],
+            ['counter', 'Counter (takeout)'],
+          ].map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => pickKind(k)}
+              className={`rounded-lg py-2 text-sm font-semibold transition ${
+                kind === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {isCounter && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            A counter QR is for the line at the register: scanning it asks the customer’s name and
+            starts a <strong>takeout</strong> order — no table needed.
+          </p>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Label prefix">
-            <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="Table" />
+          <Field label={isCounter ? 'Name' : 'Label prefix'}>
+            <Input
+              value={prefix}
+              onChange={(e) => setPrefix(e.target.value)}
+              placeholder={isCounter ? 'Counter' : 'Table'}
+            />
           </Field>
           <Field label="How many?">
             <Input
@@ -296,15 +348,14 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
             />
           </Field>
         </div>
+
         <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
-          Will create{' '}
-          <strong>
-            {prefix.trim() || 'Table'} {existingCount + 1}
-          </strong>{' '}
-          …{' '}
-          <strong>
-            {prefix.trim() || 'Table'} {existingCount + (parseInt(count, 10) || 1)}
-          </strong>
+          Will create <strong>{labelFor(0, parseInt(count, 10) || 1)}</strong>
+          {(parseInt(count, 10) || 1) > 1 && (
+            <>
+              {' '}… <strong>{labelFor((parseInt(count, 10) || 1) - 1, parseInt(count, 10) || 1)}</strong>
+            </>
+          )}
         </p>
       </div>
     </Modal>

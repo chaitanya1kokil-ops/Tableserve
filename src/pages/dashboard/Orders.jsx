@@ -8,6 +8,7 @@ import {
   Inbox,
   Plus,
   ShoppingBag,
+  User,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -258,6 +259,12 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
           {timeAgo(order.created_at)}
         </span>
       </div>
+
+      {order.customer_name && (
+        <div className="flex items-center gap-1.5 border-b border-gray-100 px-4 py-2 text-sm font-bold text-gray-900">
+          <User className="h-4 w-4 text-gray-400" /> {order.customer_name}
+        </div>
+      )}
 
       <div className="space-y-2 px-4 py-3">
         {(order.items || []).map((it) => (
