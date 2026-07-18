@@ -14,7 +14,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, timeAgo } from '../../lib/format'
-import { ORDER_STATUSES, nextStatus } from '../../lib/constants'
+import { ORDER_STATUSES } from '../../lib/constants'
 import { Button, Card, Badge, EmptyState, FullPageSpinner } from '../../components/ui'
 import NewOrderModal from './NewOrderModal'
 
@@ -23,13 +23,13 @@ const FILTERS = [
   { key: 'completed', label: 'Completed', statuses: ['completed'] },
 ]
 
-// Staff can advance orders up to "served" here. Completing an order happens
-// only through Checkout, when the bill is actually paid — so nobody can
+// Staff advance orders straight to "ready", then "served" — no separate "start
+// preparing" step. Completing/paying happens only in Checkout, so nobody can
 // accidentally close a table without charging it.
-const ADVANCE_LABEL = {
-  new: 'Start preparing',
-  preparing: 'Mark ready',
-  ready: 'Mark served',
+const ADVANCE = {
+  new: { to: 'ready', label: 'Mark ready' },
+  preparing: { to: 'ready', label: 'Mark ready' },
+  ready: { to: 'served', label: 'Mark served' },
 }
 
 export default function Orders() {
@@ -201,8 +201,8 @@ export default function Orders() {
                     order={order}
                     currency={restaurant.currency}
                     onAdvance={() => {
-                      const ns = nextStatus(order.status)
-                      if (ns) updateStatus(order, ns)
+                      const next = ADVANCE[order.status]
+                      if (next) updateStatus(order, next.to)
                     }}
                     onCancel={() => {
                       if (confirm('Cancel this order?')) updateStatus(order, 'cancelled')
@@ -220,7 +220,7 @@ export default function Orders() {
 
 function OrderCard({ order, currency, onAdvance, onCancel }) {
   const status = ORDER_STATUSES[order.status] || ORDER_STATUSES.new
-  const advanceLabel = ADVANCE_LABEL[order.status]
+  const advance = ADVANCE[order.status]
   const isNew = order.status === 'new'
   const canCancel = ['new', 'preparing'].includes(order.status)
 
@@ -301,12 +301,12 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
               <Ban className="h-4 w-4" />
             </Button>
           )}
-          {advanceLabel && (
+          {advance && (
             <button
               onClick={onAdvance}
               className={`flex items-center gap-1 rounded-xl px-3.5 py-2 text-sm font-bold text-white transition active:scale-[0.98] ${status.btn}`}
             >
-              {advanceLabel}
+              {advance.label}
               <ChevronRight className="h-4 w-4" />
             </button>
           )}
