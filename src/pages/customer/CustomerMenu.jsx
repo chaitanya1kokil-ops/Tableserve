@@ -489,7 +489,7 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onVi
               <Store className="h-7 w-7" />
             </span>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             {restaurant.cuisine && (
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-200/80">
                 {restaurant.cuisine}
@@ -499,6 +499,18 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onVi
               {restaurant.name}
             </h1>
           </div>
+          {restaurant.google_review_url && (
+            <a
+              href={restaurant.google_review_url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Leave a Google review"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/25 backdrop-blur transition active:scale-95"
+            >
+              <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+              Reviews
+            </a>
+          )}
         </div>
         {restaurant.description && (
           <p className="mt-3 text-sm leading-relaxed text-white/70">{restaurant.description}</p>

@@ -4,7 +4,7 @@ import { Check, ExternalLink, Store, Volume2, VolumeX, Bell, ShieldCheck, Printe
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase, uploadImage } from '../../lib/supabase'
-import { CUISINES, ACCENT_PRESETS, CURRENCIES, DAYS } from '../../lib/constants'
+import { CUISINES, ACCENT_PRESETS, CURRENCIES } from '../../lib/constants'
 import { Button, Card, Field, Input, Textarea, Select } from '../../components/ui'
 import ImageUpload from '../../components/ImageUpload'
 
@@ -22,8 +22,8 @@ export default function Settings() {
     accent_color: restaurant.accent_color || ACCENT_PRESETS[0],
     currency: restaurant.currency || 'USD',
     tax_rate: restaurant.tax_rate ?? 0,
+    google_review_url: restaurant.google_review_url || '',
   })
-  const [hours, setHours] = useState(restaurant.hours || {})
   const [logoFile, setLogoFile] = useState(undefined)
   const [saving, setSaving] = useState(false)
 
@@ -45,7 +45,7 @@ export default function Settings() {
         accent_color: form.accent_color,
         currency: form.currency,
         tax_rate: taxRate,
-        hours,
+        google_review_url: form.google_review_url.trim() || null,
       }
 
       if (logoFile instanceof File) {
@@ -197,21 +197,19 @@ export default function Settings() {
 
         {/* Hours */}
         <Card className="p-5">
-          <h2 className="mb-1 font-bold text-gray-900">Opening hours</h2>
-          <p className="mb-3 text-sm text-gray-500">Optional — shown on your menu page.</p>
-          <div className="space-y-2">
-            {DAYS.map((d) => (
-              <div key={d.key} className="flex items-center gap-3">
-                <span className="w-24 text-sm font-medium text-gray-600">{d.label}</span>
-                <Input
-                  value={hours[d.key] || ''}
-                  onChange={(e) => setHours({ ...hours, [d.key]: e.target.value })}
-                  placeholder="9:00 AM – 10:00 PM (or Closed)"
-                  className="flex-1"
-                />
-              </div>
-            ))}
-          </div>
+          <h2 className="mb-1 font-bold text-gray-900">Google reviews</h2>
+          <p className="mb-3 text-sm text-gray-500">
+            Paste your Google review link. A <strong>Reviews</strong> button then appears next to your
+            name on the customer menu, so diners can rate you in one tap.
+          </p>
+          <Field label="Google review link">
+            <Input
+              type="url"
+              value={form.google_review_url}
+              onChange={set('google_review_url')}
+              placeholder="https://g.page/r/…/review"
+            />
+          </Field>
         </Card>
 
         {/* Notifications */}
