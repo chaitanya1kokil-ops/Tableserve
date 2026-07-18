@@ -9,23 +9,19 @@ import {
   Clock,
   Utensils,
   Check,
-  Play,
   StickyNote,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
 
-// Per-item cooking flow. `ready` is the end of the kitchen's job for that item.
-const ITEM_NEXT = { new: 'preparing', preparing: 'ready' }
-
+// One-tap flow: an item (or the whole order) goes straight to `ready` — no
+// separate "start preparing" step.
 const ITEM_STYLE = {
   new: { pill: 'bg-sky-500/15 text-sky-300', label: 'Queued' },
   preparing: { pill: 'bg-amber-500/15 text-amber-300', label: 'Cooking' },
   ready: { pill: 'bg-emerald-500/15 text-emerald-300', label: 'Ready' },
 }
-
-const ITEM_ACTION = { new: { label: 'Start', icon: Play }, preparing: { label: 'Ready', icon: Check } }
 
 // The kitchen's job ends at "ready": once every item is ready the DB trigger
 // flips the order to ready and the ticket leaves this board automatically.
@@ -41,6 +37,18 @@ export default function Kitchen() {
   const [loading, setLoading] = useState(true)
   const [muted, setMuted] = useState(false)
   const [soundReady, setSoundReady] = useState(false)
+  // 'item' = a Ready button per item; 'order' = one button per ticket.
+  const [readyMode, setReadyMode] = useState(
+    () => (typeof localStorage !== 'undefined' && localStorage.getItem('kds-ready-mode')) || 'item',
+  )
+  const pickMode = (m) => {
+    setReadyMode(m)
+    try {
+      localStorage.setItem('kds-ready-mode', m)
+    } catch {
+      /* ignore */
+    }
+  }
   const [, forceTick] = useState(0) // refresh elapsed timers periodically
 
   const reloadTimer = useRef(null)
@@ -175,45 +183,37 @@ export default function Kitchen() {
     }
   }, [rid, load, scheduleReload])
 
-  // Advance a single item (new -> preparing -> ready). The DB trigger rolls the
-  // change up to the order status, so the reception board + customer stay in sync.
-  const advanceItem = async (order, item) => {
-    const cur = item.status || 'new'
-    const ns = ITEM_NEXT[cur]
-    if (!ns) return
+  // Mark one item ready (single tap — no "start" step). The DB trigger rolls the
+  // change up to the order; once every item is ready the ticket leaves the board.
+  const markItemReady = async (order, item) => {
+    if ((item.status || 'new') === 'ready') return
     setOrders((list) =>
       list
         .map((o) =>
           o.id === order.id
-            ? { ...o, items: o.items.map((it) => (it.id === item.id ? { ...it, status: ns } : it)) }
+            ? { ...o, items: o.items.map((it) => (it.id === item.id ? { ...it, status: 'ready' } : it)) }
             : o,
         )
-        // All items ready -> the kitchen is done; the ticket leaves the board.
         .filter((o) => !(o.items || []).length || o.items.some((it) => (it.status || 'new') !== 'ready')),
     )
-    const { error } = await supabase.from('order_items').update({ status: ns }).eq('id', item.id)
+    const { error } = await supabase.from('order_items').update({ status: 'ready' }).eq('id', item.id)
     if (error) {
       toast.error('Could not update item.')
       load()
     }
   }
 
-  // Start every not-yet-started item in one tap.
-  const startAll = async (order) => {
-    setOrders((list) =>
-      list.map((o) =>
-        o.id === order.id
-          ? { ...o, items: o.items.map((it) => (it.status === 'ready' ? it : { ...it, status: 'preparing' })) }
-          : o,
-      ),
-    )
+  // Mark the whole order ready in one tap (rush-hour friendly): flips every
+  // not-yet-ready item to ready, so the order clears the board immediately.
+  const markOrderReady = async (order) => {
+    setOrders((list) => list.filter((o) => o.id !== order.id))
     const { error } = await supabase
       .from('order_items')
-      .update({ status: 'preparing' })
+      .update({ status: 'ready' })
       .eq('order_id', order.id)
-      .eq('status', 'new')
+      .neq('status', 'ready')
     if (error) {
-      toast.error('Could not update items.')
+      toast.error('Could not update order.')
       load()
     }
   }
@@ -248,6 +248,24 @@ export default function Kitchen() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Ready mode: per-item vs whole-order (kept per device) */}
+          <div className="flex rounded-xl border border-white/10 bg-white/5 p-0.5 text-xs font-bold">
+            {[
+              ['item', 'Per item'],
+              ['order', 'Whole order'],
+            ].map(([m, label]) => (
+              <button
+                key={m}
+                onClick={() => pickMode(m)}
+                title={m === 'item' ? 'A Ready button on each item' : 'One Ready button for the whole order'}
+                className={`rounded-lg px-2.5 py-1.5 transition ${
+                  readyMode === m ? 'bg-brand text-white' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={toggleMute}
             title={muted ? 'Sound off' : 'Sound on'}
@@ -299,8 +317,9 @@ export default function Kitchen() {
             <Ticket
               key={order.id}
               order={order}
-              onAdvanceItem={(it) => advanceItem(order, it)}
-              onStartAll={() => startAll(order)}
+              mode={readyMode}
+              onItemReady={(it) => markItemReady(order, it)}
+              onOrderReady={() => markOrderReady(order)}
             />
           ))}
         </div>
@@ -323,11 +342,10 @@ function elapsed(iso) {
   return { label: mins < 1 ? 'just now' : `${mins} min`, tone, pulse }
 }
 
-function Ticket({ order, onAdvanceItem, onStartAll }) {
+function Ticket({ order, mode, onItemReady, onOrderReady }) {
   const t = elapsed(order.created_at)
   const items = order.items || []
   const readyCount = items.filter((it) => (it.status || 'new') === 'ready').length
-  const hasNew = items.some((it) => (it.status || 'new') === 'new')
 
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-900 shadow-lg">
@@ -354,7 +372,6 @@ function Ticket({ order, onAdvanceItem, onStartAll }) {
         {items.map((it) => {
           const status = it.status || 'new'
           const style = ITEM_STYLE[status]
-          const action = ITEM_ACTION[status]
           const done = status === 'ready'
           return (
             <li
@@ -379,19 +396,19 @@ function Ticket({ order, onAdvanceItem, onStartAll }) {
                 {style.label}
               </span>
 
-              {action ? (
-                <button
-                  onClick={() => onAdvanceItem(it)}
-                  className="flex items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
-                >
-                  <action.icon className="h-4 w-4" />
-                  {action.label}
-                </button>
-              ) : (
+              {done ? (
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/15 text-emerald-300">
                   <Check className="h-5 w-5" />
                 </span>
-              )}
+              ) : mode === 'item' ? (
+                <button
+                  onClick={() => onItemReady(it)}
+                  className="flex items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
+                >
+                  <Check className="h-4 w-4" />
+                  Ready
+                </button>
+              ) : null}
             </li>
           )
         })}
@@ -404,16 +421,17 @@ function Ticket({ order, onAdvanceItem, onStartAll }) {
         </div>
       )}
 
-      <div className="border-t border-white/10 p-3">
-        <button
-          onClick={onStartAll}
-          disabled={!hasNew}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-base font-bold text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Play className="h-5 w-5" />
-          Start all items
-        </button>
-      </div>
+      {mode === 'order' && (
+        <div className="border-t border-white/10 p-3">
+          <button
+            onClick={onOrderReady}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-base font-bold text-white transition hover:bg-emerald-500 active:scale-[0.98]"
+          >
+            <Check className="h-5 w-5" />
+            Mark whole order ready
+          </button>
+        </div>
+      )}
     </div>
   )
 }
