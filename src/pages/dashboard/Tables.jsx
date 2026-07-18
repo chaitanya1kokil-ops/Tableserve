@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase } from '../../lib/supabase'
 import { tableUrl } from '../../lib/format'
-import { tableLimit, PLANS } from '../../lib/constants'
+import { tableLimit, PLANS, allowsCounterQr } from '../../lib/constants'
 import {
   Button,
   Card,
@@ -142,6 +142,7 @@ export default function Tables() {
           rid={rid}
           existingCount={tables.length}
           remaining={remaining}
+          canCounter={allowsCounterQr(restaurant)}
           onClose={() => setAddModal(false)}
           onSaved={() => {
             setAddModal(false)
@@ -251,7 +252,7 @@ function TableCard({ table, restaurantId, onRename, onDelete }) {
   )
 }
 
-function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onSaved }) {
+function AddTablesModal({ rid, existingCount, remaining = Infinity, canCounter = false, onClose, onSaved }) {
   const toast = useToast()
   const [kind, setKind] = useState('table')
   const [count, setCount] = useState(1)
@@ -312,23 +313,25 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
       }
     >
       <div className="space-y-4">
-        {/* Type: dining table vs counter/register (takeout) */}
-        <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
-          {[
-            ['table', 'Dining table'],
-            ['counter', 'Counter (takeout)'],
-          ].map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => pickKind(k)}
-              className={`rounded-lg py-2 text-sm font-semibold transition ${
-                kind === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* Type: dining table vs counter/register (takeout) — counter is Pro+ */}
+        {canCounter && (
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+            {[
+              ['table', 'Dining table'],
+              ['counter', 'Counter (takeout)'],
+            ].map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => pickKind(k)}
+                className={`rounded-lg py-2 text-sm font-semibold transition ${
+                  kind === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {isCounter && (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">

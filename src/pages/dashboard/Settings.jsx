@@ -4,7 +4,7 @@ import { Check, ExternalLink, Store, Volume2, VolumeX, Bell, ShieldCheck, Printe
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { supabase, uploadImage } from '../../lib/supabase'
-import { CUISINES, ACCENT_PRESETS, CURRENCIES } from '../../lib/constants'
+import { CUISINES, ACCENT_PRESETS, CURRENCIES, allowsReviews, allowsPrinting } from '../../lib/constants'
 import { Button, Card, Field, Input, Textarea, Select } from '../../components/ui'
 import ImageUpload from '../../components/ImageUpload'
 
@@ -198,22 +198,24 @@ export default function Settings() {
           </div>
         </Card>
 
-        {/* Hours */}
-        <Card className="p-5">
-          <h2 className="mb-1 font-bold text-gray-900">Google reviews</h2>
-          <p className="mb-3 text-sm text-gray-500">
-            Paste your Google review link. A <strong>Reviews</strong> button then appears next to your
-            name on the customer menu, so diners can rate you in one tap.
-          </p>
-          <Field label="Google review link">
-            <Input
-              type="url"
-              value={form.google_review_url}
-              onChange={set('google_review_url')}
-              placeholder="https://g.page/r/…/review"
-            />
-          </Field>
-        </Card>
+        {/* Google reviews — Pro & Premium */}
+        {allowsReviews(restaurant) && (
+          <Card className="p-5">
+            <h2 className="mb-1 font-bold text-gray-900">Google reviews</h2>
+            <p className="mb-3 text-sm text-gray-500">
+              Paste your Google review link. A <strong>Reviews</strong> button then appears next to
+              your name on the customer menu, so diners can rate you in one tap.
+            </p>
+            <Field label="Google review link">
+              <Input
+                type="url"
+                value={form.google_review_url}
+                onChange={set('google_review_url')}
+                placeholder="https://g.page/r/…/review"
+              />
+            </Field>
+          </Card>
+        )}
 
         {isTruck && (
           <Card className="p-5">
@@ -275,8 +277,8 @@ export default function Settings() {
           </button>
         </Card>
 
-        {/* Kitchen printing — self-serve, per restaurant */}
-        <PrintingCard restaurant={restaurant} toast={toast} />
+        {/* Kitchen printing — Pro & Premium (and food trucks) */}
+        {allowsPrinting(restaurant) && <PrintingCard restaurant={restaurant} toast={toast} />}
 
         {/* Owner PIN — only editable in owner mode */}
         {isOwner && (

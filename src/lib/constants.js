@@ -103,13 +103,16 @@ export const DAYS = [
 // Kept in sync with the DB (0016_plan_limits.sql) and the landing page.
 // Trial unlocks everything so new signups experience the full product.
 // ---------------------------------------------------------------------------
+// Capability flags: loyalty & multiBrand (existing), plus printing (kitchen
+// auto-print), counterQr (takeout register QR + its online payment link) and
+// reviews (Google review button) — these three are Pro/Premium only.
 export const PLANS = {
-  trial:      { label: 'Trial',      price: 0,   color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500',      maxTables: null, loyalty: true,  multiBrand: true },
-  starter:    { label: 'Starter',    price: 99,  color: 'bg-stone-200 text-stone-700',     dot: 'bg-stone-500',     maxTables: 10,   loyalty: false, multiBrand: false },
-  pro:        { label: 'Pro',        price: 179, color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500',     maxTables: 40,   loyalty: true,  multiBrand: true },
-  premium:    { label: 'Premium',    price: 299, color: 'bg-violet-100 text-violet-700',   dot: 'bg-violet-500',    maxTables: null, loyalty: true,  multiBrand: true },
+  trial:      { label: 'Trial',      price: 0,   color: 'bg-blue-100 text-blue-700',       dot: 'bg-blue-500',      maxTables: null, loyalty: true,  multiBrand: true,  printing: true,  counterQr: true,  reviews: true  },
+  starter:    { label: 'Starter',    price: 99,  color: 'bg-stone-200 text-stone-700',     dot: 'bg-stone-500',     maxTables: 10,   loyalty: false, multiBrand: false, printing: false, counterQr: false, reviews: false },
+  pro:        { label: 'Pro',        price: 179, color: 'bg-amber-100 text-amber-700',     dot: 'bg-amber-500',     maxTables: 40,   loyalty: true,  multiBrand: true,  printing: true,  counterQr: true,  reviews: true  },
+  premium:    { label: 'Premium',    price: 299, color: 'bg-violet-100 text-violet-700',   dot: 'bg-violet-500',    maxTables: null, loyalty: true,  multiBrand: true,  printing: true,  counterQr: true,  reviews: true  },
   // Flat plan for food trucks — one QR, order-by-name, online payments, loyalty.
-  food_truck: { label: 'Food Truck', price: 79,  color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500',   maxTables: null, loyalty: true,  multiBrand: false },
+  food_truck: { label: 'Food Truck', price: 79,  color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500',   maxTables: null, loyalty: true,  multiBrand: false, printing: true,  counterQr: false, reviews: true  },
 }
 
 // Detailed feature lists shown on plan cards (onboarding + Subscription tab).
@@ -117,11 +120,10 @@ export const PLANS = {
 export const PLAN_FEATURES = {
   starter: [
     'Up to 10 tables',
-    'QR menu — dine-in, takeout & counter',
-    'Kitchen display + auto-print tickets',
-    'Live orders board & server calls',
+    'QR menu — dine-in & takeout',
+    'Kitchen display & orders board',
+    'Live orders, server calls & one-tap ready',
     'Menu, modifiers & category ordering',
-    'Online payment links & Google reviews',
     'Card payments — 0% commission',
   ],
   pro: [
@@ -129,8 +131,10 @@ export const PLAN_FEATURES = {
     'Up to 40 tables',
     'Loyalty & rewards program',
     'Multiple brands with logos',
-    'Full analytics — peak hours & best-sellers',
-    'Owner & staff PIN roles',
+    'Counter QR & online payment links',
+    'Kitchen ticket auto-printing',
+    'Google reviews on your menu',
+    'Full analytics & staff PIN roles',
   ],
   premium: [
     'Everything in Pro',
@@ -154,4 +158,7 @@ const planFor = (r) => PLANS[r?.plan] || PLANS.trial
 // repeat customers); otherwise it follows the plan.
 export const allowsLoyalty = (r) => planFor(r).loyalty || r?.business_type === 'food_truck'
 export const allowsMultiBrand = (r) => planFor(r).multiBrand
+export const allowsPrinting = (r) => planFor(r).printing
+export const allowsCounterQr = (r) => planFor(r).counterQr
+export const allowsReviews = (r) => planFor(r).reviews
 export const tableLimit = (r) => planFor(r).maxTables // null = unlimited
