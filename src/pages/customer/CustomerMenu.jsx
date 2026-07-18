@@ -12,6 +12,7 @@ import {
   Receipt,
   ShoppingBag,
   Star,
+  User,
 } from 'lucide-react'
 import { supabase, imageUrl } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/format'
@@ -42,6 +43,7 @@ export default function CustomerMenu() {
   const [cartOpen, setCartOpen] = useState(false)
   const [calling, setCalling] = useState(false)
   const [brandChoice, setBrandChoice] = useState(null)
+  const [counterName, setCounterName] = useState('') // name captured up front at a counter QR
   const [loyaltyMember, setLoyaltyMember] = useState(null) // {id,name,email,visits}
   const [loyaltyOpen, setLoyaltyOpen] = useState(false)
 
@@ -237,6 +239,16 @@ export default function CustomerMenu() {
     toast.success('⭐ Order linked to your rewards — the visit counts when your bill is paid.')
   }
 
+  // Counter/register QR: capture the name up front, before the menu.
+  if (isCounter && canOrder && !counterName) {
+    return (
+      <div className="min-h-[100dvh] bg-[#faf6ef]" style={{ '--brand': accent }}>
+        <BrandHeader restaurant={restaurant} table={table} accent={accent} canCall={false} />
+        <CounterNameGate accent={accent} onSubmit={(n) => setCounterName(n)} />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-[100dvh] bg-[#faf6ef] pb-28" style={{ '--brand': accent }}>
       <BrandHeader
@@ -254,6 +266,15 @@ export default function CustomerMenu() {
               : null
         }
       />
+
+      {isCounter && counterName && (
+        <div className="mx-auto max-w-2xl px-4 pt-3">
+          <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-800">
+            <User className="h-4 w-4 flex-shrink-0" />
+            Hi {counterName} — we’ll call your name when your order is ready.
+          </div>
+        </div>
+      )}
 
       {!tableId && !isTruck && (
         <div className="mx-auto max-w-2xl px-4 pt-3">
@@ -404,6 +425,7 @@ export default function CustomerMenu() {
           onJoinLoyalty={() => setLoyaltyOpen(true)}
           isTruck={isTruck}
           isCounter={isCounter}
+          presetName={counterName}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
@@ -478,6 +500,43 @@ function GoogleG({ className }) {
       <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
       <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
     </svg>
+  )
+}
+
+/* ------------------------------------------------------- counter name gate -- */
+// Shown when a guest scans a counter/register QR: capture the name before the
+// menu so the whole order is theirs and staff can call it out.
+function CounterNameGate({ accent, onSubmit }) {
+  const [name, setName] = useState('')
+  const go = () => name.trim() && onSubmit(name.trim())
+  return (
+    <div className="mx-auto max-w-md px-4 py-12">
+      <div className="rounded-3xl bg-white p-7 text-center shadow-sm ring-1 ring-stone-100">
+        <div className="mx-auto mb-3 inline-flex rounded-2xl bg-stone-100 p-3 text-stone-500">
+          <User className="h-7 w-7" />
+        </div>
+        <h1 className="font-display text-2xl font-semibold text-stone-900">What’s your name?</h1>
+        <p className="mt-1 text-sm text-stone-500">
+          We’ll call it out when your takeout order is ready.
+        </p>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && go()}
+          placeholder="Your name"
+          autoFocus
+          className="mt-5 w-full rounded-xl border border-stone-300 px-4 py-3 text-center text-lg outline-none focus:border-stone-900"
+        />
+        <button
+          onClick={go}
+          disabled={!name.trim()}
+          className="mt-4 w-full rounded-xl py-3 text-sm font-bold text-white transition active:scale-[.98] disabled:opacity-50"
+          style={{ backgroundColor: accent }}
+        >
+          Start my order
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -843,13 +902,13 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 }
 
 /* ----------------------------------------------------------- cart sheet --- */
-function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, loyaltyName, onJoinLoyalty, isTruck, isCounter, restaurantId, tableId, onClose, onPlaced }) {
+function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, loyaltyName, onJoinLoyalty, isTruck, isCounter, presetName, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
   // Trucks and counter/register QRs both order by name and are takeout-only.
   const needsName = isTruck || isCounter
   const [notes, setNotes] = useState('')
   const [orderType, setOrderType] = useState(needsName ? 'takeout' : 'dine_in')
-  const [customerName, setCustomerName] = useState(loyaltyName || '')
+  const [customerName, setCustomerName] = useState(presetName || loyaltyName || '')
   const [placing, setPlacing] = useState(false)
 
   const subtotal = cart.reduce((s, l) => s + l.lineTotal, 0)
@@ -926,15 +985,24 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
               {needsName ? (
                 /* Truck or counter/register: order by name, takeout only. */
                 <div>
-                  <label className="mb-1 block text-sm font-semibold text-stone-700">
-                    Your name
-                  </label>
-                  <input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="We’ll call this when it’s ready"
-                    className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900"
-                  />
+                  {isCounter ? (
+                    <div className="rounded-xl bg-stone-50 px-3.5 py-2.5 text-sm">
+                      <span className="text-stone-500">Order for </span>
+                      <span className="font-semibold text-stone-900">{customerName}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="mb-1 block text-sm font-semibold text-stone-700">
+                        Your name
+                      </label>
+                      <input
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="We’ll call this when it’s ready"
+                        className="w-full rounded-xl border border-stone-300 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900"
+                      />
+                    </>
+                  )}
                   {isCounter && (
                     <p className="mt-2 flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
                       <ShoppingBag className="h-4 w-4 flex-shrink-0" />
