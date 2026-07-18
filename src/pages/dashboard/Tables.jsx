@@ -198,6 +198,11 @@ function TableCard({ table, restaurantId, onRename, onDelete }) {
               Takeout
             </span>
           )}
+          {table.kind === 'counter' && table.stripe_link && (
+            <span className="flex-shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+              Pays online
+            </span>
+          )}
         </div>
         <div className="flex flex-shrink-0 gap-1">
           <button onClick={onRename} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
@@ -251,6 +256,7 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
   const [kind, setKind] = useState('table')
   const [count, setCount] = useState(1)
   const [prefix, setPrefix] = useState('Table')
+  const [stripeLink, setStripeLink] = useState('')
   const [saving, setSaving] = useState(false)
 
   const isCounter = kind === 'counter'
@@ -279,6 +285,7 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
       restaurant_id: rid,
       label: labelFor(i, n),
       kind,
+      stripe_link: isCounter ? stripeLink.trim() || null : null,
     }))
     const { error } = await supabase.from('tables').insert(rows)
     setSaving(false)
@@ -330,6 +337,20 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
           </p>
         )}
 
+        {isCounter && (
+          <Field
+            label="Stripe payment link (optional)"
+            hint="If set, customers are sent here to pay right after placing their order. Leave blank for pay-at-counter."
+          >
+            <Input
+              type="url"
+              value={stripeLink}
+              onChange={(e) => setStripeLink(e.target.value)}
+              placeholder="https://buy.stripe.com/…"
+            />
+          </Field>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <Field label={isCounter ? 'Name' : 'Label prefix'}>
             <Input
@@ -364,13 +385,17 @@ function AddTablesModal({ rid, existingCount, remaining = Infinity, onClose, onS
 
 function RenameModal({ table, onClose, onSaved }) {
   const toast = useToast()
+  const isCounter = table.kind === 'counter'
   const [label, setLabel] = useState(table.label)
+  const [stripeLink, setStripeLink] = useState(table.stripe_link || '')
   const [saving, setSaving] = useState(false)
 
   const save = async () => {
     if (!label.trim()) return toast.error('Enter a label.')
     setSaving(true)
-    const { error } = await supabase.from('tables').update({ label: label.trim() }).eq('id', table.id)
+    const patch = { label: label.trim() }
+    if (isCounter) patch.stripe_link = stripeLink.trim() || null
+    const { error } = await supabase.from('tables').update(patch).eq('id', table.id)
     setSaving(false)
     if (error) return toast.error(error.message)
     onSaved()
@@ -380,7 +405,7 @@ function RenameModal({ table, onClose, onSaved }) {
     <Modal
       open
       onClose={onClose}
-      title="Rename table"
+      title={isCounter ? 'Edit counter QR' : 'Rename table'}
       maxWidth="max-w-md"
       footer={
         <div className="flex gap-2">
@@ -393,14 +418,29 @@ function RenameModal({ table, onClose, onSaved }) {
         </div>
       }
     >
-      <Field label="Table label" required>
-        <Input
-          autoFocus
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && save()}
-        />
-      </Field>
+      <div className="space-y-4">
+        <Field label={isCounter ? 'Name' : 'Table label'} required>
+          <Input
+            autoFocus
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && save()}
+          />
+        </Field>
+        {isCounter && (
+          <Field
+            label="Stripe payment link (optional)"
+            hint="Customers are sent here to pay after ordering. Leave blank for pay-at-counter."
+          >
+            <Input
+              type="url"
+              value={stripeLink}
+              onChange={(e) => setStripeLink(e.target.value)}
+              placeholder="https://buy.stripe.com/…"
+            />
+          </Field>
+        )}
+      </div>
     </Modal>
   )
 }

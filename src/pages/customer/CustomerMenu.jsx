@@ -426,6 +426,7 @@ export default function CustomerMenu() {
           isTruck={isTruck}
           isCounter={isCounter}
           presetName={counterName}
+          paymentUrl={isCounter ? table?.stripe_link : null}
           restaurantId={restaurantId}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
@@ -902,7 +903,7 @@ function ItemModal({ item, groups, currency, accent, canOrder, onClose, onAdd })
 }
 
 /* ----------------------------------------------------------- cart sheet --- */
-function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, loyaltyName, onJoinLoyalty, isTruck, isCounter, presetName, restaurantId, tableId, onClose, onPlaced }) {
+function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, loyaltyEnabled, loyaltyName, onJoinLoyalty, isTruck, isCounter, presetName, paymentUrl, restaurantId, tableId, onClose, onPlaced }) {
   const toast = useToast()
   // Trucks and counter/register QRs both order by name and are takeout-only.
   const needsName = isTruck || isCounter
@@ -958,6 +959,13 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
     setPlacing(false)
     if (error) {
       toast.error(error.message || 'Could not place order.')
+      return
+    }
+    // Counter QR with a payment link: send the customer straight to Stripe to pay.
+    if (paymentUrl) {
+      toast.success('Order placed — redirecting to payment…')
+      setCart([])
+      window.location.href = paymentUrl
       return
     }
     // TODO(payments): for trucks, redirect to Stripe payment here; the order is
