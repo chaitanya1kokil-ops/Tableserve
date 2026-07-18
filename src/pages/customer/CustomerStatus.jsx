@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Check,
   Clock,
@@ -37,6 +37,8 @@ export default function CustomerStatus() {
   const [requesting, setRequesting] = useState(false)
   const reloadTimer = useRef(null)
   const linkedOrderIds = useRef(new Set())
+  const [searchParams, setSearchParams] = useSearchParams()
+  const confirmedRef = useRef(false)
 
   // When a loyalty-linked order disappears from the open list, the bill was
   // just paid — check whether the visit counted and celebrate in the moment.
@@ -114,6 +116,35 @@ export default function CustomerStatus() {
       supabase.removeChannel(channel)
     }
   }, [ready, restaurantId, tableId, load, scheduleReload])
+
+  // Returning from Stripe Checkout (?paid=<session>&order=<id>): confirm the
+  // payment server-side (which releases the order to the kitchen), then clean
+  // the URL so a refresh doesn't re-run it.
+  useEffect(() => {
+    const sessionId = searchParams.get('paid')
+    const orderId = searchParams.get('order')
+    if (!sessionId || !orderId || confirmedRef.current) return
+    confirmedRef.current = true
+    ;(async () => {
+      try {
+        const resp = await fetch('/api/confirm-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, sessionId }),
+        })
+        const d = await resp.json().catch(() => ({}))
+        if (d.paid) toast.success('Payment received — your order is in! 🎉')
+        else toast.error(d.error || 'We couldn’t confirm your payment yet.')
+      } catch {
+        toast.error('Could not confirm payment.')
+      } finally {
+        searchParams.delete('paid')
+        searchParams.delete('order')
+        setSearchParams(searchParams, { replace: true })
+        load()
+      }
+    })()
+  }, [searchParams, setSearchParams, toast, load])
 
   const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'

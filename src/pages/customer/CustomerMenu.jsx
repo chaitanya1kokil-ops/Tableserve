@@ -947,7 +947,7 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
       })),
       line_total: l.lineTotal,
     }))
-    const { error } = await supabase.rpc('place_order', {
+    const { data: newOrderId, error } = await supabase.rpc('place_order', {
       p_restaurant_id: restaurantId,
       p_table_id: tableId || null,
       p_items: payload,
@@ -956,21 +956,43 @@ function CartSheet({ cart, setCart, currency, accent, taxRate, loyaltyMemberId, 
       p_loyalty_member_id: loyaltyMemberId,
       p_customer_name: needsName ? customerName.trim() : null,
     })
-    setPlacing(false)
     if (error) {
+      setPlacing(false)
       toast.error(error.message || 'Could not place order.')
       return
     }
-    // Counter QR with a payment link: send the customer straight to Stripe to pay.
+
+    // Counter QR with a static payment link: redirect straight to it.
     if (paymentUrl) {
       toast.success('Order placed — redirecting to payment…')
       setCart([])
       window.location.href = paymentUrl
       return
     }
-    // TODO(payments): for trucks, redirect to Stripe payment here; the order is
-    // created 'awaiting_payment' and only reaches the kitchen once paid.
-    toast.success(isTruck ? 'Order placed — pay to send it to the kitchen.' : 'Order placed! 🎉')
+
+    // Food truck: pay the exact total on the truck's connected Stripe account,
+    // then the order is released to the kitchen once payment is confirmed.
+    if (isTruck) {
+      try {
+        const resp = await fetch('/api/pay-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: newOrderId }),
+        })
+        const d = await resp.json().catch(() => ({}))
+        if (!resp.ok || !d.url) throw new Error(d.error || 'Could not start payment.')
+        setCart([])
+        window.location.href = d.url
+        return
+      } catch (e) {
+        setPlacing(false)
+        toast.error(e.message)
+        return
+      }
+    }
+
+    setPlacing(false)
+    toast.success('Order placed! 🎉')
     onPlaced()
   }
 
