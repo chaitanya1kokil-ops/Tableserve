@@ -300,9 +300,9 @@ export default function Settings() {
 /* ---------------------------------------------------------- owner PIN --- */
 const CLOUDPRNT_STEPS = [
   'Turn on "Auto-print new orders" above and press Save — this generates your Server URL.',
-  'Put the Star printer on the same wifi. To find its IP, hold the FEED button while switching it on — it prints a self-test with the address.',
+  'Put the printer (any brand that supports CloudPRNT) on the same wifi. To find its IP, print a self-test — on most thermal printers you hold the FEED button while switching it on.',
   'On a phone or laptop on that same wifi, open http://<printer-ip> in a browser.',
-  'Open the CloudPRNT page, paste the Server URL from above, set polling to 5–10 seconds, tick Enable, and Save.',
+  'Open the CloudPRNT settings page, paste the Server URL from above, set polling to 5–10 seconds, tick Enable, and Save.',
   'Reboot the printer, then place a test order — it prints within a few seconds.',
 ]
 
@@ -427,7 +427,7 @@ function PrintingCard({ restaurant, toast }) {
       {/* Provider choice */}
       <div className="mb-4 grid grid-cols-2 gap-2">
         {[
-          { key: 'cloudprnt', label: 'Star CloudPRNT', hint: 'Cloud printer — no PC' },
+          { key: 'cloudprnt', label: 'CloudPRNT', hint: 'Any CloudPRNT printer — no PC' },
           { key: 'printnode', label: 'PrintNode', hint: 'Any printer + a device' },
         ].map((p) => (
           <button
@@ -449,8 +449,9 @@ function PrintingCard({ restaurant, toast }) {
       {s.provider === 'cloudprnt' ? (
         <div className="space-y-2">
           <p className="text-sm text-gray-600">
-            In your Star printer's settings page, open <strong>CloudPRNT</strong>, paste this as the
-            <strong> Server URL</strong>, enable it, and save:
+            Works with any brand of CloudPRNT printer. In the printer's web settings page, open the
+            <strong> CloudPRNT</strong> section, paste this as the <strong>Server URL</strong>, enable
+            it, and save:
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
@@ -486,7 +487,7 @@ function PrintingCard({ restaurant, toast }) {
       {/* Short connect guide, switches with the chosen option */}
       <div className="mt-4 rounded-xl bg-gray-50 p-4">
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">
-          How to connect {s.provider === 'cloudprnt' ? 'a Star CloudPRNT printer' : 'with PrintNode'}
+          How to connect {s.provider === 'cloudprnt' ? 'a CloudPRNT printer' : 'with PrintNode'}
         </p>
         <ol className="list-decimal space-y-1.5 pl-4 text-sm text-gray-600">
           {(s.provider === 'cloudprnt' ? CLOUDPRNT_STEPS : PRINTNODE_STEPS).map((step, i) => (
