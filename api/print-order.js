@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { buildReceiptText } from '../src/lib/receipt.js'
+import { allowsPrinting } from '../src/lib/constants.js'
 
 // Push a kitchen ticket to a printer via the restaurant's own PrintNode account.
 // Two callers:
@@ -37,11 +38,14 @@ export default async function handler(req, res) {
 
   const { data: settings } = await supabase
     .from('printer_settings')
-    .select('*')
+    .select('*, restaurant:restaurants(plan, business_type)')
     .eq('restaurant_id', restaurantId)
     .maybeSingle()
   if (!settings || !settings.enabled || settings.provider !== 'printnode') {
     return res.status(200).json({ skip: 'printnode-not-enabled' })
+  }
+  if (!allowsPrinting(settings.restaurant)) {
+    return res.status(200).json({ skip: 'printing-not-on-plan' })
   }
 
   // Auth: test print proves it knows the restaurant's token; the webhook proves

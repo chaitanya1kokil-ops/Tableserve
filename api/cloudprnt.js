@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { buildReceiptText } from '../src/lib/receipt.js'
+import { allowsPrinting } from '../src/lib/constants.js'
 
 // Star CloudPRNT endpoint. The printer is configured (in its own web UI) with
 // this URL as its "Server URL", including its restaurant + token:
@@ -26,10 +27,11 @@ async function settingsFor(supabase, req) {
   if (!rid || !token) return null
   const { data } = await supabase
     .from('printer_settings')
-    .select('restaurant_id, enabled, provider, token')
+    .select('restaurant_id, enabled, provider, token, restaurant:restaurants(plan, business_type)')
     .eq('restaurant_id', rid)
     .maybeSingle()
   if (!data || !data.enabled || data.provider !== 'cloudprnt' || data.token !== token) return null
+  if (!allowsPrinting(data.restaurant)) return null // plan no longer includes printing
   return data
 }
 

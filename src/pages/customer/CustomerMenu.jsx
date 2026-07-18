@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { Button, FullPageSpinner } from '../../components/ui'
 import DietMark from '../../components/DietMark'
-import { allowsLoyalty } from '../../lib/constants'
+import { allowsLoyalty, allowsReviews, allowsCounterQr } from '../../lib/constants'
 
 export default function CustomerMenu() {
   const { restaurantId, tableId } = useParams()
@@ -147,8 +147,9 @@ export default function CustomerMenu() {
   const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
   const isTruck = restaurant?.business_type === 'food_truck'
-  // A counter/register QR = takeout-only ordering point (ask name, force takeout).
-  const isCounter = table?.kind === 'counter'
+  // A counter/register QR = takeout-only ordering point (ask name, force
+  // takeout). Only honoured while the restaurant's plan includes it.
+  const isCounter = table?.kind === 'counter' && allowsCounterQr(restaurant)
   // Trucks order from one QR (no table); restaurants need a scanned table.
   const canOrder = (Boolean(tableId) || isTruck) && restaurant?.status === 'active'
 
@@ -575,7 +576,7 @@ function BrandHeader({ restaurant, table, accent, canCall, calling, onCall, onVi
               {restaurant.name}
             </h1>
           </div>
-          {restaurant.google_review_url && (
+          {restaurant.google_review_url && allowsReviews(restaurant) && (
             <a
               href={restaurant.google_review_url}
               target="_blank"
