@@ -117,39 +117,40 @@ export const PLANS = {
 export const PLAN_FEATURES = {
   starter: [
     'Up to 10 tables',
-    'QR menu & instant ordering',
-    'Kitchen display screen',
+    'QR menu — dine-in, takeout & counter',
+    'Kitchen display + auto-print tickets',
     'Live orders board & server calls',
-    'Menu & modifier management',
+    'Menu, modifiers & category ordering',
+    'Online payment links & Google reviews',
     'Card payments — 0% commission',
   ],
   pro: [
     'Everything in Starter',
     'Up to 40 tables',
     'Loyalty & rewards program',
-    'Multiple brands / locations',
-    'Full analytics — peak hours & trends',
+    'Multiple brands with logos',
+    'Full analytics — peak hours & best-sellers',
     'Owner & staff PIN roles',
   ],
   premium: [
     'Everything in Pro',
-    'Unlimited tables',
+    'Unlimited tables & locations',
     'Priority support',
     'Personalised onboarding',
   ],
   food_truck: [
     'Single QR — order by name',
-    'Online card payments',
+    'Online payments (Stripe) & 0% commission',
     'Loyalty & rewards program',
-    'Kitchen display & orders board',
+    'Kitchen display + auto-print tickets',
+    'Live orders board & one-tap ready',
     'Analytics & best-sellers',
-    '0% commission on orders',
   ],
 }
 
 const planFor = (r) => PLANS[r?.plan] || PLANS.trial
 
-// Food trucks always get loyalty (their $59 plan includes it — trucks live on
+// Food trucks always get loyalty (their $79 plan includes it — trucks live on
 // repeat customers); otherwise it follows the plan.
 export const allowsLoyalty = (r) => planFor(r).loyalty || r?.business_type === 'food_truck'
 export const allowsMultiBrand = (r) => planFor(r).multiBrand
