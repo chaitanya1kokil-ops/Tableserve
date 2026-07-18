@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Plus,
   Pencil,
@@ -6,6 +6,7 @@ import {
   UtensilsCrossed,
   FolderPlus,
   GripVertical,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -28,7 +29,7 @@ import DietMark from '../../components/DietMark'
 import { allowsMultiBrand } from '../../lib/constants'
 
 export default function Menu() {
-  const { restaurant } = useAuth()
+  const { restaurant, refreshRestaurant } = useAuth()
   const toast = useToast()
   const rid = restaurant.id
 
@@ -181,6 +182,14 @@ export default function Menu() {
                 </button>
               ))}
             </div>
+          )}
+          {multiBrand && activeTab && activeTab !== 'No brand' && (
+            <BrandLogoRow
+              brand={activeTab}
+              restaurant={restaurant}
+              onSaved={refreshRestaurant}
+              toast={toast}
+            />
           )}
           {grouped.map(({ category, items: catItems }) => (
             <CategorySection
@@ -361,6 +370,79 @@ function ItemCard({ item, optionCount, currency, onEdit, onDelete, onToggle }) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// Upload / replace the logo shown next to a brand on the customer brand picker.
+// Stored as restaurants.brand_logos = { "<brand name>": "<storage path>" }.
+function BrandLogoRow({ brand, restaurant, onSaved, toast }) {
+  const [busy, setBusy] = useState(false)
+  const inputRef = useRef(null)
+  const current = restaurant.brand_logos?.[brand] || null
+
+  const saveLogos = async (next) => {
+    const { error } = await supabase
+      .from('restaurants')
+      .update({ brand_logos: next })
+      .eq('id', restaurant.id)
+    if (error) throw error
+    await onSaved()
+  }
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    try {
+      const slug = brand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'brand'
+      const path = await uploadImage(file, `${restaurant.id}`, `brand-${slug}`)
+      await saveLogos({ ...(restaurant.brand_logos || {}), [brand]: path })
+      toast.success('Brand logo updated.')
+    } catch (err) {
+      toast.error(err.message || 'Upload failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    setBusy(true)
+    try {
+      const next = { ...(restaurant.brand_logos || {}) }
+      delete next[brand]
+      await saveLogos(next)
+      toast.success('Brand logo removed.')
+    } catch (err) {
+      toast.error(err.message || 'Could not remove.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-stone-200">
+      {current ? (
+        <img src={imageUrl(current)} alt="" className="h-12 w-12 flex-shrink-0 rounded-xl object-cover ring-1 ring-stone-200" />
+      ) : (
+        <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-400">
+          <ImageIcon className="h-5 w-5" />
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-stone-800">{brand} logo</p>
+        <p className="text-xs text-stone-500">Shown next to “{brand}” when guests pick a menu.</p>
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
+      <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} loading={busy}>
+        {current ? 'Replace' : 'Upload'}
+      </Button>
+      {current && !busy && (
+        <button onClick={remove} className="text-xs font-medium text-stone-400 hover:text-red-600">
+          Remove
+        </button>
+      )}
     </div>
   )
 }
