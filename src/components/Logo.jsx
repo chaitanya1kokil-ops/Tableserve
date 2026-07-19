@@ -15,7 +15,7 @@ export default function Logo({ className = 'h-8 w-8' }) {
 
   return (
     <svg viewBox="0 0 96 96" className={className} role="img" aria-label="TableServe">
-      <rect x="1.5" y="1.5" width="93" height="93" rx="25" fill={bg} stroke="#E7E1D5" strokeWidth="3" />
+      <rect width="96" height="96" rx="26" fill={bg} />
       {dots.map(([cx, cy, fill], i) => (
         <circle key={i} cx={cx} cy={cy} r="8.5" fill={fill} />
       ))}
