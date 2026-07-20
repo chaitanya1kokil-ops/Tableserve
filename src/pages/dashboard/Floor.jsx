@@ -1,27 +1,17 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import {
-  Armchair,
-  Receipt,
-  Bell,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Move,
-  LayoutGrid,
-} from 'lucide-react'
+import { Receipt, Bell, X, Move, LayoutGrid, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, timeAgo } from '../../lib/format'
 import { Button, FullPageSpinner, EmptyState, Badge } from '../../components/ui'
 import { ORDER_STATUSES } from '../../lib/constants'
 
-// Active (unpaid) statuses = the table is occupied.
-const OPEN = ['new', 'preparing', 'ready', 'served']
+const OPEN = ['new', 'preparing', 'ready', 'served'] // active (unpaid) = occupied
 
-const STATE = {
-  here: { bg: 'bg-emerald-50', ring: 'ring-2 ring-emerald-400', dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Someone’s here' },
-  occupied: { bg: 'bg-amber-50', ring: 'ring-1 ring-amber-300', dot: 'bg-amber-500', text: 'text-amber-700', label: 'Occupied' },
-  free: { bg: 'bg-white', ring: 'ring-1 ring-stone-200', dot: 'bg-stone-300', text: 'text-stone-400', label: 'Free' },
+const STYLE = {
+  here: 'bg-emerald-500 text-white ring-4 ring-emerald-200',
+  occupied: 'bg-amber-400 text-white ring-4 ring-amber-100',
+  free: 'bg-white text-stone-500 ring-1 ring-stone-200 shadow-sm',
 }
 
 export default function Floor() {
@@ -31,21 +21,15 @@ export default function Floor() {
 
   const [tables, setTables] = useState([])
   const [orders, setOrders] = useState([])
+  const [calls, setCalls] = useState([])
   const [present, setPresent] = useState(() => new Set())
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [arranging, setArranging] = useState(false)
-  const [calls, setCalls] = useState([])
   const reloadTimer = useRef(null)
-
-  const loadCalls = useCallback(async () => {
-    const { data } = await supabase
-      .from('server_calls')
-      .select('*')
-      .eq('restaurant_id', rid)
-      .eq('status', 'pending')
-    setCalls(data || [])
-  }, [rid])
+  const canvasRef = useRef(null)
+  const drag = useRef(null) // id being dragged
+  const moved = useRef(false)
 
   const loadTables = useCallback(async () => {
     const { data } = await supabase
@@ -54,7 +38,7 @@ export default function Floor() {
       .eq('restaurant_id', rid)
       .order('position')
       .order('created_at')
-    setTables((data || []).filter((t) => t.kind !== 'counter')) // counters aren't seated tables
+    setTables((data || []).filter((t) => t.kind !== 'counter'))
   }, [rid])
 
   const loadOrders = useCallback(async () => {
@@ -68,23 +52,24 @@ export default function Floor() {
     setOrders(data || [])
   }, [rid])
 
+  const loadCalls = useCallback(async () => {
+    const { data } = await supabase
+      .from('server_calls')
+      .select('*')
+      .eq('restaurant_id', rid)
+      .eq('status', 'pending')
+    setCalls(data || [])
+  }, [rid])
+
   useEffect(() => {
     Promise.all([loadTables(), loadOrders(), loadCalls()]).then(() => setLoading(false))
     const ch = supabase
       .channel(`floor-${rid}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` },
-        () => {
-          clearTimeout(reloadTimer.current)
-          reloadTimer.current = setTimeout(loadOrders, 250)
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'server_calls', filter: `restaurant_id=eq.${rid}` },
-        loadCalls,
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` }, () => {
+        clearTimeout(reloadTimer.current)
+        reloadTimer.current = setTimeout(loadOrders, 250)
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'server_calls', filter: `restaurant_id=eq.${rid}` }, loadCalls)
       .subscribe()
     return () => {
       clearTimeout(reloadTimer.current)
@@ -92,7 +77,7 @@ export default function Floor() {
     }
   }, [rid, loadTables, loadOrders, loadCalls])
 
-  // Live presence: which tables have a guest on the menu right now.
+  // Live presence: tables with a guest on the menu right now.
   useEffect(() => {
     const ch = supabase.channel(`floor:${rid}`)
     ch.on('presence', { event: 'sync' }, () => {
@@ -109,13 +94,32 @@ export default function Floor() {
   for (const o of orders) (byTable[o.table_id] ||= []).push(o)
   const calledTables = new Set(calls.map((c) => c.table_id))
 
-  const move = async (idx, dir) => {
-    const j = idx + dir
-    if (j < 0 || j >= tables.length) return
-    const next = [...tables]
-    ;[next[idx], next[j]] = [next[j], next[idx]]
-    setTables(next)
-    await Promise.all(next.map((t, i) => supabase.from('tables').update({ position: i }).eq('id', t.id)))
+  // --- drag to reposition (pointer events → works on touch + mouse) ---
+  const pointFromEvent = (e) => {
+    const r = canvasRef.current.getBoundingClientRect()
+    return {
+      x: Math.min(96, Math.max(4, ((e.clientX - r.left) / r.width) * 100)),
+      y: Math.min(94, Math.max(6, ((e.clientY - r.top) / r.height) * 100)),
+    }
+  }
+  const onDown = (e, t) => {
+    if (!arranging) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    drag.current = t.id
+    moved.current = false
+  }
+  const onMove = (e) => {
+    if (!drag.current) return
+    moved.current = true
+    const { x, y } = pointFromEvent(e)
+    setTables((ts) => ts.map((t) => (t.id === drag.current ? { ...t, pos_x: x, pos_y: y } : t)))
+  }
+  const onUp = async () => {
+    const id = drag.current
+    drag.current = null
+    if (!id || !moved.current) return
+    const t = tables.find((x) => x.id === id)
+    if (t) await supabase.from('tables').update({ pos_x: t.pos_x, pos_y: t.pos_y }).eq('id', id)
   }
 
   if (loading) return <FullPageSpinner label="Loading floor…" />
@@ -124,18 +128,22 @@ export default function Floor() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-semibold text-stone-900">Floor</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Live table status — tap a table to see its order.
+            {arranging ? 'Drag tables to match your real layout.' : 'Live table status — tap a table to see its order.'}
           </p>
         </div>
-        {tables.length > 0 && (
-          <Button variant="outline" size="sm" onClick={() => setArranging((a) => !a)}>
-            <Move className="h-4 w-4" /> {arranging ? 'Done arranging' : 'Arrange'}
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <Legend />
+          {tables.length > 0 && (
+            <Button variant={arranging ? undefined : 'outline'} size="sm" onClick={() => setArranging((a) => !a)}>
+              {arranging ? <Check className="h-4 w-4" /> : <Move className="h-4 w-4" />}
+              {arranging ? 'Done' : 'Arrange'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {tables.length === 0 ? (
@@ -145,14 +153,23 @@ export default function Floor() {
           description="Create tables (and their QR codes) in Tables & QR codes — they'll appear here."
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div
+          ref={canvasRef}
+          className={`relative min-h-[62vh] w-full overflow-hidden rounded-3xl border ${
+            arranging ? 'border-brand/40 bg-[repeating-linear-gradient(45deg,#00000005_0,#00000005_1px,transparent_0,transparent_14px)]' : 'border-stone-200'
+          } bg-stone-50`}
+        >
           {tables.map((t, i) => {
             const os = byTable[t.id] || []
             const state = present.has(t.id) ? 'here' : os.length > 0 ? 'occupied' : 'free'
+            const x = t.pos_x ?? 10 + (i % 5) * 19
+            const y = t.pos_y ?? 12 + Math.floor(i / 5) * 20
             return (
-              <TableTile
+              <TableDot
                 key={t.id}
                 table={t}
+                x={x}
+                y={y}
                 state={state}
                 orders={os.length}
                 total={os.reduce((s, o) => s + Number(o.total || 0), 0)}
@@ -160,10 +177,10 @@ export default function Floor() {
                 called={calledTables.has(t.id)}
                 currency={currency}
                 arranging={arranging}
-                isFirst={i === 0}
-                isLast={i === tables.length - 1}
-                onOpen={() => setSelected(t.id)}
-                onMove={(d) => move(i, d)}
+                onOpen={() => !moved.current && setSelected(t.id)}
+                onPointerDown={(e) => onDown(e, t)}
+                onPointerMove={onMove}
+                onPointerUp={onUp}
               />
             )
           })}
@@ -184,63 +201,65 @@ export default function Floor() {
   )
 }
 
-function TableTile({ table, state, orders, total, billReq, called, currency, arranging, isFirst, isLast, onOpen, onMove }) {
-  const s = STATE[state]
+function Legend() {
+  const items = [
+    ['bg-emerald-500', 'Here'],
+    ['bg-amber-400', 'Occupied'],
+    ['bg-white ring-1 ring-stone-300', 'Free'],
+  ]
   return (
-    <div className={`relative rounded-2xl p-4 shadow-sm transition ${s.bg} ${s.ring}`}>
-      {called && (
-        <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-orange-500 text-white">
-          <Bell className="h-3.5 w-3.5 animate-bounce" />
+    <div className="hidden items-center gap-3 sm:flex">
+      {items.map(([c, l]) => (
+        <span key={l} className="flex items-center gap-1.5 text-xs font-medium text-stone-500">
+          <span className={`h-2.5 w-2.5 rounded-full ${c}`} /> {l}
         </span>
-      )}
+      ))}
+    </div>
+  )
+}
+
+function TableDot({ table, x, y, state, orders, total, billReq, called, currency, arranging, onOpen, onPointerDown, onPointerMove, onPointerUp }) {
+  return (
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2 select-none"
+      style={{ left: `${x}%`, top: `${y}%`, touchAction: arranging ? 'none' : 'auto' }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+    >
       <button
         onClick={arranging ? undefined : onOpen}
-        disabled={arranging}
-        className="block w-full text-left disabled:cursor-default"
+        className={`relative grid h-[68px] w-[68px] place-items-center rounded-2xl transition ${STYLE[state]} ${
+          arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5'
+        }`}
       >
-        <div className="flex items-center gap-2">
-          <Armchair className={`h-5 w-5 ${state === 'free' ? 'text-stone-300' : s.text}`} />
-          <span className="truncate font-bold text-stone-900">{table.label}</span>
-        </div>
-        <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold">
-          <span className="relative flex h-2 w-2">
-            {state === 'here' && (
-              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${s.dot} opacity-75`} />
-            )}
-            <span className={`relative inline-flex h-2 w-2 rounded-full ${s.dot}`} />
-          </span>
-          <span className={s.text}>{s.label}</span>
-        </div>
+        {state === 'here' && (
+          <span className="absolute inset-0 animate-ping rounded-2xl bg-emerald-400 opacity-30" />
+        )}
+        <span className="relative px-1 text-center text-sm font-bold leading-tight">{table.label}</span>
         {orders > 0 && (
-          <p className="mt-1 text-xs text-stone-500">
-            {orders} {orders === 1 ? 'order' : 'orders'} · {formatCurrency(total, currency)}
-          </p>
+          <span className="relative mt-0.5 text-[10px] font-semibold opacity-90">
+            {formatCurrency(total, currency)}
+          </span>
+        )}
+
+        {/* corner indicators */}
+        {orders > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-stone-900 px-1 text-[10px] font-bold text-white ring-2 ring-stone-50">
+            {orders}
+          </span>
+        )}
+        {called && (
+          <span className="absolute -left-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-orange-500 text-white ring-2 ring-stone-50">
+            <Bell className="h-3 w-3 animate-bounce" />
+          </span>
         )}
         {billReq && (
-          <Badge className="mt-2 bg-orange-100 text-orange-700">
-            <Receipt className="h-3 w-3" /> Bill requested
-          </Badge>
+          <span className="absolute -bottom-1.5 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-orange-100 text-orange-600 ring-2 ring-stone-50">
+            <Receipt className="h-3 w-3" />
+          </span>
         )}
       </button>
-
-      {arranging && (
-        <div className="mt-3 flex justify-between">
-          <button
-            onClick={() => onMove(-1)}
-            disabled={isFirst}
-            className="rounded-lg bg-white p-1.5 text-stone-500 ring-1 ring-stone-200 disabled:opacity-30"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => onMove(1)}
-            disabled={isLast}
-            className="rounded-lg bg-white p-1.5 text-stone-500 ring-1 ring-stone-200 disabled:opacity-30"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
     </div>
   )
 }
