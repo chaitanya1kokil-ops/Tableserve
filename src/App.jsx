@@ -5,6 +5,7 @@ import { useAuth } from './context/AuthContext'
 import { RequireOwner, RequireOnboarding, RequireAdmin } from './components/guards'
 import { OwnerOnly } from './components/OwnerAccess'
 import { FullPageSpinner } from './components/ui'
+import ErrorBoundary from './components/ErrorBoundary'
 import SetupNotice from './pages/SetupNotice'
 
 // Route components are lazy-loaded so each area ships its own chunk — a customer
@@ -56,8 +57,9 @@ export default function App() {
   if (!hasSupabaseConfig) return <SetupNotice />
 
   return (
-    <Suspense fallback={<FullPageSpinner />}>
-      <Routes>
+    <ErrorBoundary>
+      <Suspense fallback={<FullPageSpinner />}>
+        <Routes>
         {/* Public marketing + auth */}
         <Route path="/" element={<Landing />} />
         <Route path="/terms" element={<Terms />} />
@@ -128,7 +130,8 @@ export default function App() {
         <Route path="/r/:restaurantId" element={<CustomerMenu />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   )
 }

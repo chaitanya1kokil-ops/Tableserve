@@ -11,7 +11,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { useServerCalls } from '../../hooks/useServerCalls'
 import { formatCurrency, timeAgo } from '../../lib/format'
 import { Button, FullPageSpinner, EmptyState, Badge } from '../../components/ui'
 import { ORDER_STATUSES } from '../../lib/constants'
@@ -36,8 +35,17 @@ export default function Floor() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [arranging, setArranging] = useState(false)
+  const [calls, setCalls] = useState([])
   const reloadTimer = useRef(null)
-  const { calls } = useServerCalls(rid)
+
+  const loadCalls = useCallback(async () => {
+    const { data } = await supabase
+      .from('server_calls')
+      .select('*')
+      .eq('restaurant_id', rid)
+      .eq('status', 'pending')
+    setCalls(data || [])
+  }, [rid])
 
   const loadTables = useCallback(async () => {
     const { data } = await supabase
@@ -61,9 +69,9 @@ export default function Floor() {
   }, [rid])
 
   useEffect(() => {
-    Promise.all([loadTables(), loadOrders()]).then(() => setLoading(false))
+    Promise.all([loadTables(), loadOrders(), loadCalls()]).then(() => setLoading(false))
     const ch = supabase
-      .channel(`floor-orders-${rid}`)
+      .channel(`floor-${rid}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${rid}` },
@@ -72,12 +80,17 @@ export default function Floor() {
           reloadTimer.current = setTimeout(loadOrders, 250)
         },
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'server_calls', filter: `restaurant_id=eq.${rid}` },
+        loadCalls,
+      )
       .subscribe()
     return () => {
       clearTimeout(reloadTimer.current)
       supabase.removeChannel(ch)
     }
-  }, [rid, loadTables, loadOrders])
+  }, [rid, loadTables, loadOrders, loadCalls])
 
   // Live presence: which tables have a guest on the menu right now.
   useEffect(() => {
