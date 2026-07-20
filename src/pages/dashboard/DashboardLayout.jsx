@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Lock,
   MoreHorizontal,
+  LayoutGrid,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -40,6 +41,7 @@ import Logo from '../../components/Logo'
 const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true, mobilePrimary: true },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList, mobilePrimary: true },
+  { to: '/dashboard/floor', label: 'Floor', icon: LayoutGrid, restaurantOnly: true },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true },
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat, mobilePrimary: true },

@@ -135,6 +135,21 @@ export default function CustomerMenu() {
     if (ready) load()
   }, [ready, load])
 
+  // Announce presence to the restaurant's Floor view while a guest is browsing
+  // at a table (lights up the table tile even before they order).
+  useEffect(() => {
+    if (!restaurantId || !tableId) return
+    const ch = supabase.channel(`floor:${restaurantId}`, {
+      config: { presence: { key: `${tableId}:${Math.random().toString(36).slice(2)}` } },
+    })
+    ch.subscribe((status) => {
+      if (status === 'SUBSCRIBED') ch.track({ table_id: tableId })
+    })
+    return () => {
+      supabase.removeChannel(ch)
+    }
+  }, [restaurantId, tableId])
+
   // Single-brand restaurants with loyalty enabled prompt right after the menu
   // loads (multi-brand ones prompt when the loyalty brand is picked).
   useEffect(() => {

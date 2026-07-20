@@ -25,6 +25,7 @@ const Subscription = lazy(() => import('./pages/dashboard/Subscription'))
 const Menu = lazy(() => import('./pages/dashboard/Menu'))
 const Tables = lazy(() => import('./pages/dashboard/Tables'))
 const Orders = lazy(() => import('./pages/dashboard/Orders'))
+const Floor = lazy(() => import('./pages/dashboard/Floor'))
 const FoodTruckBoard = lazy(() => import('./pages/dashboard/FoodTruckBoard'))
 const TruckQR = lazy(() => import('./pages/dashboard/TruckQR'))
 const Checkout = lazy(() => import('./pages/dashboard/Checkout'))
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="tables" element={<Tables />} />
           <Route path="qr" element={<TruckQR />} />
           <Route path="orders" element={<OrdersRoute />} />
+          <Route path="floor" element={<Floor />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="analytics" element={<OwnerOnly><Analytics /></OwnerOnly>} />
           <Route path="subscription" element={<OwnerOnly><Subscription /></OwnerOnly>} />
