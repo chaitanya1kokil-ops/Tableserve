@@ -91,64 +91,13 @@ export default function DashboardLayout() {
 
   return (
     <div
-      className="min-h-[100dvh] bg-[#faf6ef] md:flex"
+      className="min-h-[100dvh] bg-[#faf6ef]"
       style={{ '--brand': restaurant?.accent_color || '#b45309' }}
     >
-      {/* Sidebar — tablet width up, except the floor plan (which wants the room) */}
-      <aside
-        className={`hidden w-60 flex-col border-r border-gray-100 bg-white lg:w-64 ${
-          isFloor ? '' : 'md:flex'
-        }`}
-      >
-        <div className="flex items-center gap-2 px-5 py-5 font-extrabold text-gray-900">
-          <Logo className="h-8 w-8" />
-          TableServe
-        </div>
-
-        <RestaurantBadge restaurant={restaurant} />
-
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {nav.map((item) => (
-            <SideLink
-              key={item.to}
-              item={item}
-              badge={item.to === '/dashboard/orders' ? newOrders : 0}
-            />
-          ))}
-        </nav>
-
-        <div className="space-y-1 border-t border-gray-100 p-3">
-          {ownerPinSet &&
-            (ownerMode ? (
-              <button
-                onClick={lockOwner}
-                className="flex w-full items-center gap-2 rounded-xl bg-stone-900 px-3 py-2.5 text-sm font-semibold text-white"
-              >
-                <ShieldCheck className="h-4 w-4 text-amber-300" />
-                <span className="flex-1 text-left">Owner mode</span>
-                <span className="text-xs font-medium text-white/60">Exit</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => setPinOpen(true)}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
-              >
-                <Lock className="h-4 w-4" /> Switch to owner
-              </button>
-            ))}
-          <button
-            onClick={signOut}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
-          >
-            <LogOut className="h-4 w-4" /> Sign out
-          </button>
-        </div>
-      </aside>
-
       {/* Main */}
       <div className="flex flex-1 flex-col">
-        {/* Mobile header (phones only) */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+        {/* Top bar (all sizes — nav lives in the bottom bar) */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur">
           <div className="flex items-center gap-2 font-bold text-gray-900">
             {restaurant?.logo_url ? (
               <img src={imageUrl(restaurant.logo_url)} alt="" className="h-7 w-7 rounded-lg object-cover" />
@@ -229,19 +178,15 @@ export default function DashboardLayout() {
           </div>
         )}
 
-        <main className={`flex-1 px-4 pt-5 md:px-8 ${isFloor ? 'pb-24' : 'pb-24 md:pb-8'}`}>
+        <main className="flex-1 px-4 pb-24 pt-5 md:px-8">
           <div className={isFloor ? '' : 'mx-auto max-w-5xl'}>
             <Outlet context={{ muted, toggleMute }} />
           </div>
         </main>
       </div>
 
-      {/* Bottom nav: phones always; also on the floor plan at every size */}
-      <nav
-        className={`fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom ${
-          isFloor ? '' : 'md:hidden'
-        }`}
-      >
+      {/* Bottom nav — the app's primary navigation at every size */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom">
         {mobilePrimary.map((item) => (
           <NavLink
             key={item.to}
@@ -279,7 +224,7 @@ export default function DashboardLayout() {
 
       {/* "More" sheet — every remaining tab, so iPhone has full parity */}
       {moreOpen && (
-        <div className={`fixed inset-0 z-40 ${isFloor ? '' : 'md:hidden'}`} onClick={() => setMoreOpen(false)}>
+        <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 bg-black/40 animate-fade-in" />
           <div
             className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl animate-slide-up"
