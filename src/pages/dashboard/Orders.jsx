@@ -19,8 +19,10 @@ import { ORDER_STATUSES } from '../../lib/constants'
 import { Button, Card, Badge, EmptyState, FullPageSpinner } from '../../components/ui'
 import NewOrderModal from './NewOrderModal'
 
+// Once an order is served it leaves the active board and moves to Checkout for
+// payment — so the board only shows what's still being worked on.
 const FILTERS = [
-  { key: 'active', label: 'Active', statuses: ['new', 'preparing', 'ready', 'served'] },
+  { key: 'active', label: 'Active', statuses: ['new', 'preparing', 'ready'] },
   { key: 'completed', label: 'Completed', statuses: ['completed'] },
 ]
 
