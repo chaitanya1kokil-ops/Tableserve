@@ -169,6 +169,21 @@ export default function CustomerStatus() {
     load()
   }
 
+  const [calling, setCalling] = useState(false)
+  const callServer = async () => {
+    if (calling || !tableId) return
+    setCalling(true)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const { error } = await supabase
+      .from('server_calls')
+      .insert({ restaurant_id: restaurantId, table_id: tableId, customer_id: user?.id })
+    setCalling(false)
+    if (error) toast.error('Could not reach the server. Please try again.')
+    else toast.success('Your server has been notified 🙌')
+  }
+
   if (sessionError) return <FullPageSpinner label="Connecting…" />
   if (!ready || loading) return <FullPageSpinner label="Loading your order…" />
 
@@ -255,12 +270,17 @@ export default function CustomerStatus() {
                 <Plus className="h-4 w-4" /> Order more
               </Button>
             ) : (
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => navigate(menuPath)}>
-                  <Plus className="h-4 w-4" /> Add items
-                </Button>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => navigate(menuPath)}>
+                    <Plus className="h-4 w-4" /> Add items
+                  </Button>
+                  <Button variant="outline" className="flex-1" loading={calling} onClick={callServer}>
+                    <Bell className="h-4 w-4" /> Call server
+                  </Button>
+                </div>
                 <Button
-                  className="flex-1"
+                  className="w-full"
                   style={{ backgroundColor: accent }}
                   loading={requesting}
                   disabled={!hasOpen || allBilled}

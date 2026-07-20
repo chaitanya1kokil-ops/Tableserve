@@ -11,9 +11,9 @@ const ACTIVE = ['new', 'preparing', 'ready'] // still being worked on
 const OPEN = [...ACTIVE, 'served'] // occupied (unpaid); served = done, awaiting payment
 
 const STYLE = {
-  active: 'bg-emerald-500 text-white ring-4 ring-emerald-200', // green — active order(s)
-  served: 'bg-amber-400 text-white ring-4 ring-amber-100', // orange — all served, awaiting payment
-  free: 'bg-white text-stone-500 ring-1 ring-stone-200',
+  active: 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-400', // subtle green — has an active order
+  served: 'bg-amber-100 text-amber-900 ring-1 ring-amber-400', // subtle amber — served, awaiting payment
+  free: 'bg-white text-stone-600 ring-1 ring-stone-200',
 }
 
 export default function Floor() {
@@ -270,36 +270,28 @@ function TableDot({ table, x, y, state, count, here, billReq, called, arranging,
     >
       <button
         onClick={arranging ? undefined : onOpen}
-        className={`relative flex h-[78px] w-[78px] flex-col items-center justify-center gap-1 rounded-2xl shadow-md shadow-black/10 transition ${STYLE[state]} ${
-          arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5 hover:shadow-lg'
+        className={`relative grid h-[58px] w-[58px] place-items-center rounded-xl shadow-sm transition ${STYLE[state]} ${
+          arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5 hover:shadow-md'
         }`}
       >
-        <span className="px-1 text-center text-[15px] font-bold leading-none">{table.label}</span>
-        {state === 'active' && count > 0 && (
-          <span className="grid h-6 min-w-6 place-items-center rounded-full bg-black/25 px-1.5 text-sm font-extrabold leading-none">
-            {count}
-          </span>
-        )}
-        {state === 'served' && (
-          <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Served</span>
-        )}
+        <span className="w-full truncate px-1 text-center text-[13px] font-bold leading-tight">{table.label}</span>
 
         {/* small static flags, tucked in the top-right */}
         {(here || called || billReq) && (
-          <span className="absolute right-1 top-1 flex items-center gap-0.5">
+          <span className="absolute -right-1 -top-1 flex items-center gap-0.5">
             {here && (
-              <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-sky-500 text-white ring-2 ring-white/70" title="Guest at the table">
-                <User className="h-2.5 w-2.5" />
+              <span className="grid h-[15px] w-[15px] place-items-center rounded-full bg-sky-500 text-white ring-2 ring-white" title="Guest at the table">
+                <User className="h-2 w-2" />
               </span>
             )}
             {called && (
-              <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-orange-500 text-white ring-2 ring-white/70" title="Server called">
-                <Bell className="h-2.5 w-2.5" />
+              <span className="grid h-[15px] w-[15px] place-items-center rounded-full bg-orange-500 text-white ring-2 ring-white" title="Server called">
+                <Bell className="h-2 w-2" />
               </span>
             )}
             {billReq && (
-              <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-white text-orange-600 ring-2 ring-white/70" title="Bill requested">
-                <Receipt className="h-2.5 w-2.5" />
+              <span className="grid h-[15px] w-[15px] place-items-center rounded-full bg-white text-orange-600 ring-1 ring-orange-200" title="Bill requested">
+                <Receipt className="h-2 w-2" />
               </span>
             )}
           </span>
