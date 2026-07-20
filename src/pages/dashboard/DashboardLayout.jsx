@@ -39,13 +39,13 @@ import Logo from '../../components/Logo'
 // reachable on phones via the "More" sheet (iPad+ shows all items in the
 // sidebar). This keeps full feature parity on iPhone without overflowing the bar.
 const NAV = [
-  { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true, mobilePrimary: true },
+  { to: '/dashboard/floor', label: 'Floor plan', icon: LayoutGrid, restaurantOnly: true, mobilePrimary: true },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList, mobilePrimary: true },
-  { to: '/dashboard/floor', label: 'Floor plan', icon: LayoutGrid, restaurantOnly: true },
+  { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true, mobilePrimary: true },
+  { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true },
+  { to: '/kitchen', label: 'Kitchen', icon: ChefHat },
+  { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true },
-  { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
-  { to: '/kitchen', label: 'Kitchen', icon: ChefHat, mobilePrimary: true },
-  { to: '/dashboard/menu', label: 'Menu', icon: UtensilsCrossed, mobilePrimary: true },
   { to: '/dashboard/qr', label: 'QR code', icon: QrCode, truckOnly: true },
   { to: '/dashboard/loyalty', label: 'Loyalty', icon: Star, ownerOnly: true },
   { to: '/dashboard/tables', label: 'Tables', icon: QrCode, restaurantOnly: true },
@@ -179,7 +179,7 @@ export default function DashboardLayout() {
         )}
 
         <main className="flex-1 px-4 pb-24 pt-5 md:px-8">
-          <div className={isFloor ? '' : 'mx-auto max-w-5xl'}>
+          <div className={isFloor ? '' : 'mx-auto w-full max-w-[1400px]'}>
             <Outlet context={{ muted, toggleMute }} />
           </div>
         </main>
