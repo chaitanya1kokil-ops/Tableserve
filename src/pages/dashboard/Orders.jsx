@@ -136,11 +136,25 @@ export default function Orders() {
     completed: orders.filter((o) => o.status === 'completed').length,
   }
 
+  // Active board: one flat, dense grid — same-table orders kept adjacent, then
+  // oldest first, so a rush of 20 orders is easy to scan without deep scrolling.
+  const sortedActive = [...visible].sort((a, b) => {
+    const ta = a.table?.label || a.customer_name || '~'
+    const tb = b.table?.label || b.customer_name || '~'
+    const t = ta.localeCompare(tb, undefined, { numeric: true })
+    return t !== 0 ? t : new Date(a.created_at) - new Date(b.created_at)
+  })
+
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+            {filter === 'completed' ? 'Completed' : 'Active orders'}
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-sm font-semibold text-gray-500">
+              {filter === 'completed' ? counts.completed : counts.active}
+            </span>
+          </h1>
           <p className="flex items-center gap-1.5 text-sm text-gray-500">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -149,9 +163,18 @@ export default function Orders() {
             Live · updates automatically
           </p>
         </div>
-        <Button onClick={() => setNewOrderOpen(true)}>
-          <Plus className="h-4 w-4" /> New order
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFilter(filter === 'active' ? 'completed' : 'active')}
+          >
+            {filter === 'active' ? `Completed · ${counts.completed}` : '← Active'}
+          </Button>
+          <Button size="sm" onClick={() => setNewOrderOpen(true)}>
+            <Plus className="h-4 w-4" /> New order
+          </Button>
+        </div>
       </div>
 
       {newOrderOpen && (
@@ -161,30 +184,6 @@ export default function Orders() {
           onPlaced={load}
         />
       )}
-
-      {/* Filter tabs */}
-      <div className="mb-5 flex gap-1 rounded-xl bg-gray-100 p-1">
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition ${
-              filter === f.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-            }`}
-          >
-            {f.label}
-            {counts[f.key] !== undefined && (
-              <span
-                className={`rounded-full px-1.5 text-xs ${
-                  filter === f.key ? 'bg-brand text-white' : 'bg-gray-200 text-gray-500'
-                }`}
-              >
-                {counts[f.key]}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
 
       {visible.length === 0 ? (
         <EmptyState
@@ -209,33 +208,21 @@ export default function Orders() {
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
-          {groupKeys.map((tableLabel) => (
-            <section key={tableLabel}>
-              <h2 className="mb-2.5 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-                {tableLabel}
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold normal-case text-gray-500">
-                  {groups[tableLabel].length}
-                </span>
-              </h2>
-              <div className="grid gap-3 lg:grid-cols-2">
-                {groups[tableLabel].map((order) => (
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    currency={restaurant.currency}
-                    onAdvance={() => {
-                      const next = ADVANCE[order.status]
-                      if (next) updateStatus(order, next.to)
-                    }}
-                    onCancel={() => {
-                      if (confirm('Cancel this order?')) updateStatus(order, 'cancelled')
-                    }}
-                    onReprint={printer?.enabled ? () => reprint(order) : null}
-                  />
-                ))}
-              </div>
-            </section>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {sortedActive.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              currency={restaurant.currency}
+              onAdvance={() => {
+                const next = ADVANCE[order.status]
+                if (next) updateStatus(order, next.to)
+              }}
+              onCancel={() => {
+                if (confirm('Cancel this order?')) updateStatus(order, 'cancelled')
+              }}
+              onReprint={printer?.enabled ? () => reprint(order) : null}
+            />
           ))}
         </div>
       )}
@@ -248,102 +235,94 @@ function OrderCard({ order, currency, onAdvance, onCancel, onReprint }) {
   const advance = ADVANCE[order.status]
   const isNew = order.status === 'new'
   const canCancel = ['new', 'preparing'].includes(order.status)
+  const who = order.customer_name || order.table?.label || 'No table'
 
   return (
-    <Card
-      className={`overflow-hidden transition ${
-        isNew ? 'bg-blue-50/40 ring-2 ring-blue-300' : ''
-      }`}
-    >
-      {/* Status strip: instant color read across the board */}
-      <div className={`h-1.5 w-full ${status.bar}`} />
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <Badge className={status.color}>
-            <span className="relative flex h-1.5 w-1.5">
-              {isNew && (
-                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${status.dot} opacity-75`} />
+    <Card className={`overflow-hidden ${isNew ? 'ring-2 ring-blue-300' : ''}`}>
+      {/* Thin status strip for an instant color read across the board */}
+      <div className={`h-1 w-full ${status.bar}`} />
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 truncate font-bold text-gray-900">
+              {order.customer_name && <User className="h-4 w-4 flex-shrink-0 text-gray-400" />}
+              {who}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <Badge className={status.color}>
+                <span className="relative flex h-1.5 w-1.5">
+                  {isNew && (
+                    <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${status.dot} opacity-75`} />
+                  )}
+                  <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                </span>
+                {status.label}
+              </Badge>
+              {order.order_type === 'takeout' && (
+                <Badge className="bg-violet-100 text-violet-700">
+                  <ShoppingBag className="h-3 w-3" /> Takeout
+                </Badge>
               )}
-              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${status.dot}`} />
-            </span>
-            {status.label}
-          </Badge>
-          {order.order_type === 'takeout' && (
-            <Badge className="bg-violet-100 text-violet-700">
-              <ShoppingBag className="h-3 w-3" /> Takeout
-            </Badge>
-          )}
-          {order.bill_requested && (
-            <Badge className="bg-orange-100 text-orange-700">
-              <Receipt className="h-3 w-3" /> Bill
-            </Badge>
-          )}
-        </div>
-        <span className="flex items-center gap-1 text-xs text-gray-400">
-          <Clock className="h-3.5 w-3.5" />
-          {timeAgo(order.created_at)}
-        </span>
-      </div>
-
-      {order.customer_name && (
-        <div className="flex items-center gap-1.5 border-b border-gray-100 px-4 py-2 text-sm font-bold text-gray-900">
-          <User className="h-4 w-4 text-gray-400" /> {order.customer_name}
-        </div>
-      )}
-
-      <div className="space-y-2 px-4 py-3">
-        {(order.items || []).map((it) => (
-          <div key={it.id} className="flex justify-between gap-3 text-sm">
-            <div className="min-w-0">
-              <span className="font-semibold text-gray-900">{it.quantity}×</span>{' '}
-              <span className="text-gray-800">{it.name_snapshot}</span>
-              {Array.isArray(it.selected_options) && it.selected_options.length > 0 && (
-                <p className="text-xs text-gray-500">
-                  {it.selected_options.map((o) => `${o.group}: ${o.value}`).join(' · ')}
-                </p>
+              {order.bill_requested && (
+                <Badge className="bg-orange-100 text-orange-700">
+                  <Receipt className="h-3 w-3" /> Bill
+                </Badge>
               )}
             </div>
-            <span className="whitespace-nowrap text-gray-500">
-              {formatCurrency(it.line_total, currency)}
-            </span>
           </div>
-        ))}
+          <span className="flex flex-shrink-0 items-center gap-1 text-xs text-gray-400">
+            <Clock className="h-3.5 w-3.5" />
+            {timeAgo(order.created_at)}
+          </span>
+        </div>
+
+        <div className="mt-2 space-y-0.5 text-sm">
+          {(order.items || []).map((it) => (
+            <div key={it.id} className="leading-snug">
+              <span className="font-bold text-gray-900">{it.quantity}×</span>{' '}
+              <span className="text-gray-800">{it.name_snapshot}</span>
+              {Array.isArray(it.selected_options) && it.selected_options.length > 0 && (
+                <span className="text-xs text-gray-400"> · {it.selected_options.map((o) => o.value).join(', ')}</span>
+              )}
+            </div>
+          ))}
+        </div>
 
         {order.notes && (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            “{order.notes}”
-          </p>
+          <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">“{order.notes}”</p>
         )}
-      </div>
 
-      <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
-        <span className="text-base font-bold text-gray-900">
-          {formatCurrency(order.total, currency)}
-        </span>
-        <div className="flex items-center gap-2">
-          {onReprint && (
-            <button
-              onClick={onReprint}
-              title="Reprint ticket"
-              className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-            >
-              <Printer className="h-4 w-4" />
-            </button>
-          )}
-          {canCancel && (
-            <Button variant="ghost" size="sm" onClick={onCancel}>
-              <Ban className="h-4 w-4" />
-            </Button>
-          )}
-          {advance && (
-            <button
-              onClick={onAdvance}
-              className={`flex items-center gap-1 rounded-xl px-3.5 py-2 text-sm font-bold text-white transition active:scale-[0.98] ${status.btn}`}
-            >
-              {advance.label}
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          )}
+        <div className="mt-2.5 flex items-center justify-between gap-2">
+          <span className="text-sm font-bold text-gray-900">{formatCurrency(order.total, currency)}</span>
+          <div className="flex items-center gap-1">
+            {onReprint && (
+              <button
+                onClick={onReprint}
+                title="Reprint ticket"
+                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+              >
+                <Printer className="h-4 w-4" />
+              </button>
+            )}
+            {canCancel && (
+              <button
+                onClick={onCancel}
+                title="Cancel order"
+                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+              >
+                <Ban className="h-4 w-4" />
+              </button>
+            )}
+            {advance && (
+              <button
+                onClick={onAdvance}
+                className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-bold text-white transition active:scale-[0.98] ${status.btn}`}
+              >
+                {advance.label}
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </Card>
