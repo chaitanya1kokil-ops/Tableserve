@@ -41,7 +41,7 @@ import Logo from '../../components/Logo'
 const NAV = [
   { to: '/dashboard', end: true, label: 'Overview', icon: LayoutDashboard, ownerOnly: true, mobilePrimary: true },
   { to: '/dashboard/orders', label: 'Orders', icon: ClipboardList, mobilePrimary: true },
-  { to: '/dashboard/floor', label: 'Floor', icon: LayoutGrid, restaurantOnly: true },
+  { to: '/dashboard/floor', label: 'Floor plan', icon: LayoutGrid, restaurantOnly: true },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, ownerOnly: true },
   { to: '/dashboard/checkout', label: 'Checkout', icon: Wallet, restaurantOnly: true },
   { to: '/kitchen', label: 'Kitchen', icon: ChefHat, mobilePrimary: true },
@@ -81,6 +81,10 @@ export default function DashboardLayout() {
     item.end ? pathname === item.to : pathname.startsWith(item.to),
   )
 
+  // The floor plan wants the whole width — hide the sidebar and use the bottom
+  // bar for nav (like a phone) at every size, and let the canvas go full-bleed.
+  const isFloor = pathname === '/dashboard/floor'
+
   // New restaurants stay 'pending' until Stripe Checkout completes. Block the
   // dashboard so payment can't be skipped by hitting Back from Stripe.
   if (restaurant?.status === 'pending') return <SubscriptionGate />
@@ -90,8 +94,12 @@ export default function DashboardLayout() {
       className="min-h-[100dvh] bg-[#faf6ef] md:flex"
       style={{ '--brand': restaurant?.accent_color || '#b45309' }}
     >
-      {/* Sidebar — shown from tablet width up (iPad portrait included) */}
-      <aside className="hidden w-60 flex-col border-r border-gray-100 bg-white md:flex lg:w-64">
+      {/* Sidebar — tablet width up, except the floor plan (which wants the room) */}
+      <aside
+        className={`hidden w-60 flex-col border-r border-gray-100 bg-white lg:w-64 ${
+          isFloor ? '' : 'md:flex'
+        }`}
+      >
         <div className="flex items-center gap-2 px-5 py-5 font-extrabold text-gray-900">
           <Logo className="h-8 w-8" />
           TableServe
@@ -221,15 +229,19 @@ export default function DashboardLayout() {
           </div>
         )}
 
-        <main className="flex-1 px-4 pb-24 pt-5 md:px-8 md:pb-8">
-          <div className="mx-auto max-w-5xl">
+        <main className={`flex-1 px-4 pt-5 md:px-8 ${isFloor ? 'pb-24' : 'pb-24 md:pb-8'}`}>
+          <div className={isFloor ? '' : 'mx-auto max-w-5xl'}>
             <Outlet context={{ muted, toggleMute }} />
           </div>
         </main>
       </div>
 
-      {/* Bottom nav (phones only): primary tabs + a "More" sheet for the rest */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom md:hidden">
+      {/* Bottom nav: phones always; also on the floor plan at every size */}
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-30 flex border-t border-gray-100 bg-white/95 backdrop-blur safe-bottom ${
+          isFloor ? '' : 'md:hidden'
+        }`}
+      >
         {mobilePrimary.map((item) => (
           <NavLink
             key={item.to}
@@ -267,7 +279,7 @@ export default function DashboardLayout() {
 
       {/* "More" sheet — every remaining tab, so iPhone has full parity */}
       {moreOpen && (
-        <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMoreOpen(false)}>
+        <div className={`fixed inset-0 z-40 ${isFloor ? '' : 'md:hidden'}`} onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 bg-black/40 animate-fade-in" />
           <div
             className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-xl animate-slide-up"

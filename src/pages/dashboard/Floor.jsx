@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Receipt, Bell, X, Move, LayoutGrid, Check } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Receipt, Bell, X, Move, LayoutGrid, Check, Wallet } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, timeAgo } from '../../lib/format'
@@ -16,6 +17,7 @@ const STYLE = {
 
 export default function Floor() {
   const { restaurant } = useAuth()
+  const navigate = useNavigate()
   const rid = restaurant.id
   const currency = restaurant.currency
 
@@ -94,6 +96,18 @@ export default function Floor() {
   for (const o of orders) (byTable[o.table_id] ||= []).push(o)
   const calledTables = new Set(calls.map((c) => c.table_id))
 
+  const resolveCall = async (tableId) => {
+    const c = calls.find((x) => x.table_id === tableId)
+    if (!c) return
+    setCalls((cs) => cs.filter((x) => x.id !== c.id))
+    await supabase.from('server_calls').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', c.id)
+  }
+
+  // Live summary of the room.
+  const nOccupied = tables.filter((t) => (byTable[t.id] || []).length > 0).length
+  const nHere = tables.filter((t) => present.has(t.id)).length
+  const nBills = tables.filter((t) => (byTable[t.id] || []).some((o) => o.bill_requested)).length
+
   // --- drag to reposition (pointer events → works on touch + mouse) ---
   const pointFromEvent = (e) => {
     const r = canvasRef.current.getBoundingClientRect()
@@ -130,9 +144,13 @@ export default function Floor() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-stone-900">Floor</h1>
+          <h1 className="font-display text-3xl font-semibold text-stone-900">Floor plan</h1>
           <p className="mt-1 text-sm text-stone-500">
-            {arranging ? 'Drag tables to match your real layout.' : 'Live table status — tap a table to see its order.'}
+            {arranging
+              ? 'Drag tables to match your real layout.'
+              : tables.length > 0
+                ? `${nHere ? `${nHere} here · ` : ''}${nOccupied} occupied · ${tables.length - nOccupied} free${nBills ? ` · ${nBills} bill${nBills > 1 ? 's' : ''}` : ''}`
+                : 'Live table status — tap a table to see its order.'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -155,9 +173,15 @@ export default function Floor() {
       ) : (
         <div
           ref={canvasRef}
-          className={`relative min-h-[62vh] w-full overflow-hidden rounded-3xl border ${
-            arranging ? 'border-brand/40 bg-[repeating-linear-gradient(45deg,#00000005_0,#00000005_1px,transparent_0,transparent_14px)]' : 'border-stone-200'
-          } bg-stone-50`}
+          className={`relative min-h-[70vh] w-full overflow-hidden rounded-3xl shadow-inner ring-1 transition ${
+            arranging ? 'ring-2 ring-brand/40' : 'ring-stone-200'
+          }`}
+          style={{
+            backgroundColor: '#faf8f4',
+            backgroundImage:
+              'radial-gradient(circle, rgba(120,90,40,0.06) 1px, transparent 1.6px)',
+            backgroundSize: '26px 26px',
+          }}
         >
           {tables.map((t, i) => {
             const os = byTable[t.id] || []
@@ -194,6 +218,8 @@ export default function Floor() {
           currency={currency}
           present={present.has(selectedTable.id)}
           called={calledTables.has(selectedTable.id)}
+          onResolve={() => resolveCall(selectedTable.id)}
+          onCheckout={() => navigate('/dashboard/checkout')}
           onClose={() => setSelected(null)}
         />
       )}
@@ -264,7 +290,7 @@ function TableDot({ table, x, y, state, orders, total, billReq, called, currency
   )
 }
 
-function TableSheet({ table, orders, currency, present, called, onClose }) {
+function TableSheet({ table, orders, currency, present, called, onResolve, onCheckout, onClose }) {
   const total = orders.reduce((s, o) => s + Number(o.total || 0), 0)
   const rounds = [...orders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   return (
@@ -324,14 +350,28 @@ function TableSheet({ table, orders, currency, present, called, onClose }) {
           )}
         </div>
 
-        {rounds.length > 0 && (
-          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4">
-            <span className="text-sm text-stone-500">Table total</span>
-            <span className="font-display text-lg font-semibold text-stone-900">
-              {formatCurrency(total, currency)}
-            </span>
+        <div className="space-y-3 border-t border-gray-100 px-5 py-4">
+          {rounds.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-stone-500">Table total</span>
+              <span className="font-display text-lg font-semibold text-stone-900">
+                {formatCurrency(total, currency)}
+              </span>
+            </div>
+          )}
+          <div className="flex gap-2">
+            {called && (
+              <Button variant="outline" className="flex-1" onClick={onResolve}>
+                <Check className="h-4 w-4" /> Resolve call
+              </Button>
+            )}
+            {rounds.length > 0 && (
+              <Button className="flex-1" onClick={onCheckout}>
+                <Wallet className="h-4 w-4" /> Take payment
+              </Button>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )
