@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Receipt, Bell, X, Move, LayoutGrid, Check, Wallet, User } from 'lucide-react'
+import { Receipt, Bell, X, Move, LayoutGrid, Check, Wallet, User, Utensils } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, timeAgo } from '../../lib/format'
@@ -200,6 +200,7 @@ export default function Floor() {
           {tables.map((t, i) => {
             const os = byTable[t.id] || []
             const activeCount = os.filter((o) => ACTIVE.includes(o.status)).length
+            const hasNew = os.some((o) => o.status === 'new') // freshly placed, not started
             // green while there's active work, orange once everything's served
             const state = activeCount > 0 ? 'active' : os.length > 0 ? 'served' : 'free'
             const x = t.pos_x ?? 10 + (i % 5) * 19
@@ -212,6 +213,7 @@ export default function Floor() {
                 y={y}
                 state={state}
                 count={activeCount}
+                hasNew={hasNew}
                 here={present.has(t.id)}
                 billReq={os.some((o) => o.bill_requested)}
                 called={calledTables.has(t.id)}
@@ -259,7 +261,7 @@ function Legend() {
   )
 }
 
-function TableDot({ table, x, y, state, count, here, billReq, called, arranging, onOpen, onPointerDown, onPointerMove, onPointerUp }) {
+function TableDot({ table, x, y, state, count, hasNew, here, billReq, called, arranging, onOpen, onPointerDown, onPointerMove, onPointerUp }) {
   return (
     <div
       className="absolute -translate-x-1/2 -translate-y-1/2 select-none"
@@ -276,9 +278,14 @@ function TableDot({ table, x, y, state, count, here, billReq, called, arranging,
       >
         <span className="w-full truncate px-1 text-center text-[13px] font-bold leading-tight">{table.label}</span>
 
-        {/* small static flags, tucked in the top-right */}
-        {(here || called || billReq) && (
+        {/* small flags, tucked in the top-right */}
+        {(hasNew || here || called || billReq) && (
           <span className="absolute -right-1 -top-1 flex items-center gap-0.5">
+            {hasNew && (
+              <span className="grid h-[15px] w-[15px] animate-bounce place-items-center rounded-full bg-emerald-600 text-white ring-2 ring-white" title="New order">
+                <Utensils className="h-2 w-2" />
+              </span>
+            )}
             {here && (
               <span className="grid h-[15px] w-[15px] place-items-center rounded-full bg-sky-500 text-white ring-2 ring-white" title="Guest at the table">
                 <User className="h-2 w-2" />
