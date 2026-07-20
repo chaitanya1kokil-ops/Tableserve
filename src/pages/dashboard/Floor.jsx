@@ -7,11 +7,12 @@ import { formatCurrency, timeAgo } from '../../lib/format'
 import { Button, FullPageSpinner, EmptyState, Badge } from '../../components/ui'
 import { ORDER_STATUSES } from '../../lib/constants'
 
-const OPEN = ['new', 'preparing', 'ready', 'served'] // active (unpaid) = occupied
+const ACTIVE = ['new', 'preparing', 'ready'] // still being worked on
+const OPEN = [...ACTIVE, 'served'] // occupied (unpaid); served = done, awaiting payment
 
 const STYLE = {
-  here: 'bg-emerald-500 text-white ring-4 ring-emerald-200',
-  occupied: 'bg-amber-400 text-white ring-4 ring-amber-100',
+  active: 'bg-emerald-500 text-white ring-4 ring-emerald-200', // green — active order(s)
+  served: 'bg-amber-400 text-white ring-4 ring-amber-100', // orange — all served, awaiting payment
   free: 'bg-white text-stone-500 ring-1 ring-stone-200',
 }
 
@@ -104,8 +105,12 @@ export default function Floor() {
   }
 
   // Live summary of the room.
-  const nOccupied = tables.filter((t) => (byTable[t.id] || []).length > 0).length
-  const nHere = tables.filter((t) => present.has(t.id)).length
+  const nActive = tables.filter((t) => (byTable[t.id] || []).some((o) => ACTIVE.includes(o.status))).length
+  const nServed = tables.filter((t) => {
+    const os = byTable[t.id] || []
+    return os.length > 0 && !os.some((o) => ACTIVE.includes(o.status))
+  }).length
+  const nFree = tables.length - nActive - nServed
   const nBills = tables.filter((t) => (byTable[t.id] || []).some((o) => o.bill_requested)).length
 
   // --- drag to reposition (pointer events → works on touch + mouse) ---
@@ -149,7 +154,7 @@ export default function Floor() {
             {arranging
               ? 'Drag tables to match your real layout.'
               : tables.length > 0
-                ? `${nHere ? `${nHere} here · ` : ''}${nOccupied} occupied · ${tables.length - nOccupied} free${nBills ? ` · ${nBills} bill${nBills > 1 ? 's' : ''}` : ''}`
+                ? `${nActive} active · ${nServed} served · ${nFree} free${nBills ? ` · ${nBills} bill${nBills > 1 ? 's' : ''}` : ''}`
                 : 'Live table status — tap a table to see its order.'}
           </p>
         </div>
@@ -194,7 +199,9 @@ export default function Floor() {
         >
           {tables.map((t, i) => {
             const os = byTable[t.id] || []
-            const state = present.has(t.id) ? 'here' : os.length > 0 ? 'occupied' : 'free'
+            const activeCount = os.filter((o) => ACTIVE.includes(o.status)).length
+            // green while there's active work, orange once everything's served
+            const state = activeCount > 0 ? 'active' : os.length > 0 ? 'served' : 'free'
             const x = t.pos_x ?? 10 + (i % 5) * 19
             const y = t.pos_y ?? 12 + Math.floor(i / 5) * 20
             return (
@@ -204,11 +211,10 @@ export default function Floor() {
                 x={x}
                 y={y}
                 state={state}
-                orders={os.length}
-                total={os.reduce((s, o) => s + Number(o.total || 0), 0)}
+                count={activeCount}
+                here={present.has(t.id)}
                 billReq={os.some((o) => o.bill_requested)}
                 called={calledTables.has(t.id)}
-                currency={currency}
                 arranging={arranging}
                 onOpen={() => !moved.current && setSelected(t.id)}
                 onPointerDown={(e) => onDown(e, t)}
@@ -238,8 +244,8 @@ export default function Floor() {
 
 function Legend() {
   const items = [
-    ['bg-emerald-500', 'Here'],
-    ['bg-amber-400', 'Occupied'],
+    ['bg-emerald-500', 'Active'],
+    ['bg-amber-400', 'Served'],
     ['bg-white ring-1 ring-stone-300', 'Free'],
   ]
   return (
@@ -253,7 +259,7 @@ function Legend() {
   )
 }
 
-function TableDot({ table, x, y, state, orders, total, billReq, called, currency, arranging, onOpen, onPointerDown, onPointerMove, onPointerUp }) {
+function TableDot({ table, x, y, state, count, here, billReq, called, arranging, onOpen, onPointerDown, onPointerMove, onPointerUp }) {
   return (
     <div
       className="absolute -translate-x-1/2 -translate-y-1/2 select-none"
@@ -268,20 +274,24 @@ function TableDot({ table, x, y, state, orders, total, billReq, called, currency
           arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5 hover:shadow-xl'
         }`}
       >
-        {state === 'here' && (
-          <span className="absolute inset-0 animate-ping rounded-2xl bg-emerald-400 opacity-30" />
-        )}
         <span className="relative px-1 text-center text-sm font-bold leading-tight">{table.label}</span>
-        {orders > 0 && (
-          <span className="relative mt-0.5 text-[10px] font-semibold opacity-90">
-            {formatCurrency(total, currency)}
+        {state === 'served' && (
+          <span className="relative mt-0.5 text-[10px] font-semibold uppercase tracking-wide opacity-90">
+            Served
           </span>
         )}
 
-        {/* corner indicators */}
-        {orders > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-stone-900 px-1 text-[10px] font-bold text-white ring-2 ring-stone-50">
-            {orders}
+        {/* active order count (top-right) — green tiles only */}
+        {state === 'active' && count > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-stone-900 px-1 text-[11px] font-bold text-white ring-2 ring-stone-50">
+            {count}
+          </span>
+        )}
+        {/* a guest is on the menu at this table right now (bottom-left) */}
+        {here && (
+          <span className="absolute -bottom-1 -left-1 flex h-3.5 w-3.5 items-center justify-center">
+            <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-sky-400 opacity-70" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500 ring-2 ring-stone-50" />
           </span>
         )}
         {called && (
