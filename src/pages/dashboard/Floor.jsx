@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Receipt, Bell, X, Move, LayoutGrid, Check, Wallet } from 'lucide-react'
+import { Receipt, Bell, X, Move, LayoutGrid, Check, Wallet, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, timeAgo } from '../../lib/format'
@@ -270,38 +270,38 @@ function TableDot({ table, x, y, state, count, here, billReq, called, arranging,
     >
       <button
         onClick={arranging ? undefined : onOpen}
-        className={`relative grid h-[68px] w-[68px] place-items-center rounded-2xl shadow-lg shadow-black/10 transition ${STYLE[state]} ${
-          arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5 hover:shadow-xl'
+        className={`relative flex h-[78px] w-[78px] flex-col items-center justify-center gap-1 rounded-2xl shadow-md shadow-black/10 transition ${STYLE[state]} ${
+          arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5 hover:shadow-lg'
         }`}
       >
-        <span className="relative px-1 text-center text-sm font-bold leading-tight">{table.label}</span>
-        {state === 'served' && (
-          <span className="relative mt-0.5 text-[10px] font-semibold uppercase tracking-wide opacity-90">
-            Served
-          </span>
-        )}
-
-        {/* active order count (top-right) — green tiles only */}
+        <span className="px-1 text-center text-[15px] font-bold leading-none">{table.label}</span>
         {state === 'active' && count > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-stone-900 px-1 text-[11px] font-bold text-white ring-2 ring-stone-50">
+          <span className="grid h-6 min-w-6 place-items-center rounded-full bg-black/25 px-1.5 text-sm font-extrabold leading-none">
             {count}
           </span>
         )}
-        {/* a guest is on the menu at this table right now (bottom-left) */}
-        {here && (
-          <span className="absolute -bottom-1 -left-1 flex h-3.5 w-3.5 items-center justify-center">
-            <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-sky-400 opacity-70" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500 ring-2 ring-stone-50" />
-          </span>
+        {state === 'served' && (
+          <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Served</span>
         )}
-        {called && (
-          <span className="absolute -left-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-orange-500 text-white ring-2 ring-stone-50">
-            <Bell className="h-3 w-3 animate-bounce" />
-          </span>
-        )}
-        {billReq && (
-          <span className="absolute -bottom-1.5 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-orange-100 text-orange-600 ring-2 ring-stone-50">
-            <Receipt className="h-3 w-3" />
+
+        {/* small static flags, tucked in the top-right */}
+        {(here || called || billReq) && (
+          <span className="absolute right-1 top-1 flex items-center gap-0.5">
+            {here && (
+              <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-sky-500 text-white ring-2 ring-white/70" title="Guest at the table">
+                <User className="h-2.5 w-2.5" />
+              </span>
+            )}
+            {called && (
+              <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-orange-500 text-white ring-2 ring-white/70" title="Server called">
+                <Bell className="h-2.5 w-2.5" />
+              </span>
+            )}
+            {billReq && (
+              <span className="grid h-[18px] w-[18px] place-items-center rounded-full bg-white text-orange-600 ring-2 ring-white/70" title="Bill requested">
+                <Receipt className="h-2.5 w-2.5" />
+              </span>
+            )}
           </span>
         )}
       </button>
