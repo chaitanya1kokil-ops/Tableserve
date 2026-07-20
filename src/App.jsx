@@ -1,37 +1,41 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { hasSupabaseConfig } from './lib/supabase'
 import { useAuth } from './context/AuthContext'
 import { RequireOwner, RequireOnboarding, RequireAdmin } from './components/guards'
 import { OwnerOnly } from './components/OwnerAccess'
+import { FullPageSpinner } from './components/ui'
 import SetupNotice from './pages/SetupNotice'
 
-import Landing from './pages/Landing'
-import Terms from './pages/legal/Terms'
-import Privacy from './pages/legal/Privacy'
-import Login from './pages/auth/Login'
-import Signup from './pages/auth/Signup'
-import ForgotPassword from './pages/auth/ForgotPassword'
-import ResetPassword from './pages/auth/ResetPassword'
-import Onboarding from './pages/Onboarding'
+// Route components are lazy-loaded so each area ships its own chunk — a customer
+// scanning a QR downloads only the menu, not the whole dashboard.
+const Landing = lazy(() => import('./pages/Landing'))
+const Terms = lazy(() => import('./pages/legal/Terms'))
+const Privacy = lazy(() => import('./pages/legal/Privacy'))
+const Login = lazy(() => import('./pages/auth/Login'))
+const Signup = lazy(() => import('./pages/auth/Signup'))
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
-import DashboardLayout from './pages/dashboard/DashboardLayout'
-import Overview from './pages/dashboard/Overview'
-import Analytics from './pages/dashboard/Analytics'
-import Subscription from './pages/dashboard/Subscription'
-import Menu from './pages/dashboard/Menu'
-import Tables from './pages/dashboard/Tables'
-import Orders from './pages/dashboard/Orders'
-import FoodTruckBoard from './pages/dashboard/FoodTruckBoard'
-import TruckQR from './pages/dashboard/TruckQR'
-import Checkout from './pages/dashboard/Checkout'
-import Loyalty from './pages/dashboard/Loyalty'
-import Settings from './pages/dashboard/Settings'
-import Kitchen from './pages/dashboard/Kitchen'
+const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout'))
+const Overview = lazy(() => import('./pages/dashboard/Overview'))
+const Analytics = lazy(() => import('./pages/dashboard/Analytics'))
+const Subscription = lazy(() => import('./pages/dashboard/Subscription'))
+const Menu = lazy(() => import('./pages/dashboard/Menu'))
+const Tables = lazy(() => import('./pages/dashboard/Tables'))
+const Orders = lazy(() => import('./pages/dashboard/Orders'))
+const FoodTruckBoard = lazy(() => import('./pages/dashboard/FoodTruckBoard'))
+const TruckQR = lazy(() => import('./pages/dashboard/TruckQR'))
+const Checkout = lazy(() => import('./pages/dashboard/Checkout'))
+const Loyalty = lazy(() => import('./pages/dashboard/Loyalty'))
+const Settings = lazy(() => import('./pages/dashboard/Settings'))
+const Kitchen = lazy(() => import('./pages/dashboard/Kitchen'))
 
-import Admin from './pages/admin/Admin'
+const Admin = lazy(() => import('./pages/admin/Admin'))
 
-import CustomerMenu from './pages/customer/CustomerMenu'
-import CustomerStatus from './pages/customer/CustomerStatus'
+const CustomerMenu = lazy(() => import('./pages/customer/CustomerMenu'))
+const CustomerStatus = lazy(() => import('./pages/customer/CustomerStatus'))
 
 // Food trucks get a streamlined name-based board; restaurants get the full
 // orders board. Both live at /dashboard/orders.
@@ -51,76 +55,78 @@ export default function App() {
   if (!hasSupabaseConfig) return <SetupNotice />
 
   return (
-    <Routes>
-      {/* Public marketing + auth */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+    <Suspense fallback={<FullPageSpinner />}>
+      <Routes>
+        {/* Public marketing + auth */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Restaurant onboarding */}
-      <Route
-        path="/onboarding"
-        element={
-          <RequireOnboarding>
-            <Onboarding />
-          </RequireOnboarding>
-        }
-      />
+        {/* Restaurant onboarding */}
+        <Route
+          path="/onboarding"
+          element={
+            <RequireOnboarding>
+              <Onboarding />
+            </RequireOnboarding>
+          }
+        />
 
-      {/* Restaurant dashboard */}
-      <Route
-        path="/dashboard"
-        element={
-          <RequireOwner>
-            <DashboardLayout />
-          </RequireOwner>
-        }
-      >
-        <Route index element={<DashboardHome />} />
-        <Route path="menu" element={<Menu />} />
-        <Route path="tables" element={<Tables />} />
-        <Route path="qr" element={<TruckQR />} />
-        <Route path="orders" element={<OrdersRoute />} />
-        <Route path="checkout" element={<Checkout />} />
-        <Route path="analytics" element={<OwnerOnly><Analytics /></OwnerOnly>} />
-        <Route path="subscription" element={<OwnerOnly><Subscription /></OwnerOnly>} />
-        <Route path="loyalty" element={<OwnerOnly><Loyalty /></OwnerOnly>} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
+        {/* Restaurant dashboard */}
+        <Route
+          path="/dashboard"
+          element={
+            <RequireOwner>
+              <DashboardLayout />
+            </RequireOwner>
+          }
+        >
+          <Route index element={<DashboardHome />} />
+          <Route path="menu" element={<Menu />} />
+          <Route path="tables" element={<Tables />} />
+          <Route path="qr" element={<TruckQR />} />
+          <Route path="orders" element={<OrdersRoute />} />
+          <Route path="checkout" element={<Checkout />} />
+          <Route path="analytics" element={<OwnerOnly><Analytics /></OwnerOnly>} />
+          <Route path="subscription" element={<OwnerOnly><Subscription /></OwnerOnly>} />
+          <Route path="loyalty" element={<OwnerOnly><Loyalty /></OwnerOnly>} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
 
-      {/* Full-screen kitchen display (owner/staff only) */}
-      <Route
-        path="/kitchen"
-        element={
-          <RequireOwner>
-            <Kitchen />
-          </RequireOwner>
-        }
-      />
+        {/* Full-screen kitchen display (owner/staff only) */}
+        <Route
+          path="/kitchen"
+          element={
+            <RequireOwner>
+              <Kitchen />
+            </RequireOwner>
+          }
+        />
 
-      {/* Platform admin */}
-      <Route
-        path="/admin"
-        element={
-          <RequireAdmin>
-            <Admin />
-          </RequireAdmin>
-        }
-      />
+        {/* Platform admin */}
+        <Route
+          path="/admin"
+          element={
+            <RequireAdmin>
+              <Admin />
+            </RequireAdmin>
+          }
+        />
 
-      {/* Public customer ordering (reached by scanning a table QR code) */}
-      <Route path="/r/:restaurantId/t/:tableId" element={<CustomerMenu />} />
-      <Route path="/r/:restaurantId/t/:tableId/status" element={<CustomerStatus />} />
-      {/* Food-truck ordering + status (one QR, no table) */}
-      <Route path="/r/:restaurantId/status" element={<CustomerStatus />} />
-      {/* Truck QR, or browse-only for a restaurant visited without a table */}
-      <Route path="/r/:restaurantId" element={<CustomerMenu />} />
+        {/* Public customer ordering (reached by scanning a table QR code) */}
+        <Route path="/r/:restaurantId/t/:tableId" element={<CustomerMenu />} />
+        <Route path="/r/:restaurantId/t/:tableId/status" element={<CustomerStatus />} />
+        {/* Food-truck ordering + status (one QR, no table) */}
+        <Route path="/r/:restaurantId/status" element={<CustomerStatus />} />
+        {/* Truck QR, or browse-only for a restaurant visited without a table */}
+        <Route path="/r/:restaurantId" element={<CustomerMenu />} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }
