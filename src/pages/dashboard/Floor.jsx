@@ -12,7 +12,7 @@ const OPEN = ['new', 'preparing', 'ready', 'served'] // active (unpaid) = occupi
 const STYLE = {
   here: 'bg-emerald-500 text-white ring-4 ring-emerald-200',
   occupied: 'bg-amber-400 text-white ring-4 ring-amber-100',
-  free: 'bg-white text-stone-500 ring-1 ring-stone-200 shadow-sm',
+  free: 'bg-white text-stone-500 ring-1 ring-stone-200',
 }
 
 export default function Floor() {
@@ -173,14 +173,23 @@ export default function Floor() {
       ) : (
         <div
           ref={canvasRef}
-          className={`relative min-h-[70vh] w-full overflow-hidden rounded-3xl shadow-inner ring-1 transition ${
-            arranging ? 'ring-2 ring-brand/40' : 'ring-stone-200'
+          className={`relative min-h-[70vh] w-full overflow-hidden rounded-3xl shadow-[inset_0_2px_36px_rgba(80,60,30,0.14)] ring-1 transition ${
+            arranging ? 'ring-2 ring-brand/50' : 'ring-stone-200'
           }`}
           style={{
-            backgroundColor: '#faf8f4',
-            backgroundImage:
-              'radial-gradient(circle, rgba(120,90,40,0.06) 1px, transparent 1.6px)',
-            backgroundSize: '26px 26px',
+            backgroundColor: '#f3ecdf',
+            backgroundImage: [
+              // soft light from the top + warm shadow pooling at the bottom
+              'radial-gradient(120% 85% at 50% -10%, rgba(255,255,255,0.75), rgba(255,255,255,0) 55%)',
+              'radial-gradient(150% 120% at 50% 125%, rgba(120,90,50,0.14), rgba(120,90,50,0) 55%)',
+              // major architectural grid
+              'linear-gradient(0deg, rgba(120,90,50,0.08) 1px, transparent 1px)',
+              'linear-gradient(90deg, rgba(120,90,50,0.08) 1px, transparent 1px)',
+              // fine minor grid
+              'linear-gradient(0deg, rgba(120,90,50,0.04) 1px, transparent 1px)',
+              'linear-gradient(90deg, rgba(120,90,50,0.04) 1px, transparent 1px)',
+            ].join(','),
+            backgroundSize: '100% 100%, 100% 100%, 120px 120px, 120px 120px, 24px 24px, 24px 24px',
           }}
         >
           {tables.map((t, i) => {
@@ -255,8 +264,8 @@ function TableDot({ table, x, y, state, orders, total, billReq, called, currency
     >
       <button
         onClick={arranging ? undefined : onOpen}
-        className={`relative grid h-[68px] w-[68px] place-items-center rounded-2xl transition ${STYLE[state]} ${
-          arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5'
+        className={`relative grid h-[68px] w-[68px] place-items-center rounded-2xl shadow-lg shadow-black/10 transition ${STYLE[state]} ${
+          arranging ? 'cursor-grab active:cursor-grabbing' : 'hover:-translate-y-0.5 hover:shadow-xl'
         }`}
       >
         {state === 'here' && (
