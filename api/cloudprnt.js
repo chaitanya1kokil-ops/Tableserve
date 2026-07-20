@@ -11,7 +11,8 @@ import { allowsPrinting } from '../src/lib/constants.js'
 //   DELETE  = acknowledge the print    -> { }
 // No browser or PC required — the printer does all of this over wifi/LTE.
 
-const RECENT_MS = 30 * 60 * 1000 // ignore anything older than 30 min (no backlog dumps)
+const RECENT_MS = 2 * 60 * 60 * 1000 // ignore anything older than 2h (no backlog dumps)
+const PRINTABLE = ['new', 'preparing', 'ready'] // print unless it's cancelled/awaiting_payment
 
 function service() {
   return createClient(
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
       .from('orders')
       .select('id')
       .eq('restaurant_id', settings.restaurant_id)
-      .eq('status', 'new')
+      .in('status', PRINTABLE)
       .is('printed_at', null)
       .gt('created_at', new Date(Date.now() - RECENT_MS).toISOString())
       .order('created_at', { ascending: true })
@@ -78,7 +79,7 @@ export default async function handler(req, res) {
         .from('orders')
         .select('*, items:order_items(*), table:tables(label)')
         .eq('restaurant_id', settings.restaurant_id)
-        .eq('status', 'new')
+        .in('status', PRINTABLE)
         .is('printed_at', null)
         .order('created_at', { ascending: true })
         .limit(1)

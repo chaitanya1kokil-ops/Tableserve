@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   const webhookOk =
     process.env.PRINT_WEBHOOK_SECRET &&
     req.headers['x-webhook-secret'] === process.env.PRINT_WEBHOOK_SECRET
-  if (body.test) {
+  if (body.test || body.reprint) {
     if (body.token !== settings.token) return res.status(401).json({ error: 'Bad token' })
   } else if (!webhookOk) {
     return res.status(401).json({ error: 'Unauthorized' })
@@ -76,6 +76,16 @@ export default async function handler(req, res) {
       notes: 'If you can read this, printing works.',
       total: 0,
     }
+  } else if (body.reprint) {
+    // Staff-triggered reprint: print the order again regardless of status.
+    const { data } = await supabase
+      .from('orders')
+      .select('*, items:order_items(*), table:tables(label)')
+      .eq('id', body.orderId)
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle()
+    if (!data) return res.status(404).json({ error: 'Order not found' })
+    order = data
   } else {
     if (record?.status && record.status !== 'new') return res.status(200).json({ skip: 'not-new' })
     const { data: claimed } = await supabase
@@ -106,8 +116,8 @@ export default async function handler(req, res) {
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => '')
-    // Un-claim so a retry can print it.
-    if (!body.test) {
+    // Un-claim so a retry can print it (only the auto-print path claimed it).
+    if (!body.test && !body.reprint) {
       await supabase.from('orders').update({ printed_at: null }).eq('id', order.id)
     }
     return res.status(502).json({ error: 'PrintNode rejected the job', detail: detail.slice(0, 300) })

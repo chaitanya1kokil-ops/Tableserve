@@ -9,6 +9,7 @@ import {
   Plus,
   ShoppingBag,
   User,
+  Printer,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -41,7 +42,30 @@ export default function Orders() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('active')
   const [newOrderOpen, setNewOrderOpen] = useState(false)
+  const [printer, setPrinter] = useState(null) // {enabled, provider, token}
   const reloadTimer = useRef(null)
+
+  useEffect(() => {
+    supabase
+      .from('printer_settings')
+      .select('enabled, provider, token')
+      .eq('restaurant_id', rid)
+      .maybeSingle()
+      .then(({ data }) => setPrinter(data))
+  }, [rid])
+
+  // Re-send a ticket to the kitchen printer (dropped print, paper jam, etc.).
+  const reprint = async (order) => {
+    await supabase.from('orders').update({ printed_at: null }).eq('id', order.id) // CloudPRNT re-polls
+    if (printer?.provider === 'printnode') {
+      await fetch('/api/print-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId: rid, orderId: order.id, token: printer.token, reprint: true }),
+      })
+    }
+    toast.success('Reprinting ticket…')
+  }
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -207,6 +231,7 @@ export default function Orders() {
                     onCancel={() => {
                       if (confirm('Cancel this order?')) updateStatus(order, 'cancelled')
                     }}
+                    onReprint={printer?.enabled ? () => reprint(order) : null}
                   />
                 ))}
               </div>
@@ -218,7 +243,7 @@ export default function Orders() {
   )
 }
 
-function OrderCard({ order, currency, onAdvance, onCancel }) {
+function OrderCard({ order, currency, onAdvance, onCancel, onReprint }) {
   const status = ORDER_STATUSES[order.status] || ORDER_STATUSES.new
   const advance = ADVANCE[order.status]
   const isNew = order.status === 'new'
@@ -296,6 +321,15 @@ function OrderCard({ order, currency, onAdvance, onCancel }) {
           {formatCurrency(order.total, currency)}
         </span>
         <div className="flex items-center gap-2">
+          {onReprint && (
+            <button
+              onClick={onReprint}
+              title="Reprint ticket"
+              className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+            >
+              <Printer className="h-4 w-4" />
+            </button>
+          )}
           {canCancel && (
             <Button variant="ghost" size="sm" onClick={onCancel}>
               <Ban className="h-4 w-4" />
