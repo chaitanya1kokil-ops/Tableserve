@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Store,
   LogOut,
@@ -15,6 +16,7 @@ import {
   Minus,
   BarChart3,
   ExternalLink,
+  LogIn,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -38,8 +40,15 @@ function healthOf(lastOrderAt) {
 }
 
 export default function Admin() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, impersonate } = useAuth()
+  const navigate = useNavigate()
   const toast = useToast()
+
+  // Enter a client's dashboard as its owner (admins have full RLS access).
+  const openDashboard = (restaurant) => {
+    impersonate(restaurant.id)
+    navigate('/dashboard')
+  }
 
   const [loading, setLoading] = useState(true)
   const [restaurants, setRestaurants] = useState([])
@@ -285,6 +294,7 @@ export default function Admin() {
                 usage={a.perRest[r.id]}
                 onSetStatus={setStatus}
                 onSetPlan={setPlan}
+                onOpen={openDashboard}
               />
             ))
           )}
@@ -417,7 +427,7 @@ function Trend({ current, previous }) {
   )
 }
 
-function ClientCard({ restaurant: r, usage, onSetStatus, onSetPlan }) {
+function ClientCard({ restaurant: r, usage, onSetStatus, onSetPlan, onOpen }) {
   const status = RESTAURANT_STATUS[r.status] || RESTAURANT_STATUS.active
   const plan = PLANS[r.plan] || PLANS.trial
   const health = healthOf(usage?.lastOrderAt)
@@ -486,6 +496,9 @@ function ClientCard({ restaurant: r, usage, onSetStatus, onSetPlan }) {
               <ExternalLink className="h-4 w-4" /> Menu
             </Button>
           </a>
+          <Button size="sm" variant="outline" onClick={() => onOpen(r)} title="Open this client's dashboard as its owner">
+            <LogIn className="h-4 w-4" /> Open
+          </Button>
           {r.status === 'pending' && (
             <Button size="sm" onClick={() => onSetStatus(r, 'active')}>
               <CheckCircle2 className="h-4 w-4" /> Approve

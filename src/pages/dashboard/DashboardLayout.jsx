@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   ClipboardList,
@@ -21,6 +21,7 @@ import {
   Lock,
   MoreHorizontal,
   LayoutGrid,
+  Eye,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -60,10 +61,16 @@ export default function DashboardLayout() {
   const { soundReady, enableSound } = useOrderSounds(restaurant?.id, muted)
   const newOrders = useNewOrderCount(restaurant?.id)
 
-  const { isOwner, ownerPinSet, ownerMode, lockOwner } = useAuth()
+  const { isOwner, ownerPinSet, ownerMode, lockOwner, isImpersonating, stopImpersonating } = useAuth()
   const [pinOpen, setPinOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+
+  const exitImpersonation = () => {
+    stopImpersonating()
+    navigate('/admin')
+  }
 
   const isTruck = restaurant?.business_type === 'food_truck'
   const nav = NAV.filter(
@@ -86,18 +93,41 @@ export default function DashboardLayout() {
   const isFloor = pathname === '/dashboard/floor'
 
   // New restaurants stay 'pending' until Stripe Checkout completes. Block the
-  // dashboard so payment can't be skipped by hitting Back from Stripe.
-  if (restaurant?.status === 'pending') return <SubscriptionGate />
+  // dashboard so payment can't be skipped by hitting Back from Stripe — but let
+  // an impersonating admin through to inspect the account.
+  if (restaurant?.status === 'pending' && !isImpersonating) return <SubscriptionGate />
 
   return (
     <div
       className="min-h-[100dvh] bg-[#faf6ef]"
       style={{ '--brand': restaurant?.accent_color || '#b45309' }}
     >
+      {/* Impersonation banner — always visible so exiting is one tap away. */}
+      {isImpersonating && (
+        <div className="sticky top-0 z-40 flex items-center justify-between gap-2 bg-stone-900 px-4 py-2 text-sm text-white">
+          <span className="flex min-w-0 items-center gap-2">
+            <Eye className="h-4 w-4 flex-shrink-0 text-amber-300" />
+            <span className="truncate">
+              Viewing <strong className="font-semibold">{restaurant?.name}</strong> as owner
+            </span>
+          </span>
+          <button
+            onClick={exitImpersonation}
+            className="flex-shrink-0 rounded-lg bg-white/15 px-3 py-1 font-semibold text-amber-200 hover:bg-white/25"
+          >
+            Exit to HQ
+          </button>
+        </div>
+      )}
+
       {/* Main */}
       <div className="flex flex-1 flex-col">
         {/* Top bar (all sizes — nav lives in the bottom bar) */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur">
+        <header
+          className={`sticky z-30 flex items-center justify-between border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur ${
+            isImpersonating ? 'top-9' : 'top-0'
+          }`}
+        >
           <div className="flex items-center gap-2 font-bold text-gray-900">
             {restaurant?.logo_url ? (
               <img src={imageUrl(restaurant.logo_url)} alt="" className="h-7 w-7 rounded-lg object-cover" />
@@ -109,7 +139,7 @@ export default function DashboardLayout() {
             <span className="line-clamp-1">{restaurant?.name}</span>
           </div>
           <div className="flex items-center gap-1">
-            {ownerPinSet &&
+            {ownerPinSet && !isImpersonating &&
               (ownerMode ? (
                 <button
                   onClick={lockOwner}

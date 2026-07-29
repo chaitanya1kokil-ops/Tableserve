@@ -26,6 +26,17 @@ export function AuthProvider({ children }) {
       return false
     }
   })
+  // Impersonation: a platform admin viewing a specific restaurant's dashboard as
+  // its owner. Kept per-tab (sessionStorage) so a refresh stays in, but a new tab
+  // starts clean and signing out clears it. RLS already grants admins full access
+  // to every tenant table, so this is a pure client-side view switch.
+  const [impersonatedId, setImpersonatedId] = useState(() => {
+    try {
+      return sessionStorage.getItem('ts-impersonate') || null
+    } catch {
+      return null
+    }
+  })
 
   // 1. Track the auth session.
   useEffect(() => {
@@ -70,11 +81,15 @@ export function AuthProvider({ children }) {
 
       setProfile(prof || null)
 
-      if (prof?.restaurant_id) {
+      // Admins impersonating a restaurant load that one; everyone else loads
+      // the restaurant linked to their own profile.
+      const isAdminRole = prof?.role === 'platform_admin'
+      const targetId = isAdminRole && impersonatedId ? impersonatedId : prof?.restaurant_id
+      if (targetId) {
         const { data: rest } = await supabase
           .from('restaurants')
           .select('*')
-          .eq('id', prof.restaurant_id)
+          .eq('id', targetId)
           .maybeSingle()
         setRestaurant(stripPin(rest))
       } else {
@@ -84,7 +99,7 @@ export function AuthProvider({ children }) {
       setProfileLoading(false)
       setProfileChecked(true)
     }
-  }, [userId, isAnonymous])
+  }, [userId, isAnonymous, impersonatedId])
 
   useEffect(() => {
     setProfileChecked(false)
@@ -119,11 +134,33 @@ export function AuthProvider({ children }) {
     setProfile(null)
     setRestaurant(null)
     setOwnerMode(false)
+    setImpersonatedId(null)
     try {
       sessionStorage.removeItem('ts-owner-mode')
+      sessionStorage.removeItem('ts-impersonate')
     } catch {
       /* ignore */
     }
+  }, [])
+
+  // Admin: start viewing a restaurant's dashboard as its owner. Reloading the
+  // profile (via the impersonatedId dependency) swaps in that restaurant.
+  const impersonate = useCallback((restId) => {
+    try {
+      sessionStorage.setItem('ts-impersonate', restId)
+    } catch {
+      /* ignore */
+    }
+    setImpersonatedId(restId)
+  }, [])
+
+  const stopImpersonating = useCallback(() => {
+    try {
+      sessionStorage.removeItem('ts-impersonate')
+    } catch {
+      /* ignore */
+    }
+    setImpersonatedId(null)
   }, [])
 
   // Verify the owner PIN server-side; on success unlock owner mode for the session.
@@ -148,6 +185,11 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  const isAdmin = profile?.role === 'platform_admin'
+  // True only once the impersonated restaurant has actually loaded, so guards
+  // never briefly admit an admin to an empty dashboard.
+  const isImpersonating = isAdmin && Boolean(impersonatedId) && Boolean(restaurant)
+
   const value = {
     session,
     user: session?.user || null,
@@ -157,12 +199,16 @@ export function AuthProvider({ children }) {
     loading,
     profileLoading,
     profileChecked,
-    isAdmin: profile?.role === 'platform_admin',
+    isAdmin,
+    isImpersonating,
+    impersonate,
+    stopImpersonating,
     // Owner/staff mode. When no PIN is set, the account behaves as owner (no
-    // split) so nothing changes for accounts that never configure it.
+    // split) so nothing changes for accounts that never configure it. An
+    // impersonating admin always gets full owner powers (no PIN to know).
     ownerPinSet: Boolean(restaurant?.owner_pin_set),
     ownerMode,
-    isOwner: !restaurant?.owner_pin_set || ownerMode,
+    isOwner: isImpersonating ? true : !restaurant?.owner_pin_set || ownerMode,
     unlockOwner,
     lockOwner,
     refreshProfile: loadProfile,

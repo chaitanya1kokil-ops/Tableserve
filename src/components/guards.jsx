@@ -4,13 +4,15 @@ import { FullPageSpinner } from './ui'
 
 /** Requires a signed-in owner/staff who has completed onboarding. */
 export function RequireOwner({ children }) {
-  const { loading, profileChecked, user, isAnonymous, profile, restaurant } = useAuth()
+  const { loading, profileChecked, user, isAnonymous, profile, restaurant, isImpersonating } = useAuth()
   const location = useLocation()
 
   if (loading) return <FullPageSpinner label="Loading…" />
   if (!user || isAnonymous) return <Navigate to="/login" state={{ from: location }} replace />
   if (!profileChecked) return <FullPageSpinner label="Loading…" />
-  if (profile?.role === 'platform_admin') return <Navigate to="/admin" replace />
+  // Admins live in /admin — unless they're impersonating a restaurant, in which
+  // case they get its owner dashboard.
+  if (profile?.role === 'platform_admin' && !isImpersonating) return <Navigate to="/admin" replace />
   if (!restaurant) return <Navigate to="/onboarding" replace />
 
   return children
