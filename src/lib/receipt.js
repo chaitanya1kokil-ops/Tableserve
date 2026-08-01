@@ -26,6 +26,9 @@ export function buildReceiptText(order, restaurant) {
   rows.push(rule)
 
   for (const it of order.items || []) {
+    // Staff voided this line (returned or wrong dish) — it is not on the bill,
+    // so it must not be on the ticket either.
+    if (it.voided_at) continue
     rows.push(`${it.quantity}x ${it.name_snapshot}`)
     const opts = Array.isArray(it.selected_options)
       ? it.selected_options.map((o) => o.value || o.name || o.label).filter(Boolean)

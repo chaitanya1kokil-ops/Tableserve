@@ -19,6 +19,7 @@ export function toUnits(orders, compItemId) {
   const units = []
   for (const o of orders) {
     for (const it of o.items || []) {
+      if (it.voided_at) continue // returned/removed by staff — nobody pays for it
       if (it.id === compItemId) continue
       const qty = Math.max(1, it.quantity || 1)
       const each = (Number(it.line_total) || 0) / qty

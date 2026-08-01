@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   User,
   Printer,
+  Pencil,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -18,6 +19,7 @@ import { formatCurrency, timeAgo } from '../../lib/format'
 import { ORDER_STATUSES } from '../../lib/constants'
 import { Button, Card, Badge, EmptyState, FullPageSpinner } from '../../components/ui'
 import NewOrderModal from './NewOrderModal'
+import EditOrderModal from './EditOrderModal'
 
 // Once an order is served it leaves the active board and moves to Checkout for
 // payment — so the board only shows what's still being worked on.
@@ -44,6 +46,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('active')
   const [newOrderOpen, setNewOrderOpen] = useState(false)
+  const [editing, setEditing] = useState(null) // order being corrected
   const [printer, setPrinter] = useState(null) // {enabled, provider, token}
   const reloadTimer = useRef(null)
 
@@ -187,6 +190,15 @@ export default function Orders() {
         />
       )}
 
+      {editing && (
+        <EditOrderModal
+          order={editing}
+          restaurant={restaurant}
+          onClose={() => setEditing(null)}
+          onSaved={load}
+        />
+      )}
+
       {visible.length === 0 ? (
         <EmptyState
           icon={Inbox}
@@ -224,6 +236,7 @@ export default function Orders() {
                 if (confirm('Cancel this order?')) updateStatus(order, 'cancelled')
               }}
               onReprint={printer?.enabled ? () => reprint(order) : null}
+              onEdit={() => setEditing(order)}
             />
           ))}
         </div>
@@ -232,7 +245,7 @@ export default function Orders() {
   )
 }
 
-function OrderCard({ order, currency, onAdvance, onCancel, onReprint }) {
+function OrderCard({ order, currency, onAdvance, onCancel, onReprint, onEdit }) {
   const status = ORDER_STATUSES[order.status] || ORDER_STATUSES.new
   const advance = ADVANCE[order.status]
   const isNew = order.status === 'new'
@@ -280,11 +293,20 @@ function OrderCard({ order, currency, onAdvance, onCancel, onReprint }) {
 
         <div className="mt-2 space-y-0.5 text-sm">
           {(order.items || []).map((it) => (
-            <div key={it.id} className="leading-snug">
-              <span className="font-bold text-gray-900">{it.quantity}×</span>{' '}
-              <span className="text-gray-800">{it.name_snapshot}</span>
+            <div key={it.id} className={`leading-snug ${it.voided_at ? 'opacity-45' : ''}`}>
+              <span className={`font-bold text-gray-900 ${it.voided_at ? 'line-through' : ''}`}>
+                {it.quantity}×
+              </span>{' '}
+              <span className={`text-gray-800 ${it.voided_at ? 'line-through' : ''}`}>
+                {it.name_snapshot}
+              </span>
               {Array.isArray(it.selected_options) && it.selected_options.length > 0 && (
                 <span className="text-xs text-gray-400"> · {it.selected_options.map((o) => o.value).join(', ')}</span>
+              )}
+              {it.voided_at && (
+                <span className="ml-1 text-xs font-semibold text-red-500">
+                  removed{it.void_reason ? ` · ${it.void_reason}` : ''}
+                </span>
               )}
             </div>
           ))}
@@ -304,6 +326,15 @@ function OrderCard({ order, currency, onAdvance, onCancel, onReprint }) {
                 className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
               >
                 <Printer className="h-4 w-4" />
+              </button>
+            )}
+            {onEdit && !order.paid_at && order.status !== 'cancelled' && (
+              <button
+                onClick={onEdit}
+                title="Edit order — remove a returned dish or add an item"
+                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+              >
+                <Pencil className="h-4 w-4" />
               </button>
             )}
             {canCancel && (

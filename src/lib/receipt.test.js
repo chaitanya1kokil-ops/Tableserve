@@ -76,6 +76,25 @@ describe('buildReceiptText', () => {
     expect(rows.filter((r) => r.startsWith('   - '))).toHaveLength(3)
   })
 
+  it('omits a voided line — it is off the bill, so off the ticket', () => {
+    const text = buildReceiptText(
+      makeOrder({
+        items: [
+          { quantity: 1, name_snapshot: 'Paneer Tikka', selected_options: [] },
+          {
+            quantity: 1,
+            name_snapshot: 'Returned Curry',
+            selected_options: [],
+            voided_at: '2026-07-31T10:00:00Z',
+          },
+        ],
+      }),
+      { name: 'R', currency: 'CAD' },
+    )
+    expect(text).toContain('1x Paneer Tikka')
+    expect(text).not.toContain('Returned Curry')
+  })
+
   it('prints the total in the restaurant currency', () => {
     const cad = buildReceiptText(makeOrder({ total: 24.5 }), { name: 'R', currency: 'CAD' })
     expect(cad).toContain('TOTAL  $24.50')

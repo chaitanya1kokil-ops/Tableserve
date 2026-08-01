@@ -58,6 +58,20 @@ describe('toUnits', () => {
     expect(units.some((u) => u.itemId === 'b')).toBe(false)
   })
 
+  it('leaves out a line staff voided — nobody pays for a returned dish', () => {
+    const withVoid = [
+      {
+        items: [
+          { id: 'a', name_snapshot: 'Vada Pav', quantity: 2, line_total: 25.98 },
+          { id: 'b', name_snapshot: 'Butter Chicken', quantity: 1, line_total: 19.99, voided_at: '2026-07-31T10:00:00Z' },
+        ],
+      },
+    ]
+    const units = toUnits(withVoid)
+    expect(units).toHaveLength(2)
+    expect(units.some((u) => u.itemId === 'b')).toBe(false)
+  })
+
   it('treats a missing or zero quantity as one unit', () => {
     const units = toUnits([{ items: [{ id: 'x', name_snapshot: 'Chai', line_total: 5.99 }] }])
     expect(units).toHaveLength(1)
