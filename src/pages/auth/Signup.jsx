@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { MailCheck } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
 import { Button, Field, Input } from '../../components/ui'
 import AuthShell from './AuthShell'
+import { checkAttempt, recordFailure, clearAttempts, describeWait } from '../../lib/throttle'
 
 export default function Signup() {
   const { signUp } = useAuth()
@@ -13,6 +14,15 @@ export default function Signup() {
   const [form, setForm] = useState({ fullName: '', email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [needsConfirm, setNeedsConfirm] = useState(false)
+  const [lockedMs, setLockedMs] = useState(0)
+
+  // Repeated signups for one address are almost always a script; slow them down.
+  useEffect(() => {
+    const tick = () => setLockedMs(checkAttempt(form.email).remainingMs)
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [form.email])
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -20,13 +30,25 @@ export default function Signup() {
       toast.error('Password must be at least 6 characters.')
       return
     }
+    const gate = checkAttempt(form.email)
+    if (gate.blocked) {
+      setLockedMs(gate.remainingMs)
+      return
+    }
     setLoading(true)
     const { data, error } = await signUp(form)
     setLoading(false)
     if (error) {
-      toast.error(error.message)
+      const after = recordFailure(form.email)
+      setLockedMs(after.remainingMs)
+      toast.error(
+        after.blocked
+          ? `Too many attempts. Try again in ${describeWait(after.remainingMs)}.`
+          : error.message,
+      )
       return
     }
+    clearAttempts(form.email)
     // If email confirmation is on, there's no session yet.
     if (data.session) {
       navigate('/onboarding', { replace: true })
@@ -98,8 +120,19 @@ export default function Signup() {
             placeholder="••••••••"
           />
         </Field>
-        <Button type="submit" className="w-full" size="lg" loading={loading}>
-          Create account
+        {lockedMs > 0 && (
+          <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-800">
+            Too many attempts for this address. Try again in {describeWait(lockedMs)}.
+          </p>
+        )}
+        <Button
+          type="submit"
+          className="w-full"
+          size="lg"
+          loading={loading}
+          disabled={lockedMs > 0}
+        >
+          {lockedMs > 0 ? `Locked · ${describeWait(lockedMs)}` : 'Create account'}
         </Button>
         <p className="text-center text-xs text-gray-400">
           By creating an account, you agree to our{' '}
