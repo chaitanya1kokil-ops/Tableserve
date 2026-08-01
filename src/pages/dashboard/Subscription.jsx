@@ -73,10 +73,10 @@ export default function Subscription() {
   const loadConnect = useCallback(async () => {
     if (!isTruck) return
     try {
-      const resp = await fetch('/api/connect-status', {
+      const resp = await fetch('/api/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantId: restaurant.id }),
+        body: JSON.stringify({ action: 'status', restaurantId: restaurant.id }),
       })
       setConnect(await resp.json().catch(() => ({})))
     } catch {
@@ -91,10 +91,10 @@ export default function Subscription() {
   async function connectStripe() {
     setConnectBusy(true)
     try {
-      const resp = await fetch('/api/connect-onboard', {
+      const resp = await fetch('/api/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantId: restaurant.id }),
+        body: JSON.stringify({ action: 'onboard', restaurantId: restaurant.id }),
       })
       const data = await resp.json().catch(() => ({}))
       if (data?.url) {
