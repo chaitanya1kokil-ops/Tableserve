@@ -655,10 +655,17 @@ export default function Landing() {
             <p className="mt-2 text-xs text-stone-400">
               Scan. Order. Enjoy. QR ordering for modern restaurants.
             </p>
+            <a
+              href="mailto:chaitanya@tableserve.ca"
+              className="mt-3 inline-block text-sm font-semibold text-stone-600 transition hover:text-brand"
+            >
+              chaitanya@tableserve.ca
+            </a>
           </div>
           <div className="flex items-center gap-6 text-sm text-stone-500">
             <a href="#efficiency" className="hover:text-stone-900">Why TableServe</a>
             <a href="#features" className="hover:text-stone-900">Features</a>
+            <Link to="/contact" className="hover:text-stone-900">Contact</Link>
             <Link to="/login" className="hover:text-stone-900">Log in</Link>
             <Link to="/signup" className="font-semibold text-brand">Sign up</Link>
           </div>

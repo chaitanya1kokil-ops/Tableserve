@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, Send, CheckCircle2, MessageSquare } from 'lucide-react'
 import Logo from '../components/Logo'
-import { supabase } from '../lib/supabase'
 import { Button } from '../components/ui'
 
 const MAX = 4000
@@ -24,21 +23,28 @@ export default function Contact() {
     if (!canSend) return
     setSending(true)
     setError('')
-    const { error: err } = await supabase.from('contact_messages').insert({
-      name: name.trim() || null,
-      email: email.trim(),
-      message: message.trim(),
-    })
-    setSending(false)
-    if (err) {
-      setError(
-        /Too many messages/.test(err.message)
-          ? 'You’ve sent a few already — give it an hour and try again.'
-          : 'That didn’t send. Please try again, or email us directly.',
-      )
-      return
+    // Goes through the API so the message is both stored and emailed to us.
+    try {
+      const resp = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          message: message.trim(),
+        }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      setSending(false)
+      if (!resp.ok) {
+        setError(data.error || 'That didn’t send. Please try again, or email us directly.')
+        return
+      }
+      setSent(true)
+    } catch {
+      setSending(false)
+      setError('That didn’t send — check your connection and try again.')
     }
-    setSent(true)
   }
 
   return (
@@ -147,7 +153,13 @@ export default function Contact() {
                   <Send className="h-4 w-4" /> Send message
                 </Button>
                 <span className="flex items-center gap-1.5 text-xs text-stone-400">
-                  <Mail className="h-3.5 w-3.5" /> We reply to the address you enter here.
+                  <Mail className="h-3.5 w-3.5" /> Or email{' '}
+                  <a
+                    href="mailto:chaitanya@tableserve.ca"
+                    className="font-semibold text-stone-600 hover:text-brand"
+                  >
+                    chaitanya@tableserve.ca
+                  </a>
                 </span>
               </div>
             </form>
@@ -156,6 +168,11 @@ export default function Contact() {
       </main>
 
       <footer className="border-t border-stone-100 py-8 text-center text-xs text-stone-400">
+        <a href="mailto:chaitanya@tableserve.ca" className="hover:text-stone-600">
+          chaitanya@tableserve.ca
+        </a>
+        <br className="sm:hidden" />
+        <span className="hidden sm:inline"> · </span>
         © {new Date().getFullYear()} TableServe ·{' '}
         <Link to="/terms" className="hover:text-stone-600">Terms of Use</Link> ·{' '}
         <Link to="/privacy" className="hover:text-stone-600">Privacy Policy</Link>
