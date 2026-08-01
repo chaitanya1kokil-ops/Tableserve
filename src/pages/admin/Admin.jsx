@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   Download,
+  Mail,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -89,6 +90,7 @@ export default function Admin() {
   const [refreshing, setRefreshing] = useState(false)
   const [restaurants, setRestaurants] = useState([])
   const [orders, setOrders] = useState([])
+  const [messages, setMessages] = useState([]) // contact form enquiries
 
   // ---- filters ------------------------------------------------------------
   const [filter, setFilter] = useState('all')
@@ -115,8 +117,29 @@ export default function Admin() {
     ])
     setRestaurants(rests || [])
     setOrders(ords || [])
+    // Contact-form enquiries land in the database (no mail service is wired up),
+    // so this console is where they get read.
+    const { data: msgs } = await supabase
+      .from('contact_messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    setMessages(msgs || [])
     setLoading(false)
   }, [])
+
+  const markHandled = async (msg) => {
+    const at = msg.handled_at ? null : new Date().toISOString()
+    setMessages((list) => list.map((m) => (m.id === msg.id ? { ...m, handled_at: at } : m)))
+    const { error } = await supabase
+      .from('contact_messages')
+      .update({ handled_at: at })
+      .eq('id', msg.id)
+    if (error) {
+      toast.error(error.message)
+      load()
+    }
+  }
 
   useEffect(() => {
     load()
@@ -141,6 +164,7 @@ export default function Admin() {
   }
 
   const a = useMemo(() => computeAnalytics(restaurants, orders), [restaurants, orders])
+  const unreadMessages = messages.filter((m) => !m.handled_at).length
 
   const setStatus = async (restaurant, status) => {
     setRestaurants((list) => list.map((r) => (r.id === restaurant.id ? { ...r, status } : r)))
@@ -600,6 +624,69 @@ export default function Admin() {
             </div>
           </div>
         </div>
+
+        {/* ------------------------------------------------------- enquiries */}
+        {messages.length > 0 && (
+          <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-stone-900">
+                <Mail className="h-5 w-5 text-stone-400" />
+                Enquiries
+                {unreadMessages > 0 && (
+                  <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">
+                    {unreadMessages} new
+                  </span>
+                )}
+              </h2>
+              <span className="text-xs text-stone-400">From the contact form</span>
+            </div>
+            <div className="space-y-2.5">
+              {messages.slice(0, 8).map((m) => (
+                <div
+                  key={m.id}
+                  className={`rounded-xl border p-3 ${
+                    m.handled_at ? 'border-stone-100 bg-stone-50/60' : 'border-stone-200'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-stone-800">
+                        {m.name || m.email}
+                        {m.name && <span className="ml-1.5 font-normal text-stone-400">{m.email}</span>}
+                      </p>
+                      <p className="text-xs text-stone-400">{formatDate(m.created_at)}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`mailto:${m.email}?subject=Re:%20your%20message%20to%20TableServe`}
+                        className="rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-50"
+                      >
+                        Reply
+                      </a>
+                      <button
+                        onClick={() => markHandled(m)}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                          m.handled_at
+                            ? 'text-stone-400 hover:bg-stone-100'
+                            : 'bg-stone-900 text-white hover:bg-stone-800'
+                        }`}
+                      >
+                        {m.handled_at ? 'Reopen' : 'Mark done'}
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    className={`mt-2 whitespace-pre-wrap text-sm leading-relaxed ${
+                      m.handled_at ? 'text-stone-400' : 'text-stone-600'
+                    }`}
+                  >
+                    {m.message}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ------------------------------------------------ needs attention */}
         {(counts.pending > 0 || counts.suspended > 0 || trialsExpired > 0 || neverOrdered > 0) && (

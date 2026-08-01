@@ -194,6 +194,9 @@ export default function Landing() {
               </Link>
             ) : (
               <>
+                <Link to="/contact" className="hidden text-sm font-semibold text-stone-500 transition hover:text-stone-900 sm:block">
+                  Contact
+                </Link>
                 <Link to="/login">
                   <Button variant="outline" size="sm">
                     <LogIn className="h-4 w-4" /> Log in
@@ -663,6 +666,7 @@ export default function Landing() {
         <div className="flex flex-col items-center justify-center gap-2 border-t border-stone-100 py-4 text-center text-xs text-stone-400 sm:flex-row sm:gap-4">
           <span>© {new Date().getFullYear()} TableServe. All rights reserved.</span>
           <span className="flex items-center gap-4">
+            <Link to="/contact" className="hover:text-stone-600">Contact us</Link> ·{' '}
             <Link to="/terms" className="hover:text-stone-600">Terms of Use</Link>
             <Link to="/privacy" className="hover:text-stone-600">Privacy Policy</Link>
           </span>

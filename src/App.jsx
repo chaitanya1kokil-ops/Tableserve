@@ -13,6 +13,7 @@ import SetupNotice from './pages/SetupNotice'
 const Landing = lazy(() => import('./pages/Landing'))
 const Terms = lazy(() => import('./pages/legal/Terms'))
 const Privacy = lazy(() => import('./pages/legal/Privacy'))
+const Contact = lazy(() => import('./pages/Contact'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Signup = lazy(() => import('./pages/auth/Signup'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
