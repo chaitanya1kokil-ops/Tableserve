@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { formatCurrency } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Button } from '../../components/ui'
+import { ItemOptions } from './NewOrderModal'
 
 /**
  * Correct an order that has already gone out — a returned dish comes off, a
@@ -17,20 +18,33 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
   const toast = useToast()
   const currency = restaurant.currency
   const [menu, setMenu] = useState([])
+  const [optionsByItem, setOptionsByItem] = useState({}) // menu_item_id -> groups[]
   const [query, setQuery] = useState('')
   const [voidIds, setVoidIds] = useState(() => new Set())
-  const [additions, setAdditions] = useState([]) // { menu_item_id, name, price, quantity }
+  const [additions, setAdditions] = useState([]) // lines from makeLine()
+  const [pendingItem, setPendingItem] = useState(null) // item awaiting modifier choices
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Menu plus its modifier groups, so a correction can be priced exactly like
+  // the original order — a replacement dish keeps its "extra spicy +$2".
   useEffect(() => {
-    supabase
-      .from('menu_items')
-      .select('id, name, price')
-      .eq('restaurant_id', restaurant.id)
-      .eq('is_available', true)
-      .order('name')
-      .then(({ data }) => setMenu(data || []))
+    const rid = restaurant.id
+    Promise.all([
+      supabase.from('menu_items').select('id, name, price')
+        .eq('restaurant_id', rid).eq('is_available', true).order('name'),
+      supabase.from('item_options').select('*').eq('restaurant_id', rid).order('sort_order'),
+      supabase.from('item_option_values').select('*').eq('restaurant_id', rid).order('sort_order'),
+    ]).then(([{ data: items }, { data: groups }, { data: values }]) => {
+      setMenu(items || [])
+      const byGroup = {}
+      for (const v of values || []) (byGroup[v.option_id] ||= []).push(v)
+      const byItem = {}
+      for (const g of groups || []) {
+        ;(byItem[g.item_id] ||= []).push({ ...g, values: byGroup[g.id] || [] })
+      }
+      setOptionsByItem(byItem)
+    })
   }, [restaurant.id])
 
   const live = (order.items || []).filter((it) => !it.voided_at)
@@ -48,21 +62,22 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
       return next
     })
 
-  const addItem = (m) => {
-    setAdditions((list) => {
-      const found = list.find((a) => a.menu_item_id === m.id)
-      if (found) {
-        return list.map((a) => (a.menu_item_id === m.id ? { ...a, quantity: a.quantity + 1 } : a))
-      }
-      return [...list, { menu_item_id: m.id, name: m.name, price: Number(m.price) || 0, quantity: 1 }]
-    })
+  // Items with modifier groups open the picker; plain items go straight on.
+  const pickItem = (m) => {
     setQuery('')
+    const groups = optionsByItem[m.id] || []
+    if (groups.length > 0) return setPendingItem({ item: m, groups })
+    setAdditions((list) => [...list, makeSimpleLine(m)])
   }
 
-  const bump = (id, by) =>
+  const bump = (lineId, by) =>
     setAdditions((list) =>
       list
-        .map((a) => (a.menu_item_id === id ? { ...a, quantity: a.quantity + by } : a))
+        .map((a) =>
+          a.lineId === lineId
+            ? { ...a, quantity: a.quantity + by, lineTotal: a.unitPrice * (a.quantity + by) }
+            : a,
+        )
         .filter((a) => a.quantity > 0),
     )
 
@@ -70,7 +85,7 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
   const removedValue = live
     .filter((it) => voidIds.has(it.id))
     .reduce((s, it) => s + (Number(it.line_total) || 0), 0)
-  const addedValue = additions.reduce((s, a) => s + a.price * a.quantity, 0)
+  const addedValue = additions.reduce((s, a) => s + a.unitPrice * a.quantity, 0)
   const changed = voidIds.size > 0 || additions.length > 0
 
   const save = async () => {
@@ -79,7 +94,12 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
     const { data, error } = await supabase.rpc('edit_order', {
       p_order_id: order.id,
       p_void: [...voidIds],
-      p_add: additions.map((a) => ({ menu_item_id: a.menu_item_id, quantity: a.quantity })),
+      // Send only what was chosen — edit_order looks the prices up itself.
+      p_add: additions.map((a) => ({
+        menu_item_id: a.itemId,
+        quantity: a.quantity,
+        selected_options: (a.options || []).map((o) => ({ group: o.group, value: o.value })),
+      })),
       p_reason: reason.trim() || null,
     })
     setSaving(false)
@@ -172,18 +192,26 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
           </div>
           {results.length > 0 && (
             <div className="mt-1.5 overflow-hidden rounded-xl border border-stone-200">
-              {results.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => addItem(m)}
-                  className="flex w-full items-center justify-between gap-3 border-b border-stone-100 px-3 py-2 text-left text-sm last:border-0 hover:bg-stone-50"
-                >
-                  <span className="truncate text-stone-700">{m.name}</span>
-                  <span className="whitespace-nowrap text-stone-400">
-                    {formatCurrency(m.price, currency)}
-                  </span>
-                </button>
-              ))}
+              {results.map((m) => {
+                const groups = optionsByItem[m.id] || []
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => pickItem(m)}
+                    className="flex w-full items-center justify-between gap-3 border-b border-stone-100 px-3 py-2 text-left text-sm last:border-0 hover:bg-stone-50"
+                  >
+                    <span className="min-w-0 truncate text-stone-700">
+                      {m.name}
+                      {groups.length > 0 && (
+                        <span className="ml-1.5 text-xs text-stone-400">· options</span>
+                      )}
+                    </span>
+                    <span className="whitespace-nowrap text-stone-400">
+                      {formatCurrency(m.price, currency)}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -191,13 +219,20 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
             <div className="mt-2 space-y-1.5">
               {additions.map((a) => (
                 <div
-                  key={a.menu_item_id}
+                  key={a.lineId}
                   className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5"
                 >
-                  <p className="min-w-0 flex-1 truncate text-sm text-stone-800">{a.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-stone-800">{a.name}</p>
+                    {a.options?.length > 0 && (
+                      <p className="truncate text-xs text-stone-500">
+                        {a.options.map((o) => o.value).join(', ')}
+                      </p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => bump(a.menu_item_id, -1)}
+                      onClick={() => bump(a.lineId, -1)}
                       className="grid h-6 w-6 place-items-center rounded-md bg-white text-stone-600 ring-1 ring-stone-200"
                       aria-label={`One fewer ${a.name}`}
                     >
@@ -205,7 +240,7 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
                     </button>
                     <span className="w-5 text-center text-sm font-bold tabular-nums">{a.quantity}</span>
                     <button
-                      onClick={() => bump(a.menu_item_id, 1)}
+                      onClick={() => bump(a.lineId, 1)}
                       className="grid h-6 w-6 place-items-center rounded-md bg-white text-stone-600 ring-1 ring-stone-200"
                       aria-label={`One more ${a.name}`}
                     >
@@ -213,7 +248,7 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
                     </button>
                   </div>
                   <span className="w-16 text-right text-sm tabular-nums text-stone-600">
-                    {formatCurrency(a.price * a.quantity, currency)}
+                    {formatCurrency(a.unitPrice * a.quantity, currency)}
                   </span>
                 </div>
               ))}
@@ -260,6 +295,35 @@ export default function EditOrderModal({ order, restaurant, onClose, onSaved }) 
           </Button>
         </div>
       </div>
+
+      {/* Same modifier picker the New order flow uses, so a replacement dish
+          can be rebuilt exactly as the guest originally had it. */}
+      {pendingItem && (
+        <ItemOptions
+          item={pendingItem.item}
+          groups={pendingItem.groups}
+          currency={currency}
+          onCancel={() => setPendingItem(null)}
+          onAdd={(line) => {
+            setAdditions((list) => [...list, line])
+            setPendingItem(null)
+          }}
+        />
+      )}
     </div>
   )
+}
+
+// A line for an item with no modifier groups — same shape makeLine() produces.
+function makeSimpleLine(item) {
+  const unitPrice = Number(item.price) || 0
+  return {
+    lineId: `${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    itemId: item.id,
+    name: item.name,
+    options: [],
+    quantity: 1,
+    unitPrice,
+    lineTotal: unitPrice,
+  }
 }

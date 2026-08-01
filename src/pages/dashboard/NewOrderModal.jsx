@@ -6,7 +6,7 @@ import { useToast } from '../../components/Toast'
 import { Button, Select, Textarea, FullPageSpinner } from '../../components/ui'
 
 // Same line shape the customer cart uses, so place_order gets consistent data.
-function makeLine(item, options, quantity) {
+export function makeLine(item, options, quantity) {
   const delta = options.reduce((s, o) => s + Number(o.priceDelta || 0), 0)
   const unitPrice = Number(item.price) + delta
   return {
@@ -304,7 +304,8 @@ export default function NewOrderModal({ restaurant, onClose, onPlaced }) {
   )
 }
 
-function ItemOptions({ item, groups, currency, onCancel, onAdd }) {
+// Shared with EditOrderModal so corrections get the same modifier picker.
+export function ItemOptions({ item, groups, currency, onCancel, onAdd }) {
   // selection[groupId] = valueId (single) or { [valueId]: true } (multiple)
   const [selection, setSelection] = useState({})
   const [quantity, setQuantity] = useState(1)
