@@ -5,21 +5,13 @@ import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatTime } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Button, Badge, FullPageSpinner, EmptyState, Select } from '../../components/ui'
+import { round2, evenSplit, toUnits, amountsFromAssignment, itemOwners } from '../../lib/split'
 
 const METHODS = [
   { key: 'cash', label: 'Cash', icon: Banknote },
   { key: 'card', label: 'Card', icon: CreditCard },
   { key: 'other', label: 'Other', icon: HandCoins },
 ]
-
-const round2 = (n) => Math.round(n * 100) / 100
-
-// Split a total into n even parts that sum exactly to the total.
-function evenSplit(total, n) {
-  const cents = Math.round(total * 100)
-  const base = Math.floor(cents / n)
-  return Array.from({ length: n }, (_, i) => ((base + (i === 0 ? cents - base * n : 0)) / 100).toFixed(2))
-}
 
 export default function Checkout() {
   const { restaurant } = useAuth()
@@ -204,49 +196,117 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
       })
   }, [tab])
 
+  const [splitMode, setSplitMode] = useState('even') // 'even' | 'item'
+  const [assignment, setAssignment] = useState({}) // unit key -> payer index
+
   const allItems = tab.orders.flatMap((o) => o.items || [])
   const rewardItem = reward ? allItems.find((it) => it.id === reward.itemId) : null
   const compAmount = rewardItem ? round2(Number(rewardItem.line_total) || 0) : 0
   const due = round2(tab.total - compAmount)
 
-  const paidSum = round2(payments.reduce((s, p) => s + (Number(p.amount) || 0), 0))
-  const balanced = paidSum === due
-  const singleCash = payments.length === 1 && payments[0].method === 'cash'
+  const units = useMemo(() => toUnits(tab.orders, reward?.itemId), [tab.orders, reward])
+  const unassigned = splitMode === 'item' ? units.filter((u) => assignment[u.key] == null).length : 0
+
+  // In item mode the amounts are derived from the assignment, not typed.
+  const itemSplit = useMemo(
+    () => amountsFromAssignment(units, assignment, payments.length, due),
+    [units, assignment, payments.length, due],
+  )
+  const byItem = splitMode === 'item'
+  const effective = byItem ? payments.map((p, i) => ({ ...p, amount: itemSplit.amounts[i] })) : payments
+
+  const paidSum = round2(effective.reduce((s, p) => s + (Number(p.amount) || 0), 0))
+  const balanced = paidSum === due && (!byItem || unassigned === 0)
+  const singleCash = effective.length === 1 && effective[0].method === 'cash'
   const change =
-    singleCash && tendered !== '' ? round2(Number(tendered) - (Number(payments[0].amount) || 0)) : null
+    singleCash && tendered !== ''
+      ? round2(Number(tendered) - (Number(effective[0].amount) || 0))
+      : null
 
   const setPayment = (i, patch) =>
     setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)))
 
   const addSplit = () => {
+    if (byItem) {
+      setPayments((ps) => [...ps, { method: 'card', amount: '', tip: '' }])
+      return
+    }
     const amounts = evenSplit(due, payments.length + 1)
     setPayments((ps) => [...ps, { method: 'card', amount: '', tip: '' }].map((p, i) => ({ ...p, amount: amounts[i] })))
   }
 
   const removePayment = (i) => {
     const next = payments.filter((_, idx) => idx !== i)
+    if (byItem) {
+      // Drop that payer's items and shift higher payers down a slot.
+      setAssignment((a) => {
+        const out = {}
+        for (const [k, v] of Object.entries(a)) {
+          if (v === i) continue
+          out[k] = v > i ? v - 1 : v
+        }
+        return out
+      })
+      setPayments(next)
+      return
+    }
     const amounts = evenSplit(due, next.length)
     setPayments(next.map((p, idx) => ({ ...p, amount: amounts[idx] })))
   }
 
+  // Switching to by-item starts with two payers so there is something to split
+  // between; switching back restores even amounts.
+  const chooseMode = (mode) => {
+    setSplitMode(mode)
+    setAssignment({})
+    if (mode === 'item') {
+      if (payments.length < 2) {
+        setPayments((ps) => [...ps, { method: 'card', amount: '', tip: '' }])
+      }
+    } else {
+      const amounts = evenSplit(due, payments.length)
+      setPayments((ps) => ps.map((p, i) => ({ ...p, amount: amounts[i] })))
+    }
+  }
+
+  const assignUnit = (key, payer) => setAssignment((a) => ({ ...a, [key]: payer }))
+  const assignRest = (payer) =>
+    setAssignment((a) => {
+      const out = { ...a }
+      for (const u of units) if (out[u.key] == null) out[u.key] = payer
+      return out
+    })
+
   const applyReward = (memberId, itemId) => {
     setReward(memberId ? { memberId, itemId } : null)
-    // Reset payment amounts to the new amount due.
+    // Reset payment amounts to the new amount due. The comped item leaves the
+    // split entirely, so any existing item assignment is no longer valid.
     const item = itemId ? allItems.find((it) => it.id === itemId) : null
     const comp = item ? round2(Number(item.line_total) || 0) : 0
+    setAssignment({})
+    setSplitMode('even')
     setPayments([{ method: 'cash', amount: round2(tab.total - comp).toFixed(2), tip: '' }])
   }
 
   const settle = async () => {
     if (!balanced) return
     setSettling(true)
+    const itemOwner = byItem ? itemOwners(units, assignment) : {}
+
     const { error } = await supabase.rpc('settle_tab', {
       p_table_id: tab.tableId,
       p_order_ids: tab.orders.map((o) => o.id),
-      p_payments: payments.map((p) => ({
+      p_payments: effective.map((p, i) => ({
         method: p.method,
         amount: round2(Number(p.amount) || 0),
         tip: round2(Number(p.tip) || 0),
+        ...(byItem
+          ? {
+              item_ids: Object.entries(itemOwner)
+                .filter(([, owner]) => owner === i)
+                .map(([itemId]) => itemId),
+            }
+          : {}),
       })),
       p_reward: reward ? { member_id: reward.memberId, order_item_id: reward.itemId } : null,
     })
@@ -384,13 +444,93 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
                 onClick={addSplit}
                 className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-stone-50"
               >
-                <Plus className="h-3.5 w-3.5" /> Split payment
+                <Plus className="h-3.5 w-3.5" /> Add payer
               </button>
             </div>
+
+            {/* How to divide the tab */}
+            <div className="mb-3 flex gap-1 rounded-xl bg-stone-100 p-1">
+              {[
+                { key: 'even', label: 'Split evenly' },
+                { key: 'item', label: 'Split by item' },
+              ].map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => chooseMode(m.key)}
+                  className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    splitMode === m.key
+                      ? 'bg-white text-stone-900 shadow-sm'
+                      : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Assign each item to a payer */}
+            {byItem && (
+              <div className="mb-3 rounded-xl border border-stone-200">
+                <div className="flex items-center justify-between gap-2 border-b border-stone-100 px-3 py-2">
+                  <span className="text-xs font-semibold text-stone-500">
+                    {unassigned > 0
+                      ? `${unassigned} item${unassigned === 1 ? '' : 's'} left to assign`
+                      : 'All items assigned'}
+                  </span>
+                  {unassigned > 0 && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] text-stone-400">Rest to</span>
+                      {payments.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => assignRest(i)}
+                          className="rounded-md bg-stone-100 px-2 py-0.5 text-[11px] font-bold text-stone-600 hover:bg-stone-200"
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="max-h-56 space-y-1 overflow-y-auto p-2">
+                  {units.map((u) => (
+                    <div key={u.key} className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-sm text-stone-700">
+                        {u.name}
+                      </span>
+                      <span className="whitespace-nowrap text-xs tabular-nums text-stone-400">
+                        {formatCurrency(u.each, currency)}
+                      </span>
+                      <div className="flex gap-1">
+                        {payments.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => assignUnit(u.key, i)}
+                            aria-label={`Assign ${u.name} to payer ${i + 1}`}
+                            className={`h-6 w-6 rounded-md text-[11px] font-bold transition ${
+                              assignment[u.key] === i
+                                ? 'bg-brand text-white'
+                                : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-2.5">
               {payments.map((p, i) => (
                 <div key={i} className="rounded-xl border border-stone-200 p-3">
                   <div className="flex flex-wrap items-center gap-2">
+                    {payments.length > 1 && (
+                      <span className="grid h-6 w-6 flex-none place-items-center rounded-md bg-stone-800 text-[11px] font-bold text-white">
+                        {i + 1}
+                      </span>
+                    )}
                     <div className="flex gap-1">
                       {METHODS.map((m) => (
                         <button
@@ -422,9 +562,15 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
                         type="number"
                         min="0"
                         step="0.01"
-                        value={p.amount}
+                        readOnly={byItem}
+                        value={byItem ? itemSplit.amounts[i] : p.amount}
                         onChange={(e) => setPayment(i, { amount: e.target.value })}
-                        className="mt-1 w-full rounded-lg border border-stone-300 px-2.5 py-2 text-sm font-semibold text-stone-900 outline-none focus:border-brand"
+                        title={byItem ? 'Set by the items assigned to this payer' : undefined}
+                        className={`mt-1 w-full rounded-lg border px-2.5 py-2 text-sm font-semibold outline-none ${
+                          byItem
+                            ? 'cursor-default border-stone-200 bg-stone-50 text-stone-500'
+                            : 'border-stone-300 text-stone-900 focus:border-brand'
+                        }`}
                       />
                     </label>
                     <label className="text-xs font-medium text-stone-500">
@@ -469,12 +615,18 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
               </div>
             )}
 
-            {!balanced && (
-              <p className="mt-2 text-xs font-medium text-red-500">
-                Payments total {formatCurrency(paidSum, currency)} but{' '}
-                {formatCurrency(due, currency)} is due.
-              </p>
-            )}
+            {!balanced &&
+              (byItem && unassigned > 0 ? (
+                <p className="mt-2 text-xs font-medium text-red-500">
+                  Assign the last {unassigned} item{unassigned === 1 ? '' : 's'} to a payer to
+                  finish the split.
+                </p>
+              ) : (
+                <p className="mt-2 text-xs font-medium text-red-500">
+                  Payments total {formatCurrency(paidSum, currency)} but{' '}
+                  {formatCurrency(due, currency)} is due.
+                </p>
+              ))}
           </div>
         </div>
 
