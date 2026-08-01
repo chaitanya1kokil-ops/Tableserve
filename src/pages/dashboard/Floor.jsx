@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Receipt, Bell, X, Move, LayoutGrid, Check, Wallet, User, Utensils } from 'lucide-react'
+import { Receipt, Bell, X, Move, LayoutGrid, Check, Wallet, User, Utensils, Pencil } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, timeAgo } from '../../lib/format'
 import { Button, FullPageSpinner, EmptyState, Badge } from '../../components/ui'
 import { ORDER_STATUSES } from '../../lib/constants'
+import EditOrderModal from './EditOrderModal'
 
 const ACTIVE = ['new', 'preparing', 'ready'] // still being worked on
 const OPEN = [...ACTIVE, 'served'] // occupied (unpaid); served = done, awaiting payment
@@ -28,6 +29,7 @@ export default function Floor() {
   const [present, setPresent] = useState(() => new Set())
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
+  const [editingOrder, setEditingOrder] = useState(null)
   const [arranging, setArranging] = useState(false)
   const reloadTimer = useRef(null)
   const canvasRef = useRef(null)
@@ -238,6 +240,16 @@ export default function Floor() {
           onResolve={() => resolveCall(selectedTable.id)}
           onCheckout={() => navigate('/dashboard/checkout')}
           onClose={() => setSelected(null)}
+          onEditOrder={setEditingOrder}
+        />
+      )}
+
+      {editingOrder && (
+        <EditOrderModal
+          order={editingOrder}
+          restaurant={restaurant}
+          onClose={() => setEditingOrder(null)}
+          onSaved={loadOrders}
         />
       )}
     </div>
@@ -308,7 +320,7 @@ function TableDot({ table, x, y, state, count, hasNew, here, billReq, called, ar
   )
 }
 
-function TableSheet({ table, orders, currency, present, called, onResolve, onCheckout, onClose }) {
+function TableSheet({ table, orders, currency, present, called, onResolve, onCheckout, onClose, onEditOrder }) {
   const total = orders.reduce((s, o) => s + Number(o.total || 0), 0)
   const rounds = [...orders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   return (
@@ -342,20 +354,36 @@ function TableSheet({ table, orders, currency, present, called, onResolve, onChe
                 const st = ORDER_STATUSES[o.status] || ORDER_STATUSES.new
                 return (
                   <div key={o.id} className="border-t border-gray-100 pt-3 first:border-0 first:pt-0">
-                    <div className="mb-1.5 flex items-center justify-between text-xs text-gray-400">
+                    <div className="mb-1.5 flex items-center justify-between gap-2 text-xs text-gray-400">
                       <span>
                         {rounds.length > 1 && <>Round {i + 1} · </>}
                         {timeAgo(o.created_at)}
                       </span>
-                      <Badge className={st.color}>{st.label}</Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge className={st.color}>{st.label}</Badge>
+                        {onEditOrder && !o.paid_at && (
+                          <button
+                            onClick={() => onEditOrder(o)}
+                            title="Remove a returned dish or add an item"
+                            className="rounded-lg p-1 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-1">
                       {(o.items || []).map((it) => (
-                        <div key={it.id} className="flex justify-between gap-3 text-sm">
-                          <span className="text-stone-700">
+                        <div
+                          key={it.id}
+                          className={`flex justify-between gap-3 text-sm ${it.voided_at ? 'opacity-45' : ''}`}
+                        >
+                          <span className={`text-stone-700 ${it.voided_at ? 'line-through' : ''}`}>
                             <span className="font-semibold">{it.quantity}×</span> {it.name_snapshot}
                           </span>
-                          <span className="whitespace-nowrap text-stone-500">
+                          <span
+                            className={`whitespace-nowrap text-stone-500 ${it.voided_at ? 'line-through' : ''}`}
+                          >
                             {formatCurrency(it.line_total, currency)}
                           </span>
                         </div>

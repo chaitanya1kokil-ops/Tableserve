@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins, Gift, ShoppingBag, Check } from 'lucide-react'
+import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins, Gift, ShoppingBag, Check, Pencil } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatTime } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Button, Badge, FullPageSpinner, EmptyState, Select } from '../../components/ui'
+import EditOrderModal from './EditOrderModal'
 import {
   round2,
   evenSplit,
@@ -165,8 +166,10 @@ export default function Checkout() {
       {selected && (
         <SettleModal
           tab={selected}
+          restaurant={restaurant}
           currency={currency}
           onClose={() => setActiveTab(null)}
+          onEdited={load}
           onSettled={() => {
             setActiveTab(null)
             load()
@@ -177,8 +180,12 @@ export default function Checkout() {
   )
 }
 
-function SettleModal({ tab, currency, onClose, onSettled }) {
+function SettleModal({ tab, restaurant, currency, onClose, onEdited, onSettled }) {
   const toast = useToast()
+  // A tab reaches Checkout only once every round is served — which is exactly
+  // when a dish comes back. Corrections have to be reachable from here, not
+  // just from the active board.
+  const [editingOrder, setEditingOrder] = useState(null)
   const [payments, setPayments] = useState([
     { method: 'cash', amount: tab.total.toFixed(2), tip: '' },
   ])
@@ -369,17 +376,31 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
           <div className="space-y-3">
             {tab.orders.map((o, i) => (
               <div key={o.id}>
-                <p className="mb-1 text-xs font-semibold text-stone-400">
-                  {tab.orders.length > 1 ? `Round ${i + 1} · ` : ''}
-                  {formatTime(o.created_at)}
-                </p>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-stone-400">
+                    {tab.orders.length > 1 ? `Round ${i + 1} · ` : ''}
+                    {formatTime(o.created_at)}
+                  </p>
+                  <button
+                    onClick={() => setEditingOrder(o)}
+                    className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
+                    title="Remove a returned dish or add an item"
+                  >
+                    <Pencil className="h-3 w-3" /> Edit
+                  </button>
+                </div>
                 <div className="space-y-1">
                   {(o.items || []).map((it) => (
-                    <div key={it.id} className="flex justify-between gap-3 text-sm">
-                      <span className="text-stone-700">
+                    <div
+                      key={it.id}
+                      className={`flex justify-between gap-3 text-sm ${it.voided_at ? 'opacity-45' : ''}`}
+                    >
+                      <span className={`text-stone-700 ${it.voided_at ? 'line-through' : ''}`}>
                         <span className="font-semibold">{it.quantity}×</span> {it.name_snapshot}
                       </span>
-                      <span className="whitespace-nowrap text-stone-500">
+                      <span
+                        className={`whitespace-nowrap text-stone-500 ${it.voided_at ? 'line-through' : ''}`}
+                      >
                         {formatCurrency(it.line_total, currency)}
                       </span>
                     </div>
@@ -710,6 +731,15 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
           </Button>
         </div>
       </div>
+
+      {editingOrder && (
+        <EditOrderModal
+          order={editingOrder}
+          restaurant={restaurant}
+          onClose={() => setEditingOrder(null)}
+          onSaved={onEdited}
+        />
+      )}
     </div>
   )
 }
