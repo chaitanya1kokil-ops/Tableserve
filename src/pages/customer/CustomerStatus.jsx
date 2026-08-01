@@ -160,15 +160,6 @@ export default function CustomerStatus() {
     load()
   }
 
-  const cancelOrder = async (orderId) => {
-    const { data, error } = await supabase.rpc('cancel_my_order', { p_order_id: orderId })
-    if (error) return toast.error(error.message)
-    toast[data ? 'success' : 'error'](
-      data ? 'Order cancelled.' : 'This order can no longer be cancelled.',
-    )
-    load()
-  }
-
   const [calling, setCalling] = useState(false)
   const callServer = async () => {
     if (calling || !tableId) return
@@ -243,7 +234,7 @@ export default function CustomerStatus() {
             </Button>
           </div>
         ) : (
-          <CombinedOrderCard orders={orders} accent={accent} currency={currency} onCancel={cancelOrder} />
+          <CombinedOrderCard orders={orders} accent={accent} currency={currency} />
         )}
       </div>
 
@@ -300,7 +291,7 @@ export default function CustomerStatus() {
 
 // All of a table's orders merged into one card. Each place_order call is a
 // "round" of items; the kitchen still sees rounds as separate order tickets.
-function CombinedOrderCard({ orders, accent, currency, onCancel }) {
+function CombinedOrderCard({ orders, accent, currency }) {
   // Oldest first, so items read in the sequence they were added.
   const rounds = [...orders].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   const active = rounds.filter((o) => o.status !== 'cancelled')
@@ -383,14 +374,10 @@ function CombinedOrderCard({ orders, accent, currency, onCancel }) {
                   </div>
                 ))}
               </div>
-              {['new', 'awaiting_payment'].includes(o.status) && !o.paid_at && (
-                <button
-                  onClick={() => confirm('Cancel this order?') && onCancel(o.id)}
-                  className="mt-2 text-xs font-semibold text-red-500 hover:text-red-600"
-                >
-                  Cancel this {rounds.length > 1 ? 'round' : 'order'}
-                </button>
-              )}
+              {/* No customer-facing cancel: a 'new' order is already on the
+                  kitchen printer (see PRINTABLE in api/cloudprnt.js), so
+                  cancelling from the phone would pull a ticket the line has
+                  started. Guests ask staff, who can cancel from the board. */}
             </div>
           )
         })}
