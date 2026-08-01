@@ -194,9 +194,6 @@ export default function Landing() {
               </Link>
             ) : (
               <>
-                <Link to="/contact" className="hidden text-sm font-semibold text-stone-500 transition hover:text-stone-900 sm:block">
-                  Contact
-                </Link>
                 <Link to="/login">
                   <Button variant="outline" size="sm">
                     <LogIn className="h-4 w-4" /> Log in
@@ -645,40 +642,59 @@ export default function Landing() {
       </section>
 
       {/* --------------------------------------------------------- footer -- */}
-      <footer className="border-t border-stone-100">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-5 py-10 sm:flex-row">
-          <div>
+      <footer className="border-t border-stone-100 bg-stone-50/70">
+        <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          <div className="max-w-xs">
             <div className="flex items-center gap-2 font-extrabold">
               <Logo className="h-7 w-7" />
               TableServe
             </div>
-            <p className="mt-2 text-xs text-stone-400">
-              Scan. Order. Enjoy. QR ordering for modern restaurants.
+            <p className="mt-3 text-sm leading-relaxed text-stone-500">
+              QR ordering that runs the whole floor — scan to order, straight to the kitchen, paid
+              at the table. No commission, ever.
             </p>
-            <a
-              href="mailto:chaitanya@tableserve.ca"
-              className="mt-3 inline-block text-sm font-semibold text-stone-600 transition hover:text-brand"
+            <Link
+              to="/signup"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-stone-800"
             >
-              chaitanya@tableserve.ca
-            </a>
+              Start free trial <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
-          <div className="flex items-center gap-6 text-sm text-stone-500">
+
+          <FooterCol title="Product">
             <a href="#efficiency" className="hover:text-stone-900">Why TableServe</a>
             <a href="#features" className="hover:text-stone-900">Features</a>
-            <Link to="/contact" className="hover:text-stone-900">Contact</Link>
+            <a href="#pricing" className="hover:text-stone-900">Pricing</a>
+          </FooterCol>
+
+          <FooterCol title="Company">
+            <Link to="/contact" className="hover:text-stone-900">Contact us</Link>
             <Link to="/login" className="hover:text-stone-900">Log in</Link>
-            <Link to="/signup" className="font-semibold text-brand">Sign up</Link>
+            <Link to="/signup" className="hover:text-stone-900">Create an account</Link>
+          </FooterCol>
+
+          <FooterCol title="Legal">
+            <Link to="/terms" className="hover:text-stone-900">Terms of Use</Link>
+            <Link to="/privacy" className="hover:text-stone-900">Privacy Policy</Link>
+          </FooterCol>
+        </div>
+
+        <div className="border-t border-stone-100">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-5 text-xs text-stone-400 sm:flex-row">
+            <span>© {new Date().getFullYear()} TableServe. All rights reserved.</span>
+            <span>Built for restaurants in Toronto and beyond.</span>
           </div>
         </div>
-        <div className="flex flex-col items-center justify-center gap-2 border-t border-stone-100 py-4 text-center text-xs text-stone-400 sm:flex-row sm:gap-4">
-          <span>© {new Date().getFullYear()} TableServe. All rights reserved.</span>
-          <span className="flex items-center gap-4">
-            <Link to="/contact" className="hover:text-stone-600">Contact us</Link> ·{' '}
-            <Link to="/terms" className="hover:text-stone-600">Terms of Use</Link>
-            <Link to="/privacy" className="hover:text-stone-600">Privacy Policy</Link>
-          </span>
-        </div>
       </footer>
+    </div>
+  )
+}
+
+function FooterCol({ title, children }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wider text-stone-400">{title}</p>
+      <div className="mt-3 flex flex-col gap-2.5 text-sm text-stone-600">{children}</div>
     </div>
   )
 }

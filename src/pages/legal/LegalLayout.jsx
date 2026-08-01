@@ -25,10 +25,7 @@ export default function LegalLayout({ title, effectiveDate, children }) {
       </main>
 
       <footer className="border-t border-stone-100 py-8 text-center text-xs text-stone-400">
-        <a href="mailto:chaitanya@tableserve.ca" className="hover:text-stone-600">
-          chaitanya@tableserve.ca
-        </a>{' '}
-        · © {new Date().getFullYear()} TableServe ·{' '}
+        © {new Date().getFullYear()} TableServe ·{' '}
         <Link to="/contact" className="hover:text-stone-600">Contact</Link> ·{' '}
         <Link to="/terms" className="hover:text-stone-600">Terms of Use</Link> ·{' '}
         <Link to="/privacy" className="hover:text-stone-600">Privacy Policy</Link>
