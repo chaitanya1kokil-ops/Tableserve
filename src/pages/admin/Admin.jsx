@@ -26,6 +26,9 @@ import {
   SlidersHorizontal,
   Download,
   Mail,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/Toast'
@@ -91,6 +94,7 @@ export default function Admin() {
   const [restaurants, setRestaurants] = useState([])
   const [orders, setOrders] = useState([])
   const [messages, setMessages] = useState([]) // contact form enquiries
+  const [fullMessage, setFullMessage] = useState(null) // enquiry open full-screen
 
   // ---- filters ------------------------------------------------------------
   const [filter, setFilter] = useState('all')
@@ -627,65 +631,12 @@ export default function Admin() {
 
         {/* ------------------------------------------------------- enquiries */}
         {messages.length > 0 && (
-          <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-stone-100">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-stone-900">
-                <Mail className="h-5 w-5 text-stone-400" />
-                Enquiries
-                {unreadMessages > 0 && (
-                  <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">
-                    {unreadMessages} new
-                  </span>
-                )}
-              </h2>
-              <span className="text-xs text-stone-400">From the contact form</span>
-            </div>
-            <div className="space-y-2.5">
-              {messages.slice(0, 8).map((m) => (
-                <div
-                  key={m.id}
-                  className={`rounded-xl border p-3 ${
-                    m.handled_at ? 'border-stone-100 bg-stone-50/60' : 'border-stone-200'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-stone-800">
-                        {m.name || m.email}
-                        {m.name && <span className="ml-1.5 font-normal text-stone-400">{m.email}</span>}
-                      </p>
-                      <p className="text-xs text-stone-400">{formatDate(m.created_at)}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <a
-                        href={`mailto:${m.email}?subject=Re:%20your%20message%20to%20TableServe`}
-                        className="rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-50"
-                      >
-                        Reply
-                      </a>
-                      <button
-                        onClick={() => markHandled(m)}
-                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
-                          m.handled_at
-                            ? 'text-stone-400 hover:bg-stone-100'
-                            : 'bg-stone-900 text-white hover:bg-stone-800'
-                        }`}
-                      >
-                        {m.handled_at ? 'Reopen' : 'Mark done'}
-                      </button>
-                    </div>
-                  </div>
-                  <p
-                    className={`mt-2 whitespace-pre-wrap text-sm leading-relaxed ${
-                      m.handled_at ? 'text-stone-400' : 'text-stone-600'
-                    }`}
-                  >
-                    {m.message}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <Enquiries
+            messages={messages}
+            unread={unreadMessages}
+            onToggleHandled={markHandled}
+            onExpandFull={setFullMessage}
+          />
         )}
 
         {/* ------------------------------------------------ needs attention */}
@@ -903,6 +854,15 @@ export default function Admin() {
         </div>
       )}
 
+      {/* --------------------------------------------- enquiry, full screen */}
+      {fullMessage && (
+        <MessageModal
+          message={fullMessage}
+          onClose={() => setFullMessage(null)}
+          onToggleHandled={markHandled}
+        />
+      )}
+
       {/* -------------------------------------------------------- delete modal */}
       <Modal
         open={Boolean(deleteTarget)}
@@ -988,6 +948,219 @@ function StatCard({ icon: Icon, tint, value, label, delta }) {
 
 // Change against the previous equivalent window. Neutral at exactly flat, so a
 // quiet week doesn't read as either good or bad news.
+/* Contact-form enquiries. Collapsed by default so a long message can't bury the
+   rest of the console; click a row to read it inline, or open it full-screen. */
+function Enquiries({ messages, unread, onToggleHandled, onExpandFull }) {
+  const [openIds, setOpenIds] = useState(() => new Set())
+  const [showDone, setShowDone] = useState(false)
+  const [limit, setLimit] = useState(6)
+
+  const toggle = (id) =>
+    setOpenIds((s) => {
+      const next = new Set(s)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+
+  const visible = (showDone ? messages : messages.filter((m) => !m.handled_at)).slice(0, limit)
+  const pool = showDone ? messages : messages.filter((m) => !m.handled_at)
+  const allOpen = visible.length > 0 && visible.every((m) => openIds.has(m.id))
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-100">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-5 py-4">
+        <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-stone-900">
+          <Mail className="h-5 w-5 text-stone-400" />
+          Enquiries
+          {unread > 0 && (
+            <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">
+              {unread} new
+            </span>
+          )}
+        </h2>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowDone((v) => !v)}
+            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+              showDone ? 'bg-stone-100 text-stone-700' : 'text-stone-500 hover:bg-stone-50'
+            }`}
+          >
+            {showDone ? 'All' : 'Unread only'}
+          </button>
+          <button
+            onClick={() =>
+              setOpenIds(allOpen ? new Set() : new Set(visible.map((m) => m.id)))
+            }
+            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-500 transition hover:bg-stone-50"
+          >
+            {allOpen ? 'Collapse all' : 'Expand all'}
+          </button>
+        </div>
+      </div>
+
+      {pool.length === 0 ? (
+        <p className="px-5 py-10 text-center text-sm text-stone-400">
+          Nothing unread — every enquiry has been handled.
+        </p>
+      ) : (
+        <ul className="divide-y divide-stone-100">
+          {visible.map((m) => {
+            const open = openIds.has(m.id)
+            const done = !!m.handled_at
+            return (
+              <li key={m.id} className={done ? 'bg-stone-50/50' : ''}>
+                <div className="flex items-start gap-3 px-5 py-3.5">
+                  {/* unread marker */}
+                  <span
+                    className={`mt-1.5 h-2 w-2 flex-none rounded-full ${
+                      done ? 'bg-stone-200' : 'bg-brand'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <button
+                    onClick={() => toggle(m.id)}
+                    aria-expanded={open}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="flex flex-wrap items-baseline gap-x-2">
+                      <span
+                        className={`truncate text-sm ${done ? 'font-medium text-stone-500' : 'font-bold text-stone-900'}`}
+                      >
+                        {m.name || m.email}
+                      </span>
+                      {m.name && (
+                        <span className="truncate text-xs text-stone-400">{m.email}</span>
+                      )}
+                      <span className="ml-auto whitespace-nowrap text-xs text-stone-400">
+                        {timeAgo(m.created_at)}
+                      </span>
+                    </span>
+                    {/* one-line preview when collapsed, full text when open */}
+                    <span
+                      className={`mt-0.5 block text-sm leading-relaxed text-stone-600 ${
+                        open ? 'whitespace-pre-wrap' : 'truncate'
+                      }`}
+                    >
+                      {m.message}
+                    </span>
+                  </button>
+                  <div className="flex flex-none items-center gap-1">
+                    <button
+                      onClick={() => toggle(m.id)}
+                      title={open ? 'Collapse' : 'Expand'}
+                      className="rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
+                    >
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    <button
+                      onClick={() => onExpandFull(m)}
+                      title="Open full screen"
+                      className="rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {open && (
+                  <div className="flex flex-wrap items-center gap-2 px-5 pb-4 pl-10">
+                    <a
+                      href={`mailto:${m.email}?subject=${encodeURIComponent('Re: your message to TableServe')}`}
+                      className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50"
+                    >
+                      Reply by email
+                    </a>
+                    <button
+                      onClick={() => onToggleHandled(m)}
+                      className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                        done
+                          ? 'text-stone-500 hover:bg-stone-100'
+                          : 'bg-stone-900 text-white hover:bg-stone-800'
+                      }`}
+                    >
+                      {done ? 'Reopen' : 'Mark done'}
+                    </button>
+                    <span className="ml-auto text-xs text-stone-400">
+                      {formatDate(m.created_at)}
+                    </span>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {pool.length > limit && (
+        <button
+          onClick={() => setLimit((n) => n + 10)}
+          className="w-full border-t border-stone-100 py-3 text-xs font-semibold text-stone-500 transition hover:bg-stone-50"
+        >
+          Show {Math.min(10, pool.length - limit)} more
+        </button>
+      )}
+    </div>
+  )
+}
+
+/* Full-screen read for a long enquiry. */
+function MessageModal({ message, onClose, onToggleHandled }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-3xl bg-white sm:rounded-3xl">
+        <div className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 py-4">
+          <div className="min-w-0">
+            <h3 className="truncate font-display text-xl font-semibold text-stone-900">
+              {message.name || message.email}
+            </h3>
+            <p className="truncate text-sm text-stone-500">
+              {message.email} · {formatDate(message.created_at)}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-stone-400 hover:bg-stone-100"
+            aria-label="Close"
+          >
+            <Minimize2 className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-stone-700">
+            {message.message}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-5 py-4">
+          <a
+            href={`mailto:${message.email}?subject=${encodeURIComponent('Re: your message to TableServe')}`}
+            className="rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-stone-800"
+          >
+            Reply by email
+          </a>
+          <button
+            onClick={() => {
+              onToggleHandled(message)
+              onClose()
+            }}
+            className="rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50"
+          >
+            {message.handled_at ? 'Reopen' : 'Mark done'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DeltaTag({ value }) {
   const tone =
     value > 0 ? 'bg-emerald-50 text-emerald-700'
