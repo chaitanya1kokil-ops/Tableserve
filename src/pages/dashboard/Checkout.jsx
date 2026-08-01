@@ -1,11 +1,18 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins, Gift, ShoppingBag } from 'lucide-react'
+import { Wallet, Receipt, Banknote, CreditCard, Plus, Trash2, X, HandCoins, Gift, ShoppingBag, Check } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatCurrency, formatTime } from '../../lib/format'
 import { useToast } from '../../components/Toast'
 import { Button, Badge, FullPageSpinner, EmptyState, Select } from '../../components/ui'
-import { round2, evenSplit, toUnits, amountsFromAssignment, itemOwners } from '../../lib/split'
+import {
+  round2,
+  evenSplit,
+  toUnits,
+  amountsFromAssignment,
+  itemOwners,
+  collectionState,
+} from '../../lib/split'
 
 const METHODS = [
   { key: 'cash', label: 'Cash', icon: Banknote },
@@ -198,6 +205,10 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
 
   const [splitMode, setSplitMode] = useState('even') // 'even' | 'item'
   const [assignment, setAssignment] = useState({}) // unit key -> payer index
+  // Money comes in one payer at a time. This tracks who has actually handed it
+  // over, so staff can work down the table; the tab is written in one atomic
+  // settle at the end (settle_tab is all-or-nothing by design).
+  const [collected, setCollected] = useState([])
 
   const allItems = tab.orders.flatMap((o) => o.items || [])
   const rewardItem = reward ? allItems.find((it) => it.id === reward.itemId) : null
@@ -216,12 +227,28 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
   const effective = byItem ? payments.map((p, i) => ({ ...p, amount: itemSplit.amounts[i] })) : payments
 
   const paidSum = round2(effective.reduce((s, p) => s + (Number(p.amount) || 0), 0))
-  const balanced = paidSum === due && (!byItem || unassigned === 0)
+  const { split, outstanding, collectedTotal, allCollected } = collectionState(effective, collected)
+  // A split tab can only be closed once every payer has actually paid.
+  const balanced = paidSum === due && (!byItem || unassigned === 0) && allCollected
   const singleCash = effective.length === 1 && effective[0].method === 'cash'
   const change =
     singleCash && tendered !== ''
       ? round2(Number(tendered) - (Number(effective[0].amount) || 0))
       : null
+
+  // If any amount moves — an item reassigned, a figure retyped, a payer added —
+  // an earlier "collected" mark no longer refers to what that person owes.
+  const amountSig = effective.map((p) => p.amount).join('|')
+  useEffect(() => {
+    setCollected([])
+  }, [amountSig])
+
+  const toggleCollected = (i) =>
+    setCollected((c) => {
+      const next = [...c]
+      next[i] = !next[i]
+      return next
+    })
 
   const setPayment = (i, patch) =>
     setPayments((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)))
@@ -586,9 +613,51 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
                       />
                     </label>
                   </div>
+
+                  {/* Collect from this payer. Only meaningful once the tab is
+                      split — a single payer is settled by the button below. */}
+                  {split && (
+                    <button
+                      onClick={() => toggleCollected(i)}
+                      className={`mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold transition ${
+                        collected[i]
+                          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                          : 'bg-stone-900 text-white hover:bg-stone-800'
+                      }`}
+                    >
+                      {collected[i] ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Collected {formatCurrency(Number(effective[i].amount) || 0, currency)}
+                          <span className="text-xs font-medium text-emerald-600">· Undo</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="h-4 w-4" />
+                          Collect {formatCurrency(Number(effective[i].amount) || 0, currency)}
+                          {Number(p.tip) > 0
+                            ? ` + ${formatCurrency(Number(p.tip), currency)} tip`
+                            : ''}
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+
+            {split && (
+              <div className="mt-3 flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2.5 text-sm">
+                <span className="font-medium text-stone-500">
+                  {outstanding === 0
+                    ? 'All payers collected'
+                    : `${outstanding} of ${effective.length} still to pay`}
+                </span>
+                <span className="font-semibold tabular-nums text-stone-900">
+                  {formatCurrency(collectedTotal, currency)} / {formatCurrency(due, currency)}
+                </span>
+              </div>
+            )}
 
             {singleCash && (
               <div className="mt-3 flex items-center gap-3 rounded-xl bg-stone-50 p-3">
@@ -621,19 +690,23 @@ function SettleModal({ tab, currency, onClose, onSettled }) {
                   Assign the last {unassigned} item{unassigned === 1 ? '' : 's'} to a payer to
                   finish the split.
                 </p>
-              ) : (
+              ) : paidSum !== due ? (
                 <p className="mt-2 text-xs font-medium text-red-500">
                   Payments total {formatCurrency(paidSum, currency)} but{' '}
                   {formatCurrency(due, currency)} is due.
                 </p>
-              ))}
+              ) : null)}
           </div>
         </div>
 
         <div className="border-t border-gray-100 px-5 py-4 safe-bottom">
           <Button className="w-full" size="lg" loading={settling} disabled={!balanced} onClick={settle}>
             <Wallet className="h-4 w-4" />
-            Pay {formatCurrency(due, currency)}
+            {split
+              ? outstanding > 0
+                ? `Collect from ${outstanding} more payer${outstanding === 1 ? '' : 's'}`
+                : `Close tab · ${formatCurrency(due, currency)}`
+              : `Pay ${formatCurrency(due, currency)}`}
           </Button>
         </div>
       </div>

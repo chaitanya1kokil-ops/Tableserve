@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { evenSplit, toUnits, amountsFromAssignment, itemOwners } from './split'
+import {
+  evenSplit,
+  toUnits,
+  amountsFromAssignment,
+  itemOwners,
+  collectionState,
+} from './split'
 
 const sum = (arr) => arr.reduce((s, v) => s + Number(v), 0)
 
@@ -125,6 +131,49 @@ describe('amountsFromAssignment', () => {
     const { amounts } = amountsFromAssignment(units, { 'a#0': 0, 'a#1': 1, 'b#0': 2 }, 2, 25.98)
     expect(amounts).toEqual(['12.99', '12.99'])
     expect(sum(amounts)).toBeCloseTo(25.98, 10)
+  })
+})
+
+describe('collectionState', () => {
+  const two = [{ amount: '25.98' }, { amount: '19.99' }]
+
+  it('treats a single payer as ready — one button settles it', () => {
+    const s = collectionState([{ amount: '45.97' }], [])
+    expect(s.split).toBe(false)
+    expect(s.allCollected).toBe(true)
+    expect(s.outstanding).toBe(0)
+  })
+
+  it('blocks a split tab until every payer has handed money over', () => {
+    expect(collectionState(two, []).allCollected).toBe(false)
+    expect(collectionState(two, [true]).allCollected).toBe(false)
+    expect(collectionState(two, [true, true]).allCollected).toBe(true)
+  })
+
+  it('counts how many payers are still outstanding', () => {
+    expect(collectionState(two, []).outstanding).toBe(2)
+    expect(collectionState(two, [true]).outstanding).toBe(1)
+    expect(collectionState(two, [true, true]).outstanding).toBe(0)
+  })
+
+  it('runs a total of what has actually been collected so far', () => {
+    expect(collectionState(two, []).collectedTotal).toBe(0)
+    expect(collectionState(two, [true]).collectedTotal).toBeCloseTo(25.98, 10)
+    expect(collectionState(two, [true, true]).collectedTotal).toBeCloseTo(45.97, 10)
+  })
+
+  it('handles a payer marked collected out of order', () => {
+    const s = collectionState(two, [undefined, true])
+    expect(s.outstanding).toBe(1)
+    expect(s.collectedTotal).toBeCloseTo(19.99, 10)
+    expect(s.allCollected).toBe(false)
+  })
+
+  it('ignores stale flags past the end of the payer list', () => {
+    // Payer 3 was removed but their flag lingered.
+    const s = collectionState(two, [true, true, true])
+    expect(s.outstanding).toBe(0)
+    expect(s.collectedTotal).toBeCloseTo(45.97, 10)
   })
 })
 

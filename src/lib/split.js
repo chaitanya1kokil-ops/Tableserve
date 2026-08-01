@@ -51,6 +51,18 @@ export function amountsFromAssignment(units, assignment, payerCount, due) {
   return { amounts: cents.map((c) => (c / 100).toFixed(2)), base }
 }
 
+// Where a split tab stands while staff work down the table. `collected` is a
+// sparse array of booleans indexed by payer. A split tab must not close until
+// every payer has handed their share over.
+export function collectionState(payments, collected) {
+  const split = payments.length > 1
+  const outstanding = split ? payments.filter((_, i) => !collected[i]).length : 0
+  const collectedTotal = round2(
+    payments.reduce((s, p, i) => s + (collected[i] ? Number(p.amount) || 0 : 0), 0),
+  )
+  return { split, outstanding, collectedTotal, allCollected: !split || outstanding === 0 }
+}
+
 // A line split across payers is billed to whoever took the most of it, so no
 // item is ever charged to two payers — settle_tab rejects that.
 export function itemOwners(units, assignment) {
