@@ -46,6 +46,7 @@ export default function CustomerMenu() {
   const [counterName, setCounterName] = useState('') // name captured up front at a counter QR
   const [loyaltyMember, setLoyaltyMember] = useState(null) // {id,name,email,visits}
   const [loyaltyOpen, setLoyaltyOpen] = useState(false)
+  const [openOrders, setOpenOrders] = useState([]) // this guest's orders still in flight
 
   const loyaltyKey = `tableserve:loyalty:${restaurantId}`
   const saveMember = useCallback(
@@ -77,6 +78,26 @@ export default function CustomerMenu() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, loyaltyMember?.id])
+
+  // The anonymous session persists in localStorage, so a guest who closes the
+  // tab and re-scans is still the same customer_id. Look up whatever they have
+  // in flight so the menu can say so instead of looking like a first visit.
+  // RLS scopes this to their own orders.
+  const loadOpenOrders = useCallback(async () => {
+    let q = supabase
+      .from('orders')
+      .select('id, status, total')
+      .eq('restaurant_id', restaurantId)
+      .not('status', 'in', '(completed,cancelled)')
+    q = tableId ? q.eq('table_id', tableId).is('paid_at', null) : q.is('table_id', null)
+    const { data } = await q
+    setOpenOrders(data || [])
+  }, [restaurantId, tableId])
+
+  useEffect(() => {
+    if (!ready) return
+    loadOpenOrders()
+  }, [ready, loadOpenOrders])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -167,6 +188,11 @@ export default function CustomerMenu() {
   const isCounter = table?.kind === 'counter' && allowsCounterQr(restaurant)
   // Trucks order from one QR (no table); restaurants need a scanned table.
   const canOrder = (Boolean(tableId) || isTruck) && restaurant?.status === 'active'
+  const statusPath = tableId
+    ? `/r/${restaurantId}/t/${tableId}/status`
+    : isTruck
+      ? `/r/${restaurantId}/status`
+      : null
 
   const cartCount = cart.reduce((n, l) => n + l.quantity, 0)
   const cartTotal = cart.reduce((s, l) => s + l.lineTotal, 0)
@@ -274,13 +300,7 @@ export default function CustomerMenu() {
         canCall={canOrder && !isCounter}
         calling={calling}
         onCall={callServer}
-        onViewOrders={
-          tableId
-            ? () => navigate(`/r/${restaurantId}/t/${tableId}/status`)
-            : isTruck
-              ? () => navigate(`/r/${restaurantId}/status`)
-              : null
-        }
+        onViewOrders={statusPath ? () => navigate(statusPath) : null}
       />
 
       {isCounter && counterName && (
@@ -289,6 +309,38 @@ export default function CustomerMenu() {
             <User className="h-4 w-4 flex-shrink-0" />
             Hi {counterName} — we’ll call your name when your order is ready.
           </div>
+        </div>
+      )}
+
+      {/* Picks a returning guest back up where they left off. */}
+      {openOrders.length > 0 && (
+        <div className="mx-auto max-w-2xl px-4 pt-3">
+          <button
+            onClick={() => navigate(statusPath)}
+            className="flex w-full items-center gap-3 rounded-xl bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/5 transition active:scale-[0.99]"
+          >
+            <span
+              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-white"
+              style={{ backgroundColor: accent }}
+            >
+              <Receipt className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-stone-900">
+                {openOrders.length === 1
+                  ? 'Your order is in progress'
+                  : `${openOrders.length} orders in progress`}
+              </span>
+              <span className="block text-xs text-stone-500">
+                {formatCurrency(
+                  openOrders.reduce((s, o) => s + Number(o.total || 0), 0),
+                  currency,
+                )}{' '}
+                so far — tap to track
+              </span>
+            </span>
+            <ArrowRight className="h-4 w-4 flex-shrink-0 text-stone-400" />
+          </button>
         </div>
       )}
 
@@ -450,7 +502,7 @@ export default function CustomerMenu() {
             setCart([])
             setCartOpen(false)
             afterOrderLoyalty()
-            navigate(tableId ? `/r/${restaurantId}/t/${tableId}/status` : `/r/${restaurantId}/status`)
+            navigate(statusPath)
           }}
         />
       )}
