@@ -271,7 +271,7 @@ export default function CustomerMenu() {
         restaurant={restaurant}
         table={table}
         accent={accent}
-        canCall={canOrder}
+        canCall={canOrder && !isCounter}
         calling={calling}
         onCall={callServer}
         onViewOrders={

@@ -16,7 +16,7 @@ import { formatCurrency, formatTime } from '../../lib/format'
 import { useCustomerSession } from '../../hooks/useCustomerSession'
 import { useToast } from '../../components/Toast'
 import { Button, FullPageSpinner, Badge } from '../../components/ui'
-import { ORDER_STATUSES } from '../../lib/constants'
+import { ORDER_STATUSES, allowsCounterQr } from '../../lib/constants'
 
 const STEPS = [
   { key: 'new', label: 'Received', icon: Check },
@@ -33,6 +33,7 @@ export default function CustomerStatus() {
 
   const [loading, setLoading] = useState(true)
   const [restaurant, setRestaurant] = useState(null)
+  const [table, setTable] = useState(null)
   const [orders, setOrders] = useState([])
   const [requesting, setRequesting] = useState(false)
   const reloadTimer = useRef(null)
@@ -78,11 +79,17 @@ export default function CustomerStatus() {
     q = tableId
       ? q.eq('table_id', tableId).is('paid_at', null)
       : q.is('table_id', null)
-    const [{ data: rest }, { data: ords }] = await Promise.all([
+    // The table tells us whether this is a counter/register QR (takeout), which
+    // has no server to call and no tab to settle.
+    const [{ data: rest }, { data: ords }, { data: tbl }] = await Promise.all([
       supabase.from('restaurants').select('*').eq('id', restaurantId).maybeSingle(),
       q.order('created_at', { ascending: false }),
+      tableId
+        ? supabase.from('tables').select('kind').eq('id', tableId).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
     setRestaurant(rest || null)
+    setTable(tbl || null)
     setOrders(ords || [])
     setLoading(false)
 
@@ -149,6 +156,8 @@ export default function CustomerStatus() {
   const accent = restaurant?.accent_color || '#b45309'
   const currency = restaurant?.currency || 'USD'
   const isTruck = !tableId // truck status route carries no table
+  // Counter/register QR: takeout at the till, so no "Call server" button.
+  const isCounter = table?.kind === 'counter' && allowsCounterQr(restaurant)
   const menuPath = tableId ? `/r/${restaurantId}/t/${tableId}` : `/r/${restaurantId}`
 
   const requestBill = async () => {
@@ -266,9 +275,11 @@ export default function CustomerStatus() {
                   <Button variant="outline" className="flex-1" onClick={() => navigate(menuPath)}>
                     <Plus className="h-4 w-4" /> Add items
                   </Button>
-                  <Button variant="outline" className="flex-1" loading={calling} onClick={callServer}>
-                    <Bell className="h-4 w-4" /> Call server
-                  </Button>
+                  {!isCounter && (
+                    <Button variant="outline" className="flex-1" loading={calling} onClick={callServer}>
+                      <Bell className="h-4 w-4" /> Call server
+                    </Button>
+                  )}
                 </div>
                 <Button
                   className="w-full"
