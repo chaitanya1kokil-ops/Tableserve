@@ -59,3 +59,143 @@ input[type='number'] {
     scrollbar-width: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Landing page: motion + texture.
+   Everything here is decorative, and every animation is switched off under
+   prefers-reduced-motion (see the media query at the bottom).
+   --------------------------------------------------------------------------- */
+
+/* Slow drifting colour wash behind the hero. */
+@keyframes ts-aurora {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(3%, -2.5%, 0) scale(1.09); }
+  66%  { transform: translate3d(-2.5%, 2%, 0) scale(0.95); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.ts-aurora { animation: ts-aurora 20s ease-in-out infinite; will-change: transform; }
+
+/* Gentle bob for the phone mockup. */
+@keyframes ts-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+.ts-float { animation: ts-float 7s ease-in-out infinite; }
+
+/* A new order card landing on the board. */
+@keyframes ts-drop-in {
+  from { opacity: 0; transform: translateY(-14px) scale(0.94); }
+  60%  { opacity: 1; transform: translateY(3px) scale(1.02); }
+  to   { opacity: 1; transform: none; }
+}
+.ts-drop-in { animation: ts-drop-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Expanding ring when that order arrives. */
+@keyframes ts-ping-ring {
+  from { opacity: 0.55; transform: scale(0.9); }
+  to   { opacity: 0; transform: scale(1.5); }
+}
+.ts-ping-ring { animation: ts-ping-ring 1.1s ease-out forwards; }
+
+/* Status chip swapping value. */
+@keyframes ts-flip {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+.ts-flip { animation: ts-flip 0.32s ease-out both; }
+
+/* Light sweeping across a surface — used once on the hero board. */
+@keyframes ts-sheen {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to   { transform: translateX(320%) skewX(-18deg); }
+}
+.ts-sheen { animation: ts-sheen 5.5s ease-in-out infinite; }
+
+/* Fine film grain so the large dark areas are not flat. */
+.ts-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+}
+
+/* Dashboard mockup sits back in space, then straightens as you scroll to it. */
+.ts-tilt {
+  transform: perspective(1900px) rotateX(9deg) rotateY(-9deg) rotateZ(1deg) scale(0.97);
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ts-tilt-flat {
+  transform: perspective(1900px) rotateX(0) rotateY(0) rotateZ(0) scale(1);
+}
+
+/* Choreographed entrance: the hero assembles itself instead of appearing all
+   at once. Each piece sets its own --d delay. */
+@keyframes ts-rise {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: none; }
+}
+.ts-rise {
+  opacity: 0;
+  animation: ts-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
+}
+
+/* Same idea for a grid: children come in one after another once revealed. */
+.ts-stagger > * {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-in.ts-stagger > * {
+  opacity: 1;
+  transform: none;
+}
+.ts-stagger > *:nth-child(1) { transition-delay: 0.02s; }
+.ts-stagger > *:nth-child(2) { transition-delay: 0.10s; }
+.ts-stagger > *:nth-child(3) { transition-delay: 0.18s; }
+.ts-stagger > *:nth-child(4) { transition-delay: 0.26s; }
+.ts-stagger > *:nth-child(5) { transition-delay: 0.34s; }
+.ts-stagger > *:nth-child(6) { transition-delay: 0.42s; }
+.ts-stagger > *:nth-child(7) { transition-delay: 0.50s; }
+.ts-stagger > *:nth-child(8) { transition-delay: 0.58s; }
+
+/* Cards lift and warm their edge on hover. */
+.ts-card {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.ts-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 40px -18px rgba(120, 70, 20, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-aurora,
+  .ts-float,
+  .ts-drop-in,
+  .ts-ping-ring,
+  .ts-flip,
+  .ts-sheen {
+    animation: none !important;
+  }
+  .ts-tilt,
+  .ts-tilt-flat {
+    transform: none !important;
+    transition: none !important;
+  }
+  .ts-card:hover {
+    transform: none;
+  }
+  .ts-rise {
+    opacity: 1;
+    animation: none !important;
+  }
+  .ts-stagger > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
