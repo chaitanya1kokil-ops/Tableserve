@@ -442,6 +442,7 @@ function CategorySection({
                 isLast={i === items.length - 1}
                 canReorder={canReorder}
                 isDragging={drag.id === item.id}
+                dragOffset={drag.offset}
                 isDropTarget={drag.id !== null && drag.id !== item.id && drag.overIndex === i}
                 onDragStart={(e) => drag.start(e, item.id, i)}
                 onDragMove={drag.move}
@@ -474,13 +475,28 @@ function CategorySection({
 function useCardDrag(items, onDrop) {
   const [id, setId] = useState(null)
   const [overIndex, setOverIndex] = useState(null)
+  // How far the pointer has travelled since the grab — the held card is
+  // translated by this, so it visibly comes away with your finger.
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
   const cards = useRef(new Map())
   const fromIndex = useRef(null)
+  const origin = useRef({ x: 0, y: 0 })
 
   const register = useCallback((i, el) => {
     if (el) cards.current.set(i, el)
     else cards.current.delete(i)
   }, [])
+
+  const stop = useCallback(() => {
+    fromIndex.current = null
+    setId(null)
+    setOverIndex(null)
+    setOffset({ x: 0, y: 0 })
+    document.body.classList.remove('ts-dragging')
+  }, [])
+
+  // If this unmounts mid-drag the class would otherwise stick on <body>.
+  useEffect(() => () => document.body.classList.remove('ts-dragging'), [])
 
   const start = useCallback((e, itemId, i) => {
     // Ignore secondary clicks so right-click never starts a drag.
@@ -488,15 +504,21 @@ function useCardDrag(items, onDrop) {
     e.preventDefault()
     e.currentTarget.setPointerCapture?.(e.pointerId)
     fromIndex.current = i
+    origin.current = { x: e.clientX, y: e.clientY }
     setId(itemId)
     setOverIndex(i)
+    setOffset({ x: 0, y: 0 })
+    document.body.classList.add('ts-dragging')
   }, [])
 
   const move = useCallback((e) => {
     if (fromIndex.current === null) return
+    setOffset({ x: e.clientX - origin.current.x, y: e.clientY - origin.current.y })
 
-    // Which card is under the pointer?
+    // Which card is under the pointer? Skip the held one — it travels with the
+    // pointer, so it would always match and nothing else could ever be hit.
     for (const [i, el] of cards.current) {
+      if (i === fromIndex.current) continue
       const r = el.getBoundingClientRect()
       if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
         setOverIndex(i)
@@ -513,14 +535,12 @@ function useCardDrag(items, onDrop) {
 
   const end = useCallback(() => {
     const from = fromIndex.current
-    fromIndex.current = null
     const to = overIndex
-    setId(null)
-    setOverIndex(null)
+    stop()
     if (from !== null && to !== null && to !== from) onDrop(items[from], to)
-  }, [items, overIndex, onDrop])
+  }, [items, overIndex, onDrop, stop])
 
-  return { id, overIndex, register, start, move, end }
+  return { id, overIndex, offset, register, start, move, end }
 }
 
 function ItemCard({
@@ -532,6 +552,7 @@ function ItemCard({
   isLast,
   canReorder,
   isDragging,
+  dragOffset,
   isDropTarget,
   onDragStart,
   onDragMove,
@@ -546,12 +567,43 @@ function ItemCard({
   return (
     <div
       ref={cardRef}
-      className={`flex gap-3 rounded-2xl p-3 ring-1 transition ${
-        item.is_available ? 'bg-white ring-stone-100' : 'bg-stone-50 opacity-75 ring-stone-200/70'
-      } ${isDragging ? 'scale-[0.98] opacity-40 ring-2 ring-brand' : 'hover:shadow-md'} ${
-        isDropTarget ? 'ring-2 ring-brand shadow-lg' : ''
-      }`}
+      style={
+        isDragging
+          ? {
+              // Follows the pointer, tilted and lifted so it reads as picked
+              // up. Fading it out (the first attempt) just made it vanish.
+              transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) scale(1.04) rotate(-1.5deg)`,
+              zIndex: 50,
+              position: 'relative',
+              boxShadow: '0 22px 45px -12px rgba(60,30,10,.45)',
+            }
+          : undefined
+      }
+      // One background and one ring class only. Listing ring-stone-100 and
+      // ring-brand together silently loses the brand ring — Tailwind resolves
+      // conflicting utilities by stylesheet order, not by the order written
+      // here, so the drop target ended up looking like every other card.
+      className={[
+        'flex gap-3 rounded-2xl p-3 ring-1',
+        isDropTarget ? 'bg-amber-50' : item.is_available ? 'bg-white' : 'bg-stone-50 opacity-75',
+        isDropTarget
+          ? 'ring-2 ring-brand ring-offset-2 shadow-lg'
+          : isDragging
+            ? 'ring-2 ring-brand cursor-grabbing'
+            : item.is_available
+              ? 'ring-stone-100'
+              : 'ring-stone-200/70',
+        isDragging ? '' : 'transition hover:shadow-md',
+      ].join(' ')}
     >
+      {/* the slot it was lifted out of */}
+      {isDragging && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 rounded-2xl border-2 border-dashed border-brand/40 bg-brand/[0.04]"
+          style={{ transform: `translate(${-dragOffset.x}px, ${-dragOffset.y}px) rotate(1.5deg)` }}
+        />
+      )}
       {/* Reorder rail. Kept out of the footer so the buttons don't wrap on a
           phone, and always visible rather than hover-only — there is no hover
           on touch. Position is what the guest sees on the menu. */}
@@ -565,7 +617,11 @@ function ItemCard({
             title="Drag to reposition"
             aria-label="Drag to reposition"
             // touch-none: stop the browser scrolling the page instead of dragging
-            className="cursor-grab touch-none rounded-md p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-600 active:cursor-grabbing"
+            className={`touch-none rounded-md p-1 transition ${
+              isDragging
+                ? 'cursor-grabbing bg-brand text-white'
+                : 'cursor-grab bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700'
+            }`}
           >
             <GripVertical className="h-4 w-4" />
           </button>
