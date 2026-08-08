@@ -30,6 +30,7 @@ import {
 import ImageUpload from '../../components/ImageUpload'
 import DietMark from '../../components/DietMark'
 import { allowsMultiBrand } from '../../lib/constants'
+import { reorder, moveTo, applyOrder } from '../../lib/reorder'
 
 export default function Menu() {
   const { restaurant, refreshRestaurant } = useAuth()
@@ -123,6 +124,48 @@ export default function Menu() {
     const results = await Promise.all(
       list.map((c, i) =>
         supabase.from('menu_categories').update({ sort_order: i }).eq('id', c.id),
+      ),
+    )
+    if (results.some((r) => r.error)) {
+      toast.error('Could not save the new order.')
+      load()
+    }
+  }
+
+  // Reorder an item within its own category ('up' | 'down' | 'top'). Items
+  // never move between categories here — that is done by editing the item.
+  //
+  // `siblings` is only that category's items, so the 0..n reindex is scoped to
+  // the category. sort_order is only ever compared within a category (this page
+  // and the customer menu both fetch every item ordered by sort_order and then
+  // group by category_id), so values repeating across categories are harmless.
+  const reorderItem = async (item, direction, siblings) => {
+    const moved = reorder(siblings, item.id, direction)
+    if (!moved) return
+
+    setItems((prev) => applyOrder(prev, moved.orderMap)) // optimistic
+
+    const results = await Promise.all(
+      moved.list.map((i, n) =>
+        supabase.from('menu_items').update({ sort_order: n }).eq('id', i.id),
+      ),
+    )
+    if (results.some((r) => r.error)) {
+      toast.error('Could not save the new order.')
+      load()
+    }
+  }
+
+  // Drop an item at an absolute position in its category (drag and drop).
+  const moveItemTo = async (item, toIndex, siblings) => {
+    const moved = moveTo(siblings, item.id, toIndex)
+    if (!moved) return
+
+    setItems((prev) => applyOrder(prev, moved.orderMap)) // optimistic
+
+    const results = await Promise.all(
+      moved.list.map((i, n) =>
+        supabase.from('menu_items').update({ sort_order: n }).eq('id', i.id),
       ),
     )
     if (results.some((r) => r.error)) {
@@ -241,6 +284,8 @@ export default function Menu() {
               onEditItem={(it) => setItemModal(it)}
               onDeleteItem={deleteItem}
               onToggle={toggleAvailability}
+              onReorderItem={reorderItem}
+              onMoveItemTo={moveItemTo}
             />
           ))}
 
@@ -254,6 +299,8 @@ export default function Menu() {
               onEditItem={(it) => setItemModal(it)}
               onDeleteItem={deleteItem}
               onToggle={toggleAvailability}
+              onReorderItem={reorderItem}
+              onMoveItemTo={moveItemTo}
             />
           )}
         </div>
@@ -311,7 +358,12 @@ function CategorySection({
   onEditItem,
   onDeleteItem,
   onToggle,
+  onReorderItem,
+  onMoveItemTo,
 }) {
+  const canReorder = Boolean(onReorderItem) && items.length > 1
+  const drag = useCardDrag(items, (item, toIndex) => onMoveItemTo(item, toIndex, items))
+
   return (
     <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-100 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-y-2">
@@ -372,31 +424,180 @@ function CategorySection({
           No items yet — add the first one.
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              optionCount={(optionsByItem[item.id] || []).length}
-              currency={currency}
-              onEdit={() => onEditItem(item)}
-              onDelete={() => onDeleteItem(item)}
-              onToggle={() => onToggle(item)}
-            />
-          ))}
-        </div>
+        <>
+          {drag.id && (
+            <p className="mb-2 text-center text-xs font-medium text-brand">
+              Drop on the position you want — everything below it shifts down.
+            </p>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {items.map((item, i) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                cardRef={(el) => drag.register(i, el)}
+                optionCount={(optionsByItem[item.id] || []).length}
+                currency={currency}
+                isFirst={i === 0}
+                isLast={i === items.length - 1}
+                canReorder={canReorder}
+                isDragging={drag.id === item.id}
+                isDropTarget={drag.id !== null && drag.id !== item.id && drag.overIndex === i}
+                onDragStart={(e) => drag.start(e, item.id, i)}
+                onDragMove={drag.move}
+                onDragEnd={drag.end}
+                onPin={() => onReorderItem(item, 'top', items)}
+                onMoveUp={() => onReorderItem(item, 'up', items)}
+                onMoveDown={() => onReorderItem(item, 'down', items)}
+                onEdit={() => onEditItem(item)}
+                onDelete={() => onDeleteItem(item)}
+                onToggle={() => onToggle(item)}
+              />
+            ))}
+          </div>
+        </>
       )}
     </section>
   )
 }
 
-function ItemCard({ item, optionCount, currency, onEdit, onDelete, onToggle }) {
+/**
+ * Pointer-based drag reordering for a card grid.
+ *
+ * Deliberately not HTML5 drag-and-drop: that does not fire on touch devices,
+ * and owners run this on a tablet behind the counter. Pointer events cover
+ * mouse, pen and touch with one code path.
+ *
+ * Drops use insert-and-shift (see moveTo), so dragging #21 onto #2 makes it #2
+ * and pushes everything below it down one.
+ */
+function useCardDrag(items, onDrop) {
+  const [id, setId] = useState(null)
+  const [overIndex, setOverIndex] = useState(null)
+  const cards = useRef(new Map())
+  const fromIndex = useRef(null)
+
+  const register = useCallback((i, el) => {
+    if (el) cards.current.set(i, el)
+    else cards.current.delete(i)
+  }, [])
+
+  const start = useCallback((e, itemId, i) => {
+    // Ignore secondary clicks so right-click never starts a drag.
+    if (e.button != null && e.button !== 0) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    fromIndex.current = i
+    setId(itemId)
+    setOverIndex(i)
+  }, [])
+
+  const move = useCallback((e) => {
+    if (fromIndex.current === null) return
+
+    // Which card is under the pointer?
+    for (const [i, el] of cards.current) {
+      const r = el.getBoundingClientRect()
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+        setOverIndex(i)
+        break
+      }
+    }
+
+    // Nudge the page when dragging near an edge, otherwise a long category
+    // can't be crossed in one gesture.
+    const EDGE = 90
+    if (e.clientY < EDGE) window.scrollBy({ top: -18 })
+    else if (e.clientY > window.innerHeight - EDGE) window.scrollBy({ top: 18 })
+  }, [])
+
+  const end = useCallback(() => {
+    const from = fromIndex.current
+    fromIndex.current = null
+    const to = overIndex
+    setId(null)
+    setOverIndex(null)
+    if (from !== null && to !== null && to !== from) onDrop(items[from], to)
+  }, [items, overIndex, onDrop])
+
+  return { id, overIndex, register, start, move, end }
+}
+
+function ItemCard({
+  item,
+  cardRef,
+  optionCount,
+  currency,
+  isFirst,
+  isLast,
+  canReorder,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onPin,
+  onMoveUp,
+  onMoveDown,
+  onEdit,
+  onDelete,
+  onToggle,
+}) {
   return (
     <div
-      className={`flex gap-3 rounded-2xl p-3 ring-1 transition hover:shadow-md ${
+      ref={cardRef}
+      className={`flex gap-3 rounded-2xl p-3 ring-1 transition ${
         item.is_available ? 'bg-white ring-stone-100' : 'bg-stone-50 opacity-75 ring-stone-200/70'
+      } ${isDragging ? 'scale-[0.98] opacity-40 ring-2 ring-brand' : 'hover:shadow-md'} ${
+        isDropTarget ? 'ring-2 ring-brand shadow-lg' : ''
       }`}
     >
+      {/* Reorder rail. Kept out of the footer so the buttons don't wrap on a
+          phone, and always visible rather than hover-only — there is no hover
+          on touch. Position is what the guest sees on the menu. */}
+      {canReorder && (
+        <div className="flex flex-shrink-0 flex-col items-center justify-center gap-0.5">
+          <button
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDragEnd}
+            onPointerCancel={onDragEnd}
+            title="Drag to reposition"
+            aria-label="Drag to reposition"
+            // touch-none: stop the browser scrolling the page instead of dragging
+            className="cursor-grab touch-none rounded-md p-1 text-gray-300 hover:bg-gray-100 hover:text-gray-600 active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onPin}
+            disabled={isFirst}
+            title="Move to the top of this category"
+            aria-label="Move to top of category"
+            className="rounded-md p-1 text-gray-300 hover:bg-amber-50 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+          >
+            <Pin className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onMoveUp}
+            disabled={isFirst}
+            title="Move up"
+            aria-label="Move up"
+            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onMoveDown}
+            disabled={isLast}
+            title="Move down"
+            aria-label="Move down"
+            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-stone-100">
         {item.image_url ? (
           <img src={imageUrl(item.image_url)} alt="" className="h-full w-full object-cover" />
